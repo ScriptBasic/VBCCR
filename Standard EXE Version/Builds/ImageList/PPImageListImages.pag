@@ -88,7 +88,6 @@ Begin VB.PropertyPage PPImageListImages
          Left            =   720
          Locked          =   -1  'True
          TabIndex        =   2
-         Text            =   "0 of 0"
          Top             =   240
          Width           =   1230
       End
@@ -165,23 +164,20 @@ Top As Long
 Right As Long
 Bottom As Long
 End Type
-Private Declare Function DrawIconEx Lib "user32" (ByVal hDC As Long, ByVal XLeft As Long, ByVal YTop As Long, ByVal hIcon As Long, ByVal CXWidth As Long, ByVal CYWidth As Long, ByVal istepIfAniCur As Long, ByVal hbrFlickerFreeDraw As Long, ByVal diFlags As Long) As Long
 Private Declare Function DrawEdge Lib "user32" (ByVal hDC As Long, ByRef qRC As RECT, ByVal Edge As Long, ByVal grfFlags As Long) As Long
 Private Declare Function GetFocus Lib "user32" () As Long
-Private Declare Function DrawFocusRect Lib "user32" (ByVal hDC As Long, lpRect As RECT) As Long
+Private Declare Function DrawFocusRect Lib "user32" (ByVal hDC As Long, ByRef lpRect As RECT) As Long
 Private Declare Function FillRect Lib "user32" (ByVal hDC As Long, ByRef lpRect As RECT, ByVal hBrush As Long) As Long
 Private Declare Function CreateSolidBrush Lib "gdi32" (ByVal crColor As Long) As Long
 Private Declare Function DeleteObject Lib "gdi32" (ByVal hObject As Long) As Long
-Private Const DI_NORMAL As Long = &H3
 Private Const BF_LEFT As Long = 1
 Private Const BF_TOP As Long = 2
 Private Const BF_RIGHT As Long = 4
 Private Const BF_BOTTOM As Long = 8
 Private Const BF_RECT As Long = BF_LEFT Or BF_TOP Or BF_RIGHT Or BF_BOTTOM
-Private Const BDR_SUNKENINNER As Long = 8
-Private Const BDR_SUNKENOUTER As Long = 2
 Private Const BDR_RAISEDOUTER As Long = 1
 Private Const BDR_RAISEDINNER As Long = 4
+Private SelectedControl As Object
 Private CurrIndex As Long
 Private ImageFrameWidth As Long, ImageFrameHeight As Long
 Private PropShadowListImages() As ShadowListImageStruct
@@ -197,24 +193,44 @@ End Sub
 
 Private Sub PropertyPage_ApplyChanges()
 If CurrIndex > 0 Then
-    PropShadowListImages(CurrIndex).Key = TextKey.Text
     PropShadowListImages(CurrIndex).Tag = TextTag.Text
     Dim i As Long
     With PropertyPage.SelectedControls(0)
     .ListImages.Clear
     For i = 0 To UBound(PropShadowListImages())
         If i > 0 Then
-            With .ListImages.Add(i, PropShadowListImages(i).Key, PropShadowListImages(i).Picture)
-            .Tag = PropShadowListImages(i).Tag
-            End With
+            If i <> CurrIndex Then
+                With .ListImages.Add(i, PropShadowListImages(i).Key, PropShadowListImages(i).Picture)
+                .Tag = PropShadowListImages(i).Tag
+                End With
+            Else
+                With .ListImages.Add(i, , PropShadowListImages(i).Picture)
+                .Tag = PropShadowListImages(i).Tag
+                End With
+            End If
         End If
     Next i
+    If Not TextKey.Text = vbNullString Then
+        If .ListImages.Exists(TextKey.Text) = True Then
+            .ListImages(CurrIndex).Key = PropShadowListImages(CurrIndex).Key
+            MsgBox "This key is already associated with an element of this collection.", vbCritical + vbOKOnly
+            FreezeChanged = True
+            TextKey.Text = PropShadowListImages(CurrIndex).Key
+            FreezeChanged = False
+        Else
+            PropShadowListImages(CurrIndex).Key = TextKey.Text
+            .ListImages(CurrIndex).Key = PropShadowListImages(CurrIndex).Key
+        End If
+    Else
+        PropShadowListImages(CurrIndex).Key = vbNullString
+    End If
     End With
 End If
 Call PropertyPage_SelectionChanged
 End Sub
 
 Private Sub PropertyPage_SelectionChanged()
+If Not SelectedControl Is PropertyPage.SelectedControls(0) Then Set SelectedControl = PropertyPage.SelectedControls(0): CurrIndex = 0
 With PropertyPage.SelectedControls(0)
 If .ListImages.Count > 0 And CurrIndex = 0 Then
     Call FillShadowListImages
@@ -346,7 +362,7 @@ With PropertyPage.SelectedControls(0)
 ImageListHandle = .hImageList
 If ImageListHandle <> 0 Then
     Dim RC As RECT, TRC As RECT
-    Dim i As Long, X As Long, Y As Long
+    Dim i As Long, X As Long
     Dim Brush As Long, Max As Long
     RC.Left = 0
     RC.Top = 0
@@ -372,13 +388,7 @@ If ImageListHandle <> 0 Then
             TRC.Right = TRC.Left + ImageFrameWidth
             TRC.Bottom = TRC.Top + ImageFrameHeight
             FillRect PictureImages.hDC, TRC, Brush
-            With .ListImages(i).Picture
-            If .Type = vbPicTypeIcon Then
-                DrawIconEx PictureImages.hDC, X + 4, 4, .Handle, 32, 32, 0, 0, DI_NORMAL
-            Else
-                .Render PictureImages.hDC Or 0&, (X + 4&) Or 0&, 4& Or 0&, 32& Or 0&, 32& Or 0&, 0&, .Height, .Width, -.Height, 0&
-            End If
-            End With
+            Call RenderPicture(.ListImages(i).Picture, PictureImages.hDC, X + 4, 4, 32, 32)
             If i = CurrIndex Then
                 DrawEdge PictureImages.hDC, TRC, BDR_RAISEDINNER Or BDR_RAISEDOUTER, BF_RECT
                 If GetFocus() = PictureImages.hWnd Then

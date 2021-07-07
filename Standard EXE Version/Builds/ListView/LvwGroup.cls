@@ -21,8 +21,8 @@ Private Function ShadowListView() As ListView
 ComCtlsPtrToShadowObj ShadowListView, ShadowObjectPointer
 End Function
 
-Friend Sub FInit(ByVal Object As ListView, ByVal Key As String)
-ShadowObjectPointer = ObjPtr(Object)
+Friend Sub FInit(ByVal ObjectPointer As Long, ByVal Key As String)
+ShadowObjectPointer = ObjectPointer
 PropKey = Key
 End Sub
 
@@ -38,6 +38,10 @@ End Property
 Public Property Get Key() As String
 Attribute Key.VB_Description = "Returns the key used in the collection."
 Key = PropKey
+End Property
+
+Public Property Let Key(ByVal Value As String)
+ShadowListView.Groups.FChangeKey PropIndex, PropKey, Value
 End Property
 
 Public Property Get Tag() As Variant
@@ -111,7 +115,7 @@ End Property
 
 Public Property Get Hint() As String
 Attribute Hint.VB_Description = "Returns/sets the text displayed as a hint below the header for the group. Requires comctl32.dll version 6.1 or higher."
-Hint = ShadowListView.FGroupLink(PropID)
+Hint = ShadowListView.FGroupHint(PropID)
 End Property
 
 Public Property Let Hint(ByVal Value As String)

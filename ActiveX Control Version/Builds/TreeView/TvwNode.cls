@@ -54,8 +54,12 @@ PropIndex = Value
 End Property
 
 Public Property Get Key() As String
-Attribute Key.VB_Description = "Returns the key used in the collection."
+Attribute Key.VB_Description = "Returns/sets the key used in the collection."
 Key = PropKey
+End Property
+
+Public Property Let Key(ByVal Value As String)
+ShadowTreeView.Nodes.FChangeKey PropIndex, PropKey, Value
 End Property
 
 Public Property Get Tag() As Variant
@@ -459,4 +463,9 @@ End Sub
 Public Function CreateDragImage() As Long
 Attribute CreateDragImage.VB_Description = "Retrieves the handle to an image list containing a bitmap that can be used to visualize dragging of this node.Your application is responsible for destroying the image list when it is no longer needed."
 CreateDragImage = ShadowTreeView.FNodeCreateDragImage(PropHandle, PropImageIndex)
+End Function
+
+Public Function SelectedIndex() As Long
+Attribute SelectedIndex.VB_Description = "Returns the index of the selected nodes collection associated with this node."
+SelectedIndex = ShadowTreeView.FSelectedNodesIndex(PropHandle)
 End Function

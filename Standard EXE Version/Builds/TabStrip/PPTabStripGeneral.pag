@@ -1,19 +1,35 @@
 VERSION 5.00
 Begin VB.PropertyPage PPTabStripGeneral 
    Caption         =   "General"
-   ClientHeight    =   4350
+   ClientHeight    =   4875
    ClientLeft      =   0
    ClientTop       =   0
    ClientWidth     =   6075
    LockControls    =   -1  'True
    PaletteMode     =   0  'Halftone
-   ScaleHeight     =   4350
+   ScaleHeight     =   4875
    ScaleWidth      =   6075
+   Begin VB.ComboBox ComboDrawMode 
+      Height          =   315
+      Left            =   1800
+      Style           =   2  'Dropdown List
+      TabIndex        =   24
+      Top             =   4080
+      Width           =   2235
+   End
+   Begin VB.CheckBox CheckDoubleBuffer 
+      Caption         =   "DoubleBuffer"
+      Height          =   285
+      Left            =   3480
+      TabIndex        =   2
+      Top             =   120
+      Width           =   1620
+   End
    Begin VB.CheckBox CheckMouseTrack 
       Caption         =   "MouseTrack"
       Height          =   285
       Left            =   4200
-      TabIndex        =   22
+      TabIndex        =   25
       Top             =   480
       Width           =   1770
    End
@@ -21,7 +37,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Caption         =   "TabScrollWheel"
       Height          =   285
       Left            =   4200
-      TabIndex        =   28
+      TabIndex        =   31
       Top             =   2640
       Width           =   1770
    End
@@ -29,7 +45,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Height          =   315
       Left            =   1800
       Style           =   2  'Dropdown List
-      TabIndex        =   21
+      TabIndex        =   22
       Top             =   3720
       Width           =   2235
    End
@@ -37,14 +53,14 @@ Begin VB.PropertyPage PPTabStripGeneral
       Height          =   315
       Left            =   1800
       Style           =   2  'Dropdown List
-      TabIndex        =   7
+      TabIndex        =   8
       Top             =   1200
       Width           =   2235
    End
    Begin VB.TextBox TextTabMinWidth 
       Height          =   315
       Left            =   1800
-      TabIndex        =   19
+      TabIndex        =   20
       Top             =   3360
       Width           =   2235
    End
@@ -52,7 +68,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Caption         =   "ShowTips"
       Height          =   285
       Left            =   4200
-      TabIndex        =   27
+      TabIndex        =   30
       Top             =   2280
       Width           =   1770
    End
@@ -60,7 +76,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Caption         =   "MultiSelect"
       Height          =   285
       Left            =   4200
-      TabIndex        =   24
+      TabIndex        =   27
       Top             =   1200
       Width           =   1770
    End
@@ -68,7 +84,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Caption         =   "Separators"
       Height          =   285
       Left            =   4200
-      TabIndex        =   26
+      TabIndex        =   29
       Top             =   1920
       Width           =   1770
    End
@@ -76,7 +92,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Height          =   315
       Left            =   1800
       Style           =   2  'Dropdown List
-      TabIndex        =   3
+      TabIndex        =   4
       Top             =   480
       Width           =   2235
    End
@@ -84,7 +100,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Height          =   315
       Left            =   1800
       Style           =   2  'Dropdown List
-      TabIndex        =   5
+      TabIndex        =   6
       Top             =   840
       Width           =   2235
    End
@@ -92,7 +108,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Height          =   315
       Left            =   1800
       Style           =   2  'Dropdown List
-      TabIndex        =   11
+      TabIndex        =   12
       Top             =   1920
       Width           =   2235
    End
@@ -100,7 +116,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Height          =   315
       Left            =   1800
       Style           =   2  'Dropdown List
-      TabIndex        =   13
+      TabIndex        =   14
       Top             =   2280
       Width           =   2235
    End
@@ -108,21 +124,21 @@ Begin VB.PropertyPage PPTabStripGeneral
       Height          =   315
       Left            =   1800
       Style           =   2  'Dropdown List
-      TabIndex        =   9
+      TabIndex        =   10
       Top             =   1560
       Width           =   2235
    End
    Begin VB.TextBox TextTabFixedHeight 
       Height          =   315
       Left            =   1800
-      TabIndex        =   17
+      TabIndex        =   18
       Top             =   3000
       Width           =   2235
    End
    Begin VB.TextBox TextTabFixedWidth 
       Height          =   315
       Left            =   1800
-      TabIndex        =   15
+      TabIndex        =   16
       Top             =   2640
       Width           =   2235
    End
@@ -130,7 +146,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Caption         =   "HotTracking"
       Height          =   285
       Left            =   4200
-      TabIndex        =   25
+      TabIndex        =   28
       Top             =   1560
       Width           =   1770
    End
@@ -138,7 +154,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Caption         =   "MultiRow"
       Height          =   285
       Left            =   4200
-      TabIndex        =   23
+      TabIndex        =   26
       Top             =   840
       Width           =   1770
    End
@@ -158,11 +174,19 @@ Begin VB.PropertyPage PPTabStripGeneral
       Top             =   120
       Width           =   1620
    End
+   Begin VB.Label LabelDrawMode 
+      Caption         =   "DrawMode:"
+      Height          =   240
+      Left            =   120
+      TabIndex        =   23
+      Top             =   4080
+      Width           =   1620
+   End
    Begin VB.Label LabelTabAlignment 
       Caption         =   "TabAlignment:"
       Height          =   240
       Left            =   120
-      TabIndex        =   20
+      TabIndex        =   21
       Top             =   3720
       Width           =   1620
    End
@@ -170,7 +194,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Caption         =   "Placement:"
       Height          =   240
       Left            =   120
-      TabIndex        =   6
+      TabIndex        =   7
       Top             =   1200
       Width           =   1620
    End
@@ -178,7 +202,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Caption         =   "TabMinWidth:"
       Height          =   240
       Left            =   120
-      TabIndex        =   18
+      TabIndex        =   19
       Top             =   3360
       Width           =   1620
    End
@@ -186,7 +210,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Caption         =   "MousePointer:"
       Height          =   240
       Left            =   120
-      TabIndex        =   2
+      TabIndex        =   3
       Top             =   480
       Width           =   1620
    End
@@ -194,7 +218,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Caption         =   "ImageList:"
       Height          =   240
       Left            =   120
-      TabIndex        =   4
+      TabIndex        =   5
       Top             =   840
       Width           =   1620
    End
@@ -202,7 +226,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Caption         =   "TabWidthStyle:"
       Height          =   240
       Left            =   120
-      TabIndex        =   12
+      TabIndex        =   13
       Top             =   2280
       Width           =   1620
    End
@@ -210,7 +234,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Caption         =   "TabStyle:"
       Height          =   240
       Left            =   120
-      TabIndex        =   10
+      TabIndex        =   11
       Top             =   1920
       Width           =   1620
    End
@@ -218,7 +242,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Caption         =   "Style:"
       Height          =   240
       Left            =   120
-      TabIndex        =   8
+      TabIndex        =   9
       Top             =   1560
       Width           =   1620
    End
@@ -226,7 +250,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Caption         =   "TabFixedHeight:"
       Height          =   240
       Left            =   120
-      TabIndex        =   16
+      TabIndex        =   17
       Top             =   3000
       Width           =   1620
    End
@@ -234,7 +258,7 @@ Begin VB.PropertyPage PPTabStripGeneral
       Caption         =   "TabFixedWidth:"
       Height          =   240
       Left            =   120
-      TabIndex        =   14
+      TabIndex        =   15
       Top             =   2640
       Width           =   1620
    End
@@ -295,6 +319,12 @@ With ComboTabAlignment
 .AddItem TbsTabAlignmentImageCaptionLeft & " - ImageCaptionLeft"
 .ItemData(.NewIndex) = TbsTabAlignmentImageCaptionLeft
 End With
+With ComboDrawMode
+.AddItem TbsDrawModeNormal & " - Normal"
+.ItemData(.NewIndex) = TbsDrawModeNormal
+.AddItem TbsDrawModeOwnerDrawFixed & " - OwnerDrawFixed"
+.ItemData(.NewIndex) = TbsDrawModeOwnerDrawFixed
+End With
 End Sub
 
 Private Sub PropertyPage_ApplyChanges()
@@ -305,6 +335,7 @@ On Error GoTo 0
 With PropertyPage.SelectedControls(0)
 .Enabled = CBool(CheckEnabled.Value = vbChecked)
 .VisualStyles = CBool(CheckVisualStyles.Value = vbChecked)
+.DoubleBuffer = CBool(CheckDoubleBuffer.Value = vbChecked)
 .MousePointer = ComboMousePointer.ItemData(ComboMousePointer.ListIndex)
 .ImageList = ComboImageList.List(ComboImageList.ListIndex)
 .Placement = ComboPlacement.ItemData(ComboPlacement.ListIndex)
@@ -315,6 +346,7 @@ With PropertyPage.SelectedControls(0)
 .TabFixedHeight = CSng(TextTabFixedHeight.Text)
 .TabMinWidth = CSng(TextTabMinWidth.Text)
 .TabAlignment = ComboTabAlignment.ItemData(ComboTabAlignment.ListIndex)
+.DrawMode = ComboDrawMode.ItemData(ComboDrawMode.ListIndex)
 .MouseTrack = CBool(CheckMouseTrack.Value = vbChecked)
 .MultiRow = CBool(CheckMultiRow.Value = vbChecked)
 .MultiSelect = CBool(CheckMultiSelect.Value = vbChecked)
@@ -332,6 +364,7 @@ FreezeChanged = True
 With PropertyPage.SelectedControls(0)
 CheckEnabled.Value = IIf(.Enabled = True, vbChecked, vbUnchecked)
 CheckVisualStyles.Value = IIf(.VisualStyles = True, vbChecked, vbUnchecked)
+CheckDoubleBuffer.Value = IIf(.DoubleBuffer = True, vbChecked, vbUnchecked)
 For i = 0 To ComboMousePointer.ListCount - 1
     If ComboMousePointer.ItemData(i) = .MousePointer Then
         ComboMousePointer.ListIndex = i
@@ -386,6 +419,12 @@ For i = 0 To ComboTabAlignment.ListCount - 1
         Exit For
     End If
 Next i
+For i = 0 To ComboDrawMode.ListCount - 1
+    If ComboDrawMode.ItemData(i) = .DrawMode Then
+        ComboDrawMode.ListIndex = i
+        Exit For
+    End If
+Next i
 CheckMouseTrack.Value = IIf(.MouseTrack = True, vbChecked, vbUnchecked)
 CheckMultiRow.Value = IIf(.MultiRow = True, vbChecked, vbUnchecked)
 CheckMultiSelect.Value = IIf(.MultiSelect = True, vbChecked, vbUnchecked)
@@ -403,6 +442,11 @@ PropertyPage.Changed = True
 End Sub
 
 Private Sub CheckVisualStyles_Click()
+If FreezeChanged = True Then Exit Sub
+PropertyPage.Changed = True
+End Sub
+
+Private Sub CheckDoubleBuffer_Click()
 If FreezeChanged = True Then Exit Sub
 PropertyPage.Changed = True
 End Sub
@@ -552,7 +596,7 @@ Else
     SngValue = CSng(TextTabMinWidth.Text)
     Cancel = CBool(Err.Number <> 0)
     On Error GoTo 0
-    If SngValue < 0 Then Cancel = True
+    If SngValue < 0 And Not SngValue = -1 Then Cancel = True
     If Cancel = False Then
         TextTabMinWidth.Text = SngValue
     Else
@@ -564,6 +608,11 @@ End If
 End Sub
 
 Private Sub ComboTabAlignment_Click()
+If FreezeChanged = True Then Exit Sub
+PropertyPage.Changed = True
+End Sub
+
+Private Sub ComboDrawMode_Click()
 If FreezeChanged = True Then Exit Sub
 PropertyPage.Changed = True
 End Sub

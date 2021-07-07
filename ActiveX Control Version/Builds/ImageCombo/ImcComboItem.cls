@@ -22,8 +22,9 @@ Private Function ShadowImageCombo() As ImageCombo
 ComCtlsPtrToShadowObj ShadowImageCombo, ShadowObjectPointer
 End Function
 
-Friend Sub FInit(ByVal Object As ImageCombo, ByVal Key As String, ByVal Image As Variant, ByVal ImageIndex As Long, ByVal SelImage As Variant, ByVal SelImageIndex As Long)
-ShadowObjectPointer = ObjPtr(Object)
+Friend Sub FInit(ByVal ObjectPointer As Long, ByRef IndexPtr As Long, ByVal Key As String, ByVal Image As Variant, ByVal ImageIndex As Long, ByVal SelImage As Variant, ByVal SelImageIndex As Long)
+ShadowObjectPointer = ObjectPointer
+IndexPtr = VarPtr(PropIndex)
 PropKey = Key
 PropImage = Image
 PropImageIndex = ImageIndex
@@ -41,8 +42,12 @@ PropIndex = Value
 End Property
 
 Public Property Get Key() As String
-Attribute Key.VB_Description = "Returns the key used in the collection."
+Attribute Key.VB_Description = "Returns/sets the key used in the collection."
 Key = PropKey
+End Property
+
+Public Property Let Key(ByVal Value As String)
+ShadowImageCombo.ComboItems.FChangeKey PropIndex, PropKey, Value
 End Property
 
 Public Property Get Tag() As Variant

@@ -1,16 +1,19 @@
 VERSION 5.00
 Begin VB.UserControl ImageCombo 
+   BackColor       =   &H80000005&
    ClientHeight    =   1800
    ClientLeft      =   0
    ClientTop       =   0
    ClientWidth     =   2400
    DataBindingBehavior=   1  'vbSimpleBound
+   DrawStyle       =   5  'Transparent
+   ForeColor       =   &H80000008&
    HasDC           =   0   'False
    PropertyPages   =   "ImageCombo.ctx":0000
    ScaleHeight     =   120
    ScaleMode       =   3  'Pixel
    ScaleWidth      =   160
-   ToolboxBitmap   =   "ImageCombo.ctx":004B
+   ToolboxBitmap   =   "ImageCombo.ctx":003B
    Begin VB.Timer TimerImageList 
       Enabled         =   0   'False
       Interval        =   1
@@ -187,9 +190,6 @@ Private Declare Function GetWindowRect Lib "user32" (ByVal hWnd As Long, ByRef l
 Private Declare Function GetSystemMetrics Lib "user32" (ByVal nIndex As Long) As Long
 Private Declare Function FindWindowEx Lib "user32" Alias "FindWindowExW" (ByVal hWndParent As Long, ByVal hWndChildAfter As Long, ByVal lpszClass As Long, ByVal lpszWindow As Long) As Long
 Private Declare Function DeleteObject Lib "gdi32" (ByVal hObject As Long) As Long
-Private Declare Function SetTextColor Lib "gdi32" (ByVal hDC As Long, ByVal crColor As Long) As Long
-Private Declare Function SetBkMode Lib "gdi32" (ByVal hDC As Long, ByVal nBkMode As Long) As Long
-Private Declare Function CreateSolidBrush Lib "gdi32" (ByVal crColor As Long) As Long
 Private Declare Function ImageList_GetIconSize Lib "comctl32" (ByVal hImageList As Long, ByRef CX As Long, ByRef CY As Long) As Long
 Private Declare Function ClientToScreen Lib "user32" (ByVal hWnd As Long, ByRef lpPoint As POINTAPI) As Long
 Private Declare Function GetScrollInfo Lib "user32" (ByVal hWnd As Long, ByVal wBar As Long, ByRef lpScrollInfo As SCROLLINFO) As Long
@@ -198,6 +198,7 @@ Private Declare Function SetCursor Lib "user32" (ByVal hCursor As Long) As Long
 Private Declare Function SetWindowPos Lib "user32" (ByVal hWnd As Long, ByVal hWndInsertAfter As Long, ByVal X As Long, ByVal Y As Long, ByVal CX As Long, ByVal CY As Long, ByVal wFlags As Long) As Long
 Private Declare Function GetMessagePos Lib "user32" () As Long
 Private Declare Function WindowFromPoint Lib "user32" (ByVal X As Long, ByVal Y As Long) As Long
+Private Declare Function GetCursor Lib "user32" () As Long
 Private Declare Function MapWindowPoints Lib "user32" (ByVal hWndFrom As Long, ByVal hWndTo As Long, ByRef lppt As Any, ByVal cPoints As Long) As Long
 Private Const ICC_USEREX_CLASSES As Long = &H200
 Private Const RDW_UPDATENOW As Long = &H100, RDW_INVALIDATE As Long = &H1, RDW_ERASE As Long = &H4, RDW_ALLCHILDREN As Long = &H80
@@ -214,7 +215,6 @@ Private Const WS_CHILD As Long = &H40000000
 Private Const WS_EX_LAYOUTRTL As Long = &H400000, WS_EX_RTLREADING As Long = &H2000, WS_EX_RIGHT As Long = &H1000, WS_EX_LEFTSCROLLBAR As Long = &H4000
 Private Const SW_HIDE As Long = &H0
 Private Const WS_VSCROLL As Long = &H200000
-Private Const WM_MOUSEACTIVATE As Long = &H21, MA_NOACTIVATE As Long = &H3, MA_NOACTIVATEANDEAT As Long = &H4, HTVSCROLL As Long = 7
 Private Const WM_MOUSEWHEEL As Long = &H20A
 Private Const WM_NOTIFY As Long = &H4E
 Private Const WM_SETFOCUS As Long = &H7
@@ -223,6 +223,8 @@ Private Const WM_COMMAND As Long = &H111
 Private Const WM_KEYDOWN As Long = &H100
 Private Const WM_KEYUP As Long = &H101
 Private Const WM_CHAR As Long = &H102
+Private Const WM_SYSKEYDOWN As Long = &H104
+Private Const WM_SYSKEYUP As Long = &H105
 Private Const WM_UNICHAR As Long = &H109, UNICODE_NOCHAR As Long = &HFFFF&
 Private Const WM_INPUTLANGCHANGE As Long = &H51
 Private Const WM_IME_SETCONTEXT As Long = &H281
@@ -234,18 +236,18 @@ Private Const WM_MBUTTONDOWN As Long = &H207
 Private Const WM_MBUTTONUP As Long = &H208
 Private Const WM_RBUTTONDOWN As Long = &H204
 Private Const WM_RBUTTONUP As Long = &H205
+Private Const WM_LBUTTONDBLCLK As Long = &H203
+Private Const WM_MBUTTONDBLCLK As Long = &H209
+Private Const WM_RBUTTONDBLCLK As Long = &H206
 Private Const WM_MOUSEMOVE As Long = &H200
 Private Const WM_MOUSELEAVE As Long = &H2A3
 Private Const WM_VSCROLL As Long = &H115
 Private Const SB_VERT As Long = 1
-Private Const SB_THUMBPOSITION = 4, SB_THUMBTRACK As Long = 5
+Private Const SB_THUMBPOSITION As Long = 4, SB_THUMBTRACK As Long = 5
 Private Const SIF_POS As Long = &H4
 Private Const SIF_TRACKPOS As Long = &H10
 Private Const WM_SETFONT As Long = &H30
 Private Const WM_SETCURSOR As Long = &H20, HTCLIENT As Long = 1
-Private Const WM_CTLCOLOREDIT As Long = &H133
-Private Const WM_CTLCOLORSTATIC As Long = &H138
-Private Const WM_CTLCOLORLISTBOX As Long = &H134
 Private Const WM_GETTEXTLENGTH As Long = &HE
 Private Const WM_GETTEXT As Long = &HD
 Private Const WM_SETTEXT As Long = &HC
@@ -283,7 +285,8 @@ Private Const CBS_DROPDOWNLIST As Long = &H3
 Private Const CCM_FIRST As Long = &H2000
 Private Const CCM_SETUNICODEFORMAT As Long = (CCM_FIRST + 5)
 Private Const WM_USER As Long = &H400
-Private Const UM_BUTTONDOWN As Long = (WM_USER + 700)
+Private Const UM_SETFOCUS As Long = (WM_USER + 444)
+Private Const UM_BUTTONDOWN As Long = (WM_USER + 500)
 Private Const CBEM_SETUNICODEFORMAT As Long = CCM_SETUNICODEFORMAT
 Private Const CBEM_INSERTITEMA As Long = (WM_USER + 1)
 Private Const CBEM_INSERTITEMW As Long = (WM_USER + 11)
@@ -315,8 +318,7 @@ Private Const CBES_EX_NOSIZELIMIT As Long = &H8
 Private Const CBES_EX_CASESENSITIVE As Long = &H10
 Private Const CBES_EX_TEXTENDELLIPSIS As Long = &H20
 Private Const I_IMAGECALLBACK As Long = (-1)
-Private Const H_MAX As Long = &HFFFF + 1
-Private Const CBEN_FIRST As Long = (H_MAX - 800&)
+Private Const CBEN_FIRST As Long = (-800)
 Private Const CBEN_GETDISPINFOA As Long = (CBEN_FIRST - 0)
 Private Const CBEN_GETDISPINFOW As Long = (CBEN_FIRST - 7)
 Private Const CBEN_GETDISPINFO As Long = CBEN_GETDISPINFOW
@@ -338,17 +340,20 @@ Private Const CBN_CLOSEUP As Long = 8
 Private Const CBN_SELENDOK As Long = 9
 Private Const CBN_SELENDCANCEL As Long = 10
 Implements ISubclass
+Implements OLEGuids.IObjectSafety
 Implements OLEGuids.IOleInPlaceActiveObjectVB
 Implements OLEGuids.IPerPropertyBrowsingVB
 Private ImageComboHandle As Long
 Private ImageComboComboHandle As Long, ImageComboEditHandle As Long, ImageComboListHandle As Long
 Private ImageComboFontHandle As Long
-Private ImageComboBackColorBrush As Long
 Private ImageComboIMCHandle As Long
 Private ImageComboCharCodeCache As Long
 Private ImageComboMouseOver(0 To 2) As Boolean
+Private ImageComboDesignMode As Boolean
 Private ImageComboTopIndex As Long
 Private ImageComboDragIndexBuffer As Long, ImageComboDragIndex As Long
+Private ImageComboImageListObjectPointer As Long
+Private UCNoSetFocusFwd As Boolean
 Private DispIDMousePointer As Long
 Private DispIDImageList As Long, ImageListArray() As String
 Private WithEvents PropFont As StdFont
@@ -361,11 +366,9 @@ Private PropMouseTrack As Boolean
 Private PropRightToLeft As Boolean
 Private PropRightToLeftLayout As Boolean
 Private PropRightToLeftMode As CCRightToLeftModeConstants
-Private PropImageListName As String, PropImageListControl As Object, PropImageListInit As Boolean
+Private PropImageListName As String, PropImageListInit As Boolean
 Private PropStyle As ImcStyleConstants
 Private PropLocked As Boolean
-Private PropBackColor As OLE_COLOR
-Private PropForeColor As OLE_COLOR
 Private PropText As String
 Private PropIndentation As Long
 Private PropExtendedUI As Boolean
@@ -376,7 +379,16 @@ Private PropIMEMode As CCIMEModeConstants
 Private PropEllipsisFormat As ImcEllipsisFormatConstants
 Private PropScrollTrack As Boolean
 
-Private Sub IOleInPlaceActiveObjectVB_TranslateAccelerator(ByRef Handled As Boolean, ByRef RetVal As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal Shift As Long)
+Private Sub IObjectSafety_GetInterfaceSafetyOptions(ByRef riid As OLEGuids.OLECLSID, ByRef pdwSupportedOptions As Long, ByRef pdwEnabledOptions As Long)
+Const INTERFACESAFE_FOR_UNTRUSTED_CALLER As Long = &H1, INTERFACESAFE_FOR_UNTRUSTED_DATA As Long = &H2
+pdwSupportedOptions = INTERFACESAFE_FOR_UNTRUSTED_CALLER Or INTERFACESAFE_FOR_UNTRUSTED_DATA
+pdwEnabledOptions = INTERFACESAFE_FOR_UNTRUSTED_CALLER Or INTERFACESAFE_FOR_UNTRUSTED_DATA
+End Sub
+
+Private Sub IObjectSafety_SetInterfaceSafetyOptions(ByRef riid As OLEGuids.OLECLSID, ByVal dwOptionsSetMask As Long, ByVal dwEnabledOptions As Long)
+End Sub
+
+Private Sub IOleInPlaceActiveObjectVB_TranslateAccelerator(ByRef Handled As Boolean, ByRef RetVal As Long, ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal Shift As Long)
 If wMsg = WM_KEYDOWN Or wMsg = WM_KEYUP Then
     Dim KeyCode As Integer, IsInputKey As Boolean
     KeyCode = wParam And &HFF&
@@ -397,15 +409,8 @@ If wMsg = WM_KEYDOWN Or wMsg = WM_KEYUP Then
                 If SendMessage(ImageComboHandle, CB_GETDROPPEDSTATE, 0, ByVal 0&) = 1 Then SendMessage ImageComboHandle, CB_SHOWDROPDOWN, 0, ByVal 0&
                 If IsInputKey = False Then Exit Sub
             End If
-            Dim hWnd As Long
-            hWnd = GetFocus()
-            If hWnd <> 0 Then
-                Select Case hWnd
-                    Case ImageComboHandle, ImageComboComboHandle, ImageComboEditHandle
-                        SendMessage hWnd, wMsg, wParam, ByVal lParam
-                        Handled = True
-                End Select
-            End If
+            SendMessage hWnd, wMsg, wParam, ByVal lParam
+            Handled = True
     End Select
 End If
 End Sub
@@ -448,14 +453,17 @@ End Sub
 Private Sub UserControl_Initialize()
 Call ComCtlsLoadShellMod
 Call ComCtlsInitCC(ICC_USEREX_CLASSES)
-Call SetVTableSubclass(Me, VTableInterfaceInPlaceActiveObject)
-Call SetVTableSubclass(Me, VTableInterfacePerPropertyBrowsing)
+Call SetVTableHandling(Me, VTableInterfaceInPlaceActiveObject)
+Call SetVTableHandling(Me, VTableInterfacePerPropertyBrowsing)
 ReDim ImageListArray(0) As String
 End Sub
 
 Private Sub UserControl_InitProperties()
 If DispIDMousePointer = 0 Then DispIDMousePointer = GetDispID(Me, "MousePointer")
 If DispIDImageList = 0 Then DispIDImageList = GetDispID(Me, "ImageList")
+On Error Resume Next
+ImageComboDesignMode = Not Ambient.UserMode
+On Error GoTo 0
 Set PropFont = Ambient.Font
 PropVisualStyles = True
 PropOLEDragMode = vbOLEDragManual
@@ -466,11 +474,9 @@ PropRightToLeft = Ambient.RightToLeft
 PropRightToLeftLayout = False
 PropRightToLeftMode = CCRightToLeftModeVBAME
 If PropRightToLeft = True Then Me.RightToLeft = True
-PropImageListName = "(None)": Set PropImageListControl = Nothing
+PropImageListName = "(None)"
 PropStyle = ImcStyleDropDownCombo
 PropLocked = False
-PropBackColor = vbWindowBackground
-PropForeColor = vbWindowText
 PropText = Ambient.DisplayName
 PropIndentation = 0
 PropExtendedUI = False
@@ -486,6 +492,9 @@ End Sub
 Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
 If DispIDMousePointer = 0 Then DispIDMousePointer = GetDispID(Me, "MousePointer")
 If DispIDImageList = 0 Then DispIDImageList = GetDispID(Me, "ImageList")
+On Error Resume Next
+ImageComboDesignMode = Not Ambient.UserMode
+On Error GoTo 0
 With PropBag
 Set PropFont = .ReadProperty("Font", Nothing)
 PropVisualStyles = .ReadProperty("VisualStyles", True)
@@ -502,8 +511,6 @@ If PropRightToLeft = True Then Me.RightToLeft = True
 PropImageListName = .ReadProperty("ImageList", "(None)")
 PropStyle = .ReadProperty("Style", ImcStyleDropDownCombo)
 PropLocked = .ReadProperty("Locked", False)
-PropBackColor = .ReadProperty("BackColor", vbWindowBackground)
-PropForeColor = .ReadProperty("ForeColor", vbWindowText)
 PropText = VarToStr(.ReadProperty("Text", vbNullString))
 PropIndentation = .ReadProperty("Indentation", 0)
 PropExtendedUI = .ReadProperty("ExtendedUI", False)
@@ -534,8 +541,6 @@ With PropBag
 .WriteProperty "ImageList", PropImageListName, "(None)"
 .WriteProperty "Style", PropStyle, ImcStyleDropDownCombo
 .WriteProperty "Locked", PropLocked, False
-.WriteProperty "BackColor", PropBackColor, vbWindowBackground
-.WriteProperty "ForeColor", PropForeColor, vbWindowText
 .WriteProperty "Text", StrToVar(PropText), vbNullString
 .WriteProperty "Indentation", PropIndentation, 0
 .WriteProperty "ExtendedUI", PropExtendedUI, False
@@ -575,8 +580,8 @@ If ImageComboDragIndex > 0 Then
         Dim Text As String
         Text = Me.FComboItemText(ImageComboDragIndex)
         Data.SetData StrToVar(Text & vbNullChar), CF_UNICODETEXT
-        Data.SetData StrToVar(Text), vbCFText
-        AllowedEffects = vbDropEffectMove Or vbDropEffectCopy
+        Data.SetData Text, vbCFText
+        AllowedEffects = vbDropEffectCopy Or vbDropEffectMove
     End If
 End If
 RaiseEvent OLEStartDrag(Data, AllowedEffects)
@@ -591,11 +596,11 @@ UserControl.OLEDrag
 End Sub
 
 Private Sub UserControl_AmbientChanged(PropertyName As String)
-If Ambient.UserMode = False And PropertyName = "DisplayName" And PropStyle = ImcStyleDropDownList Then
+If ImageComboDesignMode = True And PropertyName = "DisplayName" And PropStyle = ImcStyleDropDownList Then
     If ImageComboHandle <> 0 Then
         If SendMessage(ImageComboHandle, CB_GETCOUNT, 0, ByVal 0&) > 0 Then
             Me.FComboItemsClear
-            Me.FComboItemsAdd , Ambient.DisplayName
+            Me.FComboItemsAdd 1, Ambient.DisplayName
             Me.FComboItemSelected(1) = True
         End If
     End If
@@ -607,47 +612,25 @@ Static InProc As Boolean
 If InProc = True Then Exit Sub
 InProc = True
 With UserControl
-If DPICorrectionFactor() <> 1 Then
-    .Extender.Move .Extender.Left + .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top + .ScaleY(1, vbPixels, vbContainerPosition)
-    .Extender.Move .Extender.Left - .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top - .ScaleY(1, vbPixels, vbContainerPosition)
-End If
+If DPICorrectionFactor() <> 1 Then Call SyncObjectRectsToContainer(Me)
 If ImageComboHandle = 0 Then InProc = False: Exit Sub
 Dim WndRect As RECT
 If PropStyle <> ImcStyleSimpleCombo Then
-    If DPICorrectionFactor() <> 1 Then
-        MoveWindow ImageComboHandle, 0, 0, .ScaleX(.Extender.Width, vbContainerSize, vbPixels), .ScaleY(.Extender.Height, vbContainerSize, vbPixels), 1
-    Else
-        MoveWindow ImageComboHandle, 0, 0, .ScaleWidth, .ScaleHeight, 1
-    End If
+    MoveWindow ImageComboHandle, 0, 0, .ScaleWidth, .ScaleHeight, 1
     GetWindowRect ImageComboHandle, WndRect
-    If DPICorrectionFactor() <> 1 Then
-        If (WndRect.Bottom - WndRect.Top) <> CLng(.ScaleY(.Extender.Height, vbContainerSize, vbPixels)) Or (WndRect.Right - WndRect.Left) <> CLng(.ScaleX(.Extender.Width, vbContainerSize, vbPixels)) Then
-            .Extender.Height = .ScaleY((WndRect.Bottom - WndRect.Top), vbPixels, vbContainerSize)
-            .Extender.Move .Extender.Left + .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top + .ScaleY(1, vbPixels, vbContainerPosition)
-            .Extender.Move .Extender.Left - .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top - .ScaleY(1, vbPixels, vbContainerPosition)
-        End If
-    Else
-        If (WndRect.Bottom - WndRect.Top) <> .ScaleHeight Or (WndRect.Right - WndRect.Left) <> .ScaleWidth Then
-            .Extender.Height = .ScaleY((WndRect.Bottom - WndRect.Top), vbPixels, vbContainerSize)
-        End If
+    If (WndRect.Bottom - WndRect.Top) <> .ScaleHeight Or (WndRect.Right - WndRect.Left) <> .ScaleWidth Then
+        .Extender.Height = .ScaleY((WndRect.Bottom - WndRect.Top), vbPixels, vbContainerSize)
+        If DPICorrectionFactor() <> 1 Then Call SyncObjectRectsToContainer(Me)
     End If
     ' Call SetDropDownHeight(True) is not needed as 'ImageComboComboHandle' is not touched.
 Else
     Dim ListRect As RECT, EditHeight As Long, ItemHeight As Long
     Dim Height As Long, Temp As Long, Count As Long
-    If DPICorrectionFactor() <> 1 Then
-        MoveWindow ImageComboHandle, 0, 0, .ScaleX(.Extender.Width, vbContainerSize, vbPixels), 100, 1
-    Else
-        MoveWindow ImageComboHandle, 0, 0, .ScaleWidth, 100, 1
-    End If
+    MoveWindow ImageComboHandle, 0, 0, .ScaleWidth, 100, 1
     GetWindowRect ImageComboHandle, WndRect
     If ImageComboListHandle <> 0 Then GetWindowRect ImageComboListHandle, ListRect
     EditHeight = (WndRect.Bottom - WndRect.Top) - (ListRect.Bottom - ListRect.Top)
-    If DPICorrectionFactor() <> 1 Then
-        MoveWindow ImageComboHandle, 0, 0, .ScaleX(.Extender.Width, vbContainerSize, vbPixels), .ScaleY(.Extender.Height, vbContainerSize, vbPixels), 1
-    Else
-        MoveWindow ImageComboHandle, 0, 0, .ScaleWidth, .ScaleHeight, 1
-    End If
+    MoveWindow ImageComboHandle, 0, 0, .ScaleWidth, .ScaleHeight, 1
     GetWindowRect ImageComboHandle, WndRect
     ItemHeight = SendMessage(ImageComboHandle, CB_GETITEMHEIGHT, 0, ByVal 0&)
     Temp = (WndRect.Bottom - WndRect.Top) - EditHeight
@@ -668,10 +651,7 @@ Else
         Height = EditHeight
     End If
     .Extender.Height = .ScaleY(Height, vbPixels, vbContainerSize)
-    If DPICorrectionFactor() <> 1 Then
-        .Extender.Move .Extender.Left + .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top + .ScaleY(1, vbPixels, vbContainerPosition)
-        .Extender.Move .Extender.Left - .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top - .ScaleY(1, vbPixels, vbContainerPosition)
-    End If
+    If DPICorrectionFactor() <> 1 Then Call SyncObjectRectsToContainer(Me)
 End If
 MoveWindow ImageComboHandle, 0, 0, .ScaleWidth, .ScaleHeight, 1
 End With
@@ -679,8 +659,8 @@ InProc = False
 End Sub
 
 Private Sub UserControl_Terminate()
-Call RemoveVTableSubclass(Me, VTableInterfaceInPlaceActiveObject)
-Call RemoveVTableSubclass(Me, VTableInterfacePerPropertyBrowsing)
+Call RemoveVTableHandling(Me, VTableInterfaceInPlaceActiveObject)
+Call RemoveVTableHandling(Me, VTableInterfacePerPropertyBrowsing)
 Call DestroyImageCombo
 Call ComCtlsReleaseShellMod
 End Sub
@@ -970,6 +950,7 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
+If ImageComboDesignMode = False Then Call RefreshMousePointer
 UserControl.PropertyChanged "MousePointer"
 End Property
 
@@ -989,7 +970,7 @@ Else
     If Value.Type = vbPicTypeIcon Or Value.Handle = 0 Then
         Set PropMouseIcon = Value
     Else
-        If Ambient.UserMode = False Then
+        If ImageComboDesignMode = True Then
             MsgBox "Invalid property value", vbCritical + vbOKOnly
             Exit Property
         Else
@@ -997,6 +978,7 @@ Else
         End If
     End If
 End If
+If ImageComboDesignMode = False Then Call RefreshMousePointer
 UserControl.PropertyChanged "MouseIcon"
 End Property
 
@@ -1021,7 +1003,7 @@ PropRightToLeft = Value
 UserControl.RightToLeft = PropRightToLeft
 Call ComCtlsCheckRightToLeft(PropRightToLeft, UserControl.RightToLeft, PropRightToLeftMode)
 Dim dwMask As Long
-If Ambient.UserMode = True Then
+If ImageComboDesignMode = False Then
     If PropRightToLeft = True And PropRightToLeftLayout = True Then dwMask = WS_EX_LAYOUTRTL
     Call ComCtlsSetRightToLeft(UserControl.hWnd, dwMask)
     dwMask = 0
@@ -1073,8 +1055,8 @@ End Property
 
 Public Property Get ImageList() As Variant
 Attribute ImageList.VB_Description = "Returns/sets the image list control to be used."
-If Ambient.UserMode = True Then
-    If PropImageListInit = False And PropImageListControl Is Nothing Then
+If ImageComboDesignMode = False Then
+    If PropImageListInit = False And ImageComboImageListObjectPointer = 0 Then
         If Not PropImageListName = "(None)" Then Me.ImageList = PropImageListName
         PropImageListInit = True
     End If
@@ -1099,8 +1081,8 @@ If ImageComboHandle <> 0 Then
         End If
         If Success = True Then
             SendMessage ImageComboHandle, CBEM_SETIMAGELIST, 0, ByVal Handle
+            ImageComboImageListObjectPointer = ObjPtr(Value)
             PropImageListName = ProperControlName(Value)
-            Set PropImageListControl = Value
         End If
     ElseIf VarType(Value) = vbString Then
         Dim ControlEnum As Object, CompareName As String
@@ -1113,10 +1095,10 @@ If ImageComboHandle <> 0 Then
                     Success = CBool(Err.Number = 0 And Handle <> 0)
                     If Success = True Then
                         SendMessage ImageComboHandle, CBEM_SETIMAGELIST, 0, ByVal Handle
+                        If ImageComboDesignMode = False Then ImageComboImageListObjectPointer = ObjPtr(ControlEnum)
                         PropImageListName = Value
-                        If Ambient.UserMode = True Then Set PropImageListControl = ControlEnum
                         Exit For
-                    ElseIf Ambient.UserMode = False Then
+                    ElseIf ImageComboDesignMode = True Then
                         PropImageListName = Value
                         Success = True
                         Exit For
@@ -1128,8 +1110,8 @@ If ImageComboHandle <> 0 Then
     On Error GoTo 0
     If Success = False Then
         SendMessage ImageComboHandle, CBEM_SETIMAGELIST, 0, ByVal 0&
+        ImageComboImageListObjectPointer = 0
         PropImageListName = "(None)"
-        Set PropImageListControl = Nothing
     ElseIf Handle = 0 Then
         SendMessage ImageComboHandle, CBEM_SETIMAGELIST, 0, ByVal 0&
     End If
@@ -1150,7 +1132,7 @@ End Property
 Public Property Let Style(ByVal Value As ImcStyleConstants)
 Select Case Value
     Case ImcStyleDropDownCombo, ImcStyleSimpleCombo, ImcStyleDropDownList
-        If Ambient.UserMode = True Then
+        If ImageComboDesignMode = False Then
             Err.Raise Number:=382, Description:="Style property is read-only at run time"
         Else
             PropStyle = Value
@@ -1176,34 +1158,6 @@ Public Property Let Locked(ByVal Value As Boolean)
 PropLocked = Value
 If ImageComboHandle <> 0 And ImageComboEditHandle <> 0 Then SendMessage ImageComboEditHandle, EM_SETREADONLY, IIf(PropLocked = True, 1, 0), ByVal 0&
 UserControl.PropertyChanged "Locked"
-End Property
-
-Public Property Get BackColor() As OLE_COLOR
-Attribute BackColor.VB_Description = "Returns/sets the background color used to display text and graphics in an object. This property is ignored at design time."
-Attribute BackColor.VB_UserMemId = -501
-BackColor = PropBackColor
-End Property
-
-Public Property Let BackColor(ByVal Value As OLE_COLOR)
-PropBackColor = Value
-If ImageComboHandle <> 0 And Ambient.UserMode = True Then
-    If ImageComboBackColorBrush <> 0 Then DeleteObject ImageComboBackColorBrush
-    ImageComboBackColorBrush = CreateSolidBrush(WinColor(PropBackColor))
-End If
-Me.Refresh
-UserControl.PropertyChanged "BackColor"
-End Property
-
-Public Property Get ForeColor() As OLE_COLOR
-Attribute ForeColor.VB_Description = "Returns/sets the foreground color used to display text and graphics in an object. This property is ignored at design time."
-Attribute ForeColor.VB_UserMemId = -513
-ForeColor = PropForeColor
-End Property
-
-Public Property Let ForeColor(ByVal Value As OLE_COLOR)
-PropForeColor = Value
-Me.Refresh
-UserControl.PropertyChanged "ForeColor"
 End Property
 
 Public Property Get Text() As String
@@ -1234,7 +1188,7 @@ Select Case PropStyle
             Text = PropText
         End If
     Case ImcStyleDropDownList
-        If ImageComboComboHandle <> 0 And Ambient.UserMode = True Then
+        If ImageComboComboHandle <> 0 And ImageComboDesignMode = False Then
             Dim iItem As Long
             iItem = SendMessage(ImageComboComboHandle, CB_GETCURSEL, 0, ByVal 0&)
             If Not iItem = CB_ERR Then
@@ -1267,7 +1221,7 @@ Select Case PropStyle
         PropText = Value
         If ImageComboHandle <> 0 And ImageComboEditHandle <> 0 Then SendMessage ImageComboEditHandle, WM_SETTEXT, 0, ByVal StrPtr(PropText)
     Case ImcStyleDropDownList
-        If Ambient.UserMode = True Then
+        If ImageComboDesignMode = False Then
             Dim Item As ImcComboItem
             Set Item = Me.FindItem(Value)
             If Not Item Is Nothing Then
@@ -1289,7 +1243,7 @@ End Property
 
 Public Property Let Indentation(ByVal Value As Long)
 If Value < 0 Then
-    If Ambient.UserMode = False Then
+    If ImageComboDesignMode = True Then
         MsgBox "Invalid property value", vbCritical + vbOKOnly
         Exit Property
     Else
@@ -1325,7 +1279,7 @@ Select Case Value
     Case 1 To 30
         PropMaxDropDownItems = Value
     Case Else
-        If Ambient.UserMode = False Then
+        If ImageComboDesignMode = True Then
             MsgBox "Invalid property value", vbCritical + vbOKOnly
             Exit Property
         Else
@@ -1361,7 +1315,7 @@ End Property
 
 Public Property Let MaxLength(ByVal Value As Long)
 If Value < 0 Then
-    If Ambient.UserMode = False Then
+    If ImageComboDesignMode = True Then
         MsgBox "Invalid property value", vbCritical + vbOKOnly
         Exit Property
     Else
@@ -1385,7 +1339,7 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
-If ImageComboHandle <> 0 And ImageComboEditHandle <> 0 And Ambient.UserMode = True Then
+If ImageComboHandle <> 0 And ImageComboEditHandle <> 0 And ImageComboDesignMode = False Then
     If GetFocus() = ImageComboEditHandle Then Call ComCtlsSetIMEMode(ImageComboEditHandle, ImageComboIMCHandle, PropIMEMode)
 End If
 UserControl.PropertyChanged "IMEMode"
@@ -1434,17 +1388,11 @@ End If
 Set ComboItems = PropComboItems
 End Property
 
-Friend Sub FComboItemsAdd(Optional ByVal Index As Long, Optional ByVal Text As String, Optional ByVal ImageIndex As Long, Optional ByVal SelImageIndex As Long, Optional ByVal Indentation As Variant)
-Dim ComboItemIndex As Long
-If Index = 0 Then
-    ComboItemIndex = Me.ComboItems.Count + 1
-Else
-    ComboItemIndex = Index
-End If
+Friend Sub FComboItemsAdd(ByVal Index As Long, Optional ByVal Text As String, Optional ByVal ImageIndex As Long, Optional ByVal SelImageIndex As Long, Optional ByVal Indentation As Variant)
 Dim CBEI As COMBOBOXEXITEM
 With CBEI
 .Mask = CBEIF_TEXT Or CBEIF_IMAGE Or CBEIF_SELECTEDIMAGE Or CBEIF_LPARAM Or CBEIF_INDENT
-.iItem = ComboItemIndex - 1
+.iItem = Index - 1
 .pszText = StrPtr(Text)
 .cchTextMax = Len(Text)
 .iImage = ImageIndex - 1
@@ -1649,7 +1597,7 @@ Select Case PropStyle
     Case ImcStyleDropDownList
         dwStyle = dwStyle Or CBS_DROPDOWNLIST
 End Select
-ImageComboHandle = CreateWindowEx(dwExStyle, StrPtr("ComboBoxEx32"), StrPtr("Image Combo"), dwStyle, 0, 0, UserControl.ScaleWidth, UserControl.ScaleHeight, UserControl.hWnd, 0, App.hInstance, ByVal 0&)
+ImageComboHandle = CreateWindowEx(dwExStyle, StrPtr("ComboBoxEx32"), 0, dwStyle, 0, 0, UserControl.ScaleWidth, UserControl.ScaleHeight, UserControl.hWnd, 0, App.hInstance, ByVal 0&)
 If ImageComboHandle <> 0 Then
     SendMessage ImageComboHandle, CBEM_SETUNICODEFORMAT, 1, ByVal 0&
     ImageComboComboHandle = SendMessage(ImageComboHandle, CBEM_GETCOMBOCONTROL, 0, ByVal 0&)
@@ -1689,9 +1637,8 @@ Me.ExtendedUI = PropExtendedUI
 Me.MaxDropDownItems = PropMaxDropDownItems
 If PropShowImages = False Then Me.ShowImages = PropShowImages
 If PropEllipsisFormat <> ImcEllipsisFormatNone Then Me.EllipsisFormat = PropEllipsisFormat
-If Ambient.UserMode = True Then
+If ImageComboDesignMode = False Then
     If ImageComboHandle <> 0 Then
-        If ImageComboBackColorBrush = 0 Then ImageComboBackColorBrush = CreateSolidBrush(WinColor(PropBackColor))
         Call ComCtlsSetSubclass(ImageComboHandle, Me, 1)
         If ImageComboComboHandle <> 0 Then Call ComCtlsSetSubclass(ImageComboComboHandle, Me, 2)
         If ImageComboEditHandle <> 0 Then
@@ -1703,7 +1650,7 @@ If Ambient.UserMode = True Then
     Call ComCtlsSetSubclass(UserControl.hWnd, Me, 5)
 Else
     If PropStyle = ImcStyleDropDownList Then
-        Me.FComboItemsAdd , Ambient.DisplayName
+        Me.FComboItemsAdd 1, Ambient.DisplayName
         If ImageComboHandle <> 0 Then SendMessage ImageComboHandle, CB_SETCURSEL, 0, ByVal 0&
     End If
 End If
@@ -1728,10 +1675,6 @@ ImageComboEditHandle = 0
 If ImageComboFontHandle <> 0 Then
     DeleteObject ImageComboFontHandle
     ImageComboFontHandle = 0
-End If
-If ImageComboBackColorBrush <> 0 Then
-    DeleteObject ImageComboBackColorBrush
-    ImageComboBackColorBrush = 0
 End If
 End Sub
 
@@ -1799,6 +1742,7 @@ End Property
 Public Property Let SelText(ByVal Value As String)
 If ImageComboHandle <> 0 Then
     If ImageComboEditHandle <> 0 Then
+        If StrPtr(Value) = 0 Then Value = ""
         SendMessage ImageComboEditHandle, EM_REPLACESEL, 0, ByVal StrPtr(Value)
     Else
         Err.Raise 380
@@ -1999,6 +1943,10 @@ If TopIndex <> ImageComboTopIndex Then
 End If
 End Sub
 
+Private Function PropImageListControl() As Object
+If ImageComboImageListObjectPointer <> 0 Then Set PropImageListControl = PtrToObj(ImageComboImageListObjectPointer)
+End Function
+
 Private Function ISubclass_Message(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal dwRefData As Long) As Long
 Select Case dwRefData
     Case 1
@@ -2021,33 +1969,6 @@ Select Case wMsg
         Call ActivateIPAO(Me)
     Case WM_KILLFOCUS
         Call DeActivateIPAO
-    Case WM_MOUSEACTIVATE
-        Static InProc As Boolean
-        If ComCtlsRootIsEditor(hWnd) = False And GetFocus() <> ImageComboHandle And (GetFocus() <> ImageComboComboHandle Or ImageComboComboHandle = 0) And (GetFocus() <> ImageComboEditHandle Or ImageComboEditHandle = 0) Then
-            If InProc = True Then WindowProcControl = MA_NOACTIVATEANDEAT: Exit Function
-            Select Case HiWord(lParam)
-                Case WM_LBUTTONDOWN
-                    On Error Resume Next
-                    With UserControl
-                    If .Extender.CausesValidation = True Then
-                        InProc = True
-                        Call ComCtlsTopParentValidateControls(Me)
-                        InProc = False
-                        If Err.Number = 380 Then
-                            WindowProcControl = MA_NOACTIVATEANDEAT
-                        Else
-                            SetFocusAPI .hWnd
-                            WindowProcControl = MA_NOACTIVATE
-                        End If
-                    Else
-                        SetFocusAPI .hWnd
-                        WindowProcControl = MA_NOACTIVATE
-                    End If
-                    End With
-                    On Error GoTo 0
-                    Exit Function
-            End Select
-        End If
     Case WM_SETCURSOR
         If LoWord(lParam) = HTCLIENT Then
             If MousePointerID(PropMousePointer) <> 0 Then
@@ -2062,14 +1983,6 @@ Select Case wMsg
                 End If
             End If
         End If
-    Case WM_CTLCOLOREDIT, WM_CTLCOLORSTATIC
-        WindowProcControl = ComCtlsDefaultProc(hWnd, wMsg, wParam, lParam)
-        SetBkMode wParam, 1
-        If Me.Enabled = True Then SetTextColor wParam, WinColor(PropForeColor)
-        If ImageComboBackColorBrush <> 0 Then WindowProcControl = ImageComboBackColorBrush
-        Exit Function
-    Case WM_CTLCOLORLISTBOX
-        If PropStyle = ImcStyleDropDownCombo Then SetFocusAPI ImageComboEditHandle
 End Select
 WindowProcControl = ComCtlsDefaultProc(hWnd, wMsg, wParam, lParam)
 End Function
@@ -2077,19 +1990,43 @@ End Function
 Private Function WindowProcCombo(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 Select Case wMsg
     Case WM_SETFOCUS
+        If wParam <> UserControl.hWnd And wParam <> ImageComboHandle And (wParam <> ImageComboEditHandle Or ImageComboEditHandle = 0) Then SetFocusAPI UserControl.hWnd: Exit Function
         Call ActivateIPAO(Me)
     Case WM_KILLFOCUS
         Call DeActivateIPAO
-    Case WM_KEYDOWN, WM_KEYUP
+    Case WM_LBUTTONDOWN
+        If ImageComboEditHandle = 0 Then
+            Select Case GetFocus()
+                Case hWnd, ImageComboHandle
+                Case Else
+                    UCNoSetFocusFwd = True: SetFocusAPI UserControl.hWnd: UCNoSetFocusFwd = False
+            End Select
+        Else
+            Select Case GetFocus()
+                Case hWnd, ImageComboHandle, ImageComboEditHandle
+                Case Else
+                    UCNoSetFocusFwd = True: SetFocusAPI UserControl.hWnd: UCNoSetFocusFwd = False
+            End Select
+        End If
+        PostMessage hWnd, UM_BUTTONDOWN, MakeDWord(vbLeftButton, GetShiftStateFromParam(wParam)), ByVal lParam
+    Case WM_RBUTTONDOWN
+        PostMessage hWnd, UM_BUTTONDOWN, MakeDWord(vbRightButton, GetShiftStateFromParam(wParam)), ByVal lParam
+    Case WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP
         If PropStyle = ImcStyleDropDownList Then
             Dim KeyCode As Integer
             KeyCode = wParam And &HFF&
-            If wMsg = WM_KEYDOWN Then
+            If wMsg = WM_KEYDOWN Or wMsg = WM_KEYUP Then
+                If wMsg = WM_KEYDOWN Then
+                    RaiseEvent KeyDown(KeyCode, GetShiftStateFromMsg())
+                ElseIf wMsg = WM_KEYUP Then
+                    RaiseEvent KeyUp(KeyCode, GetShiftStateFromMsg())
+                End If
+                ImageComboCharCodeCache = ComCtlsPeekCharCode(hWnd)
+            ElseIf wMsg = WM_SYSKEYDOWN Then
                 RaiseEvent KeyDown(KeyCode, GetShiftStateFromMsg())
-            ElseIf wMsg = WM_KEYUP Then
+            ElseIf wMsg = WM_SYSKEYUP Then
                 RaiseEvent KeyUp(KeyCode, GetShiftStateFromMsg())
             End If
-            ImageComboCharCodeCache = ComCtlsPeekCharCode(hWnd)
             wParam = KeyCode
         End If
     Case WM_CHAR
@@ -2106,7 +2043,19 @@ Select Case wMsg
         End If
     Case WM_UNICHAR
         If PropStyle = ImcStyleDropDownList Then
-            If wParam = UNICODE_NOCHAR Then WindowProcCombo = 1 Else SendMessage hWnd, WM_CHAR, wParam, ByVal lParam
+            If wParam = UNICODE_NOCHAR Then
+                WindowProcCombo = 1
+            Else
+                Dim UTF16 As String
+                UTF16 = UTF32CodePoint_To_UTF16(wParam)
+                If Len(UTF16) = 1 Then
+                    SendMessage hWnd, WM_CHAR, CIntToUInt(AscW(UTF16)), ByVal lParam
+                ElseIf Len(UTF16) = 2 Then
+                    SendMessage hWnd, WM_CHAR, CIntToUInt(AscW(Left$(UTF16, 1))), ByVal lParam
+                    SendMessage hWnd, WM_CHAR, CIntToUInt(AscW(Right$(UTF16, 1))), ByVal lParam
+                End If
+                WindowProcCombo = 0
+            End If
             Exit Function
         End If
     Case WM_IME_CHAR
@@ -2154,10 +2103,6 @@ Select Case wMsg
                 If HiWord(wParam) = EN_UPDATE Then RedrawWindow ImageComboEditHandle, 0, 0, RDW_UPDATENOW Or RDW_INVALIDATE Or RDW_ERASE Or RDW_ALLCHILDREN
             End If
         End If
-    Case WM_LBUTTONDOWN
-        PostMessage hWnd, UM_BUTTONDOWN, MakeDWord(vbLeftButton, GetShiftStateFromParam(wParam)), ByVal lParam
-    Case WM_RBUTTONDOWN
-        PostMessage hWnd, UM_BUTTONDOWN, MakeDWord(vbRightButton, GetShiftStateFromParam(wParam)), ByVal lParam
     Case UM_BUTTONDOWN
         ' The control enters a modal message loop on WM_LBUTTONDOWN and WM_RBUTTONDOWN. (DragDetect)
         ' This workaround is necessary to raise 'MouseDown' before the button was released or the mouse was moved.
@@ -2173,6 +2118,21 @@ Select Case wMsg
         Y = UserControl.ScaleY(Get_Y_lParam(lParam), vbPixels, vbTwips)
         Select Case wMsg
             Case WM_LBUTTONDOWN
+                ' In case DragDetect returns 0 then the control will set focus the focus automatically.
+                ' Otherwise not. So check and change focus, if needed.
+                If ImageComboEditHandle = 0 Then
+                    Select Case GetFocus()
+                        Case hWnd, ImageComboHandle
+                        Case Else
+                            SetFocusAPI hWnd
+                    End Select
+                Else
+                    Select Case GetFocus()
+                        Case hWnd, ImageComboHandle, ImageComboEditHandle
+                        Case Else
+                            SetFocusAPI ImageComboEditHandle
+                    End Select
+                End If
                 ' See UM_BUTTONDOWN
                 If ComCtlsSupportLevel() = 0 Then
                     ' The WM_LBUTTONUP message is not sent if the comctl32.dll version is 5.8x. (bug?)
@@ -2220,19 +2180,31 @@ End Function
 Private Function WindowProcEdit(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 Select Case wMsg
     Case WM_SETFOCUS
-        If wParam <> ImageComboComboHandle Then SetFocusAPI UserControl.hWnd: Exit Function
+        If wParam <> UserControl.hWnd And wParam <> ImageComboHandle And wParam <> ImageComboComboHandle Then SetFocusAPI UserControl.hWnd: Exit Function
         Call ActivateIPAO(Me)
     Case WM_KILLFOCUS
         Call DeActivateIPAO
-    Case WM_KEYDOWN, WM_KEYUP
+    Case WM_LBUTTONDOWN
+        Select Case GetFocus()
+            Case hWnd, ImageComboHandle, ImageComboComboHandle
+            Case Else
+                UCNoSetFocusFwd = True: SetFocusAPI UserControl.hWnd: UCNoSetFocusFwd = False
+        End Select
+    Case WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP
         Dim KeyCode As Integer
         KeyCode = wParam And &HFF&
-        If wMsg = WM_KEYDOWN Then
+        If wMsg = WM_KEYDOWN Or wMsg = WM_KEYUP Then
+            If wMsg = WM_KEYDOWN Then
+                RaiseEvent KeyDown(KeyCode, GetShiftStateFromMsg())
+            ElseIf wMsg = WM_KEYUP Then
+                RaiseEvent KeyUp(KeyCode, GetShiftStateFromMsg())
+            End If
+            ImageComboCharCodeCache = ComCtlsPeekCharCode(hWnd)
+        ElseIf wMsg = WM_SYSKEYDOWN Then
             RaiseEvent KeyDown(KeyCode, GetShiftStateFromMsg())
-        ElseIf wMsg = WM_KEYUP Then
+        ElseIf wMsg = WM_SYSKEYUP Then
             RaiseEvent KeyUp(KeyCode, GetShiftStateFromMsg())
         End If
-        ImageComboCharCodeCache = ComCtlsPeekCharCode(hWnd)
         wParam = KeyCode
     Case WM_CHAR
         Dim KeyChar As Integer
@@ -2249,7 +2221,19 @@ Select Case wMsg
             wParam = CIntToUInt(KeyChar)
         End If
     Case WM_UNICHAR
-        If wParam = UNICODE_NOCHAR Then WindowProcEdit = 1 Else SendMessage hWnd, WM_CHAR, wParam, ByVal lParam
+        If wParam = UNICODE_NOCHAR Then
+            WindowProcEdit = 1
+        Else
+            Dim UTF16 As String
+            UTF16 = UTF32CodePoint_To_UTF16(wParam)
+            If Len(UTF16) = 1 Then
+                SendMessage hWnd, WM_CHAR, CIntToUInt(AscW(UTF16)), ByVal lParam
+            ElseIf Len(UTF16) = 2 Then
+                SendMessage hWnd, WM_CHAR, CIntToUInt(AscW(Left$(UTF16, 1))), ByVal lParam
+                SendMessage hWnd, WM_CHAR, CIntToUInt(AscW(Right$(UTF16, 1))), ByVal lParam
+            End If
+            WindowProcEdit = 0
+        End If
         Exit Function
     Case WM_INPUTLANGCHANGE
         Call ComCtlsSetIMEMode(hWnd, ImageComboIMCHandle, PropIMEMode)
@@ -2257,6 +2241,9 @@ Select Case wMsg
         If wParam <> 0 Then Call ComCtlsSetIMEMode(hWnd, ImageComboIMCHandle, PropIMEMode)
     Case WM_IME_CHAR
         SendMessage hWnd, WM_CHAR, wParam, ByVal lParam
+        Exit Function
+    Case UM_SETFOCUS
+        SetFocusAPI hWnd
         Exit Function
 End Select
 WindowProcEdit = ComCtlsDefaultProc(hWnd, wMsg, wParam, lParam)
@@ -2321,13 +2308,13 @@ Select Case wMsg
                     Exit Function
             End Select
         End If
-    Case WM_LBUTTONDOWN, WM_MBUTTONDOWN, WM_RBUTTONDOWN, WM_MOUSEMOVE, WM_LBUTTONUP, WM_MBUTTONUP, WM_RBUTTONUP
+    Case WM_LBUTTONDOWN, WM_MBUTTONDOWN, WM_RBUTTONDOWN, WM_MOUSEMOVE, WM_LBUTTONUP, WM_MBUTTONUP, WM_RBUTTONUP, WM_LBUTTONDBLCLK, WM_MBUTTONDBLCLK, WM_RBUTTONDBLCLK
         If PropLocked = True Then
             Dim P As POINTAPI
             P.X = Get_X_lParam(lParam)
             P.Y = Get_Y_lParam(lParam)
-            ClientToScreen ImageComboListHandle, P
-            If Not LBItemFromPt(ImageComboListHandle, P.X, P.Y, 0) = LB_ERR Then Exit Function
+            ClientToScreen hWnd, P
+            If Not LBItemFromPt(hWnd, P.X, P.Y, 0) = LB_ERR Then Exit Function
         End If
     Case WM_VSCROLL
         Select Case LoWord(wParam)
@@ -2387,7 +2374,17 @@ Select Case wMsg
                     End If
                 End If
             Case CBN_DROPDOWN
+                If PropStyle <> ImcStyleDropDownList And ImageComboEditHandle <> 0 Then
+                    If GetCursor() = 0 Then
+                        ' The mouse cursor can be hidden when showing the drop-down list upon a change event.
+                        ' Reason is that the edit control hides the cursor and a following mouse move will show it again.
+                        ' However, the drop-down list will set a mouse capture and thus the cursor keeps hidden.
+                        ' Solution is to refresh the cursor by sending a WM_SETCURSOR.
+                        Call RefreshMousePointer(lParam)
+                    End If
+                End If
                 RaiseEvent DropDown
+                If ImageComboEditHandle <> 0 Then PostMessage ImageComboEditHandle, UM_SETFOCUS, 0, ByVal 0&
             Case CBN_CLOSEUP
                 RaiseEvent CloseUp
         End Select
@@ -2441,5 +2438,5 @@ Select Case wMsg
         End If
 End Select
 WindowProcUserControl = ComCtlsDefaultProc(hWnd, wMsg, wParam, lParam)
-If wMsg = WM_SETFOCUS Then SetFocusAPI ImageComboHandle
+If wMsg = WM_SETFOCUS And UCNoSetFocusFwd = False Then SetFocusAPI ImageComboHandle
 End Function

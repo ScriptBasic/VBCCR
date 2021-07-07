@@ -2,58 +2,50 @@ VERSION 5.00
 Begin VB.PropertyPage PPToolBarButtons 
    AutoRedraw      =   -1  'True
    Caption         =   "Buttons"
-   ClientHeight    =   4875
+   ClientHeight    =   5625
    ClientLeft      =   0
    ClientTop       =   0
    ClientWidth     =   6225
    LockControls    =   -1  'True
    PaletteMode     =   0  'Halftone
-   ScaleHeight     =   4875
+   ScaleHeight     =   5625
    ScaleWidth      =   6225
-   Begin VBCCR15.CommandButtonW CommandForeColor 
+   Begin VB.CommandButton CommandForeColor 
+      BackColor       =   &H80000012&
+      Enabled         =   0   'False
       Height          =   225
       Left            =   4200
+      Style           =   1  'Graphical
       TabIndex        =   23
       Top             =   840
       Width           =   495
-      _ExtentX        =   0
-      _ExtentY        =   0
-      BackColor       =   -2147483630
-      Enabled         =   0   'False
-      Style           =   1
    End
-   Begin VBCCR15.CheckBoxW CheckHighLighted 
+   Begin VB.CheckBox CheckHighLighted 
+      Caption         =   "&HighLighted"
+      Enabled         =   0   'False
       Height          =   285
       Left            =   4800
       TabIndex        =   27
       Top             =   1560
       Width           =   1215
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Enabled         =   0   'False
-      Caption         =   "PPToolBarButtons.pgx":0000
    End
-   Begin VBCCR15.CheckBoxW CheckAutoSize 
+   Begin VB.CheckBox CheckAutoSize 
+      Caption         =   "&AutoSize"
+      Enabled         =   0   'False
       Height          =   285
       Left            =   3360
       TabIndex        =   30
       Top             =   2280
       Width           =   1215
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Enabled         =   0   'False
-      Caption         =   "PPToolBarButtons.pgx":0038
    End
-   Begin VBCCR15.CheckBoxW CheckNoPrefix 
+   Begin VB.CheckBox CheckNoPrefix 
+      Caption         =   "NoPrefi&x"
+      Enabled         =   0   'False
       Height          =   285
       Left            =   4800
       TabIndex        =   29
       Top             =   1920
       Width           =   1215
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Enabled         =   0   'False
-      Caption         =   "PPToolBarButtons.pgx":006A
    End
    Begin VB.Frame FrameButtonMenus 
       Caption         =   "ButtonMenus"
@@ -73,17 +65,15 @@ Begin VB.PropertyPage PPToolBarButtons
          TabStop         =   0   'False
          Top             =   240
          Width           =   1035
-         Begin VBCCR15.CommandButtonW CommandButtonMenuRemove 
+         Begin VB.CommandButton CommandButtonMenuRemove 
+            Caption         =   "Remove..."
+            Enabled         =   0   'False
             Height          =   315
             Left            =   0
             TabIndex        =   43
             ToolTipText     =   "Remove Selected Button Menu"
             Top             =   0
             Width           =   1035
-            _ExtentX        =   0
-            _ExtentY        =   0
-            Enabled         =   0   'False
-            Caption         =   "PPToolBarButtons.pgx":009C
          End
       End
       Begin VB.PictureBox PictureCommandButtonMenuInsert 
@@ -97,17 +87,15 @@ Begin VB.PropertyPage PPToolBarButtons
          TabStop         =   0   'False
          Top             =   240
          Width           =   1035
-         Begin VBCCR15.CommandButtonW CommandButtonMenuInsert 
+         Begin VB.CommandButton CommandButtonMenuInsert 
+            Caption         =   "Insert..."
+            Enabled         =   0   'False
             Height          =   315
             Left            =   0
             TabIndex        =   41
             ToolTipText     =   "Insert Button Menu"
             Top             =   0
             Width           =   1035
-            _ExtentX        =   0
-            _ExtentY        =   0
-            Enabled         =   0   'False
-            Caption         =   "PPToolBarButtons.pgx":00CE
          End
       End
       Begin VB.PictureBox PictureCommandButtonMenuNext 
@@ -121,16 +109,11 @@ Begin VB.PropertyPage PPToolBarButtons
          TabStop         =   0   'False
          Top             =   240
          Width           =   300
-         Begin VBCCR15.CommandButtonW CommandButtonMenuNext 
-            Height          =   315
-            Left            =   0
-            TabIndex        =   39
-            ToolTipText     =   "Select Next Button Menu"
-            Top             =   0
-            Width           =   300
-            _ExtentX        =   0
-            _ExtentY        =   0
-            BeginProperty Font {0BE35203-8F91-11CE-9DE3-00AA004BB851} 
+         Begin VB.CommandButton CommandButtonMenuNext 
+            Appearance      =   0  'Flat
+            Caption         =   "4"
+            Enabled         =   0   'False
+            BeginProperty Font 
                Name            =   "Marlett"
                Size            =   9
                Charset         =   2
@@ -139,9 +122,12 @@ Begin VB.PropertyPage PPToolBarButtons
                Italic          =   0   'False
                Strikethrough   =   0   'False
             EndProperty
-            Appearance      =   0
-            Enabled         =   0   'False
-            Caption         =   "PPToolBarButtons.pgx":0100
+            Height          =   315
+            Left            =   0
+            TabIndex        =   39
+            ToolTipText     =   "Select Next Button Menu"
+            Top             =   0
+            Width           =   300
          End
       End
       Begin VB.PictureBox PictureCommandButtonMenuBack 
@@ -155,16 +141,10 @@ Begin VB.PropertyPage PPToolBarButtons
          TabStop         =   0   'False
          Top             =   240
          Width           =   300
-         Begin VBCCR15.CommandButtonW CommandButtonMenuBack 
-            Height          =   315
-            Left            =   0
-            TabIndex        =   37
-            ToolTipText     =   "Select Previous Button Menu"
-            Top             =   0
-            Width           =   300
-            _ExtentX        =   0
-            _ExtentY        =   0
-            BeginProperty Font {0BE35203-8F91-11CE-9DE3-00AA004BB851} 
+         Begin VB.CommandButton CommandButtonMenuBack 
+            Caption         =   "3"
+            Enabled         =   0   'False
+            BeginProperty Font 
                Name            =   "Marlett"
                Size            =   9
                Charset         =   2
@@ -173,55 +153,51 @@ Begin VB.PropertyPage PPToolBarButtons
                Italic          =   0   'False
                Strikethrough   =   0   'False
             EndProperty
-            Enabled         =   0   'False
-            Caption         =   "PPToolBarButtons.pgx":0122
+            Height          =   315
+            Left            =   0
+            TabIndex        =   37
+            ToolTipText     =   "Select Previous Button Menu"
+            Top             =   0
+            Width           =   300
          End
       End
-      Begin VBCCR15.CheckBoxW CheckButtonMenuSeparator 
+      Begin VB.CheckBox CheckButtonMenuSeparator 
+         Caption         =   "Separator"
+         Enabled         =   0   'False
          Height          =   285
          Left            =   4680
          TabIndex        =   53
          Top             =   960
          Width           =   1215
-         _ExtentX        =   0
-         _ExtentY        =   0
-         Enabled         =   0   'False
-         Caption         =   "PPToolBarButtons.pgx":0144
       End
-      Begin VBCCR15.CheckBoxW CheckButtonMenuChecked 
+      Begin VB.CheckBox CheckButtonMenuChecked 
+         Caption         =   "Checked"
+         Enabled         =   0   'False
          Height          =   285
          Left            =   3240
          TabIndex        =   52
          Top             =   960
          Width           =   1215
-         _ExtentX        =   0
-         _ExtentY        =   0
-         Enabled         =   0   'False
-         Caption         =   "PPToolBarButtons.pgx":0176
       End
-      Begin VBCCR15.CheckBoxW CheckButtonMenuVisible 
+      Begin VB.CheckBox CheckButtonMenuVisible 
+         Caption         =   "Visible"
+         Enabled         =   0   'False
          Height          =   285
          Left            =   1800
          TabIndex        =   51
          Top             =   960
          Width           =   1215
-         _ExtentX        =   0
-         _ExtentY        =   0
-         Enabled         =   0   'False
-         Caption         =   "PPToolBarButtons.pgx":01A4
       End
-      Begin VBCCR15.CheckBoxW CheckButtonMenuEnabled 
+      Begin VB.CheckBox CheckButtonMenuEnabled 
+         Caption         =   "Enabled"
+         Enabled         =   0   'False
          Height          =   285
          Left            =   360
          TabIndex        =   50
          Top             =   960
          Width           =   1215
-         _ExtentX        =   0
-         _ExtentY        =   0
-         Enabled         =   0   'False
-         Caption         =   "PPToolBarButtons.pgx":01D2
       End
-      Begin VBCCR15.TextBoxW TextButtonMenuTag 
+      Begin VBCCR17.TextBoxW TextButtonMenuTag 
          Height          =   315
          Left            =   4680
          TabIndex        =   49
@@ -232,7 +208,7 @@ Begin VB.PropertyPage PPToolBarButtons
          BackColor       =   -2147483633
          Enabled         =   0   'False
       End
-      Begin VBCCR15.TextBoxW TextButtonMenuKey 
+      Begin VBCCR17.TextBoxW TextButtonMenuKey 
          Height          =   315
          Left            =   2760
          TabIndex        =   47
@@ -243,7 +219,7 @@ Begin VB.PropertyPage PPToolBarButtons
          BackColor       =   -2147483633
          Enabled         =   0   'False
       End
-      Begin VBCCR15.TextBoxW TextButtonMenuText 
+      Begin VBCCR17.TextBoxW TextButtonMenuText 
          Height          =   315
          Left            =   735
          TabIndex        =   45
@@ -254,7 +230,7 @@ Begin VB.PropertyPage PPToolBarButtons
          BackColor       =   -2147483633
          Enabled         =   0   'False
       End
-      Begin VBCCR15.TextBoxW TextButtonMenuIndex 
+      Begin VBCCR17.TextBoxW TextButtonMenuIndex 
          Height          =   315
          Left            =   1200
          TabIndex        =   35
@@ -263,7 +239,7 @@ Begin VB.PropertyPage PPToolBarButtons
          _ExtentX        =   0
          _ExtentY        =   0
          BackColor       =   -2147483633
-         Text            =   "PPToolBarButtons.pgx":0200
+         Enabled         =   0   'False
          Locked          =   -1  'True
       End
       Begin VB.Label LabelButtonMenuTag 
@@ -299,51 +275,43 @@ Begin VB.PropertyPage PPToolBarButtons
          Width           =   975
       End
    End
-   Begin VBCCR15.CheckBoxW CheckNoImage 
+   Begin VB.CheckBox CheckNoImage 
+      Caption         =   "N&oImage"
+      Enabled         =   0   'False
       Height          =   285
       Left            =   3360
       TabIndex        =   28
       Top             =   1920
       Width           =   1215
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Enabled         =   0   'False
-      Caption         =   "PPToolBarButtons.pgx":022C
    End
-   Begin VBCCR15.CheckBoxW CheckMixedState 
+   Begin VB.CheckBox CheckMixedState 
+      Caption         =   "&MixedState"
+      Enabled         =   0   'False
       Height          =   285
       Left            =   3360
       TabIndex        =   26
       Top             =   1560
       Width           =   1215
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Enabled         =   0   'False
-      Caption         =   "PPToolBarButtons.pgx":025C
    End
-   Begin VBCCR15.CheckBoxW CheckVisible 
+   Begin VB.CheckBox CheckVisible 
+      Caption         =   "Visi&ble"
+      Enabled         =   0   'False
       Height          =   285
       Left            =   4800
       TabIndex        =   25
       Top             =   1200
       Width           =   1215
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Enabled         =   0   'False
-      Caption         =   "PPToolBarButtons.pgx":0292
    End
-   Begin VBCCR15.CheckBoxW CheckEnabled 
+   Begin VB.CheckBox CheckEnabled 
+      Caption         =   "&Enabled"
+      Enabled         =   0   'False
       Height          =   285
       Left            =   3360
       TabIndex        =   24
       Top             =   1200
       Width           =   1215
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Enabled         =   0   'False
-      Caption         =   "PPToolBarButtons.pgx":02C2
    End
-   Begin VBCCR15.TextBoxW TextCustomWidth 
+   Begin VBCCR17.TextBoxW TextCustomWidth 
       Height          =   315
       Left            =   4200
       TabIndex        =   32
@@ -354,31 +322,27 @@ Begin VB.PropertyPage PPToolBarButtons
       BackColor       =   -2147483633
       Enabled         =   0   'False
    End
-   Begin VBCCR15.ComboBoxW ComboValue 
+   Begin VB.ComboBox ComboValue 
+      BackColor       =   &H8000000F&
+      Enabled         =   0   'False
       Height          =   315
       Left            =   4200
+      Style           =   2  'Dropdown List
       TabIndex        =   21
       Top             =   480
       Width           =   1815
-      _ExtentX        =   3201
-      _ExtentY        =   556
-      BackColor       =   -2147483633
-      Enabled         =   0   'False
-      Style           =   2
    End
-   Begin VBCCR15.ComboBoxW ComboStyle 
+   Begin VB.ComboBox ComboStyle 
+      BackColor       =   &H8000000F&
+      Enabled         =   0   'False
       Height          =   315
       Left            =   1200
+      Style           =   2  'Dropdown List
       TabIndex        =   13
       Top             =   1560
       Width           =   1815
-      _ExtentX        =   3201
-      _ExtentY        =   556
-      BackColor       =   -2147483633
-      Enabled         =   0   'False
-      Style           =   2
    End
-   Begin VBCCR15.TextBoxW TextDescription 
+   Begin VBCCR17.TextBoxW TextDescription 
       Height          =   315
       Left            =   1200
       TabIndex        =   19
@@ -389,7 +353,7 @@ Begin VB.PropertyPage PPToolBarButtons
       BackColor       =   -2147483633
       Enabled         =   0   'False
    End
-   Begin VBCCR15.TextBoxW TextToolTipText 
+   Begin VBCCR17.TextBoxW TextToolTipText 
       Height          =   315
       Left            =   1200
       TabIndex        =   17
@@ -400,7 +364,7 @@ Begin VB.PropertyPage PPToolBarButtons
       BackColor       =   -2147483633
       Enabled         =   0   'False
    End
-   Begin VBCCR15.TextBoxW TextTag 
+   Begin VBCCR17.TextBoxW TextTag 
       Height          =   315
       Left            =   1200
       TabIndex        =   11
@@ -411,7 +375,7 @@ Begin VB.PropertyPage PPToolBarButtons
       BackColor       =   -2147483633
       Enabled         =   0   'False
    End
-   Begin VBCCR15.TextBoxW TextImage 
+   Begin VBCCR17.TextBoxW TextImage 
       Height          =   315
       Left            =   1200
       TabIndex        =   15
@@ -422,7 +386,7 @@ Begin VB.PropertyPage PPToolBarButtons
       BackColor       =   -2147483633
       Enabled         =   0   'False
    End
-   Begin VBCCR15.TextBoxW TextCaption 
+   Begin VBCCR17.TextBoxW TextCaption 
       Height          =   315
       Left            =   1200
       TabIndex        =   7
@@ -433,7 +397,7 @@ Begin VB.PropertyPage PPToolBarButtons
       BackColor       =   -2147483633
       Enabled         =   0   'False
    End
-   Begin VBCCR15.TextBoxW TextKey 
+   Begin VBCCR17.TextBoxW TextKey 
       Height          =   315
       Left            =   1200
       TabIndex        =   9
@@ -444,16 +408,29 @@ Begin VB.PropertyPage PPToolBarButtons
       BackColor       =   -2147483633
       Enabled         =   0   'False
    End
-   Begin VBCCR15.CommandButtonW CommandBack 
+   Begin VB.CommandButton CommandBack 
+      Caption         =   "3"
+      Enabled         =   0   'False
+      BeginProperty Font 
+         Name            =   "Marlett"
+         Size            =   9
+         Charset         =   2
+         Weight          =   500
+         Underline       =   0   'False
+         Italic          =   0   'False
+         Strikethrough   =   0   'False
+      EndProperty
       Height          =   315
       Left            =   2160
       TabIndex        =   2
       ToolTipText     =   "Select Previous Button"
       Top             =   120
       Width           =   300
-      _ExtentX        =   0
-      _ExtentY        =   0
-      BeginProperty Font {0BE35203-8F91-11CE-9DE3-00AA004BB851} 
+   End
+   Begin VB.CommandButton CommandNext 
+      Caption         =   "4"
+      Enabled         =   0   'False
+      BeginProperty Font 
          Name            =   "Marlett"
          Size            =   9
          Charset         =   2
@@ -462,31 +439,14 @@ Begin VB.PropertyPage PPToolBarButtons
          Italic          =   0   'False
          Strikethrough   =   0   'False
       EndProperty
-      Enabled         =   0   'False
-      Caption         =   "PPToolBarButtons.pgx":02F2
-   End
-   Begin VBCCR15.CommandButtonW CommandNext 
       Height          =   315
       Left            =   2460
       TabIndex        =   3
       ToolTipText     =   "Select Next Button"
       Top             =   120
       Width           =   300
-      _ExtentX        =   0
-      _ExtentY        =   0
-      BeginProperty Font {0BE35203-8F91-11CE-9DE3-00AA004BB851} 
-         Name            =   "Marlett"
-         Size            =   9
-         Charset         =   2
-         Weight          =   500
-         Underline       =   0   'False
-         Italic          =   0   'False
-         Strikethrough   =   0   'False
-      EndProperty
-      Enabled         =   0   'False
-      Caption         =   "PPToolBarButtons.pgx":0314
    End
-   Begin VBCCR15.TextBoxW TextIndex 
+   Begin VBCCR17.TextBoxW TextIndex 
       Height          =   315
       Left            =   1200
       TabIndex        =   1
@@ -495,30 +455,26 @@ Begin VB.PropertyPage PPToolBarButtons
       _ExtentX        =   0
       _ExtentY        =   0
       BackColor       =   -2147483633
-      Text            =   "PPToolBarButtons.pgx":0336
+      Enabled         =   0   'False
       Locked          =   -1  'True
    End
-   Begin VBCCR15.CommandButtonW CommandRemove 
+   Begin VB.CommandButton CommandRemove 
+      Caption         =   "&Remove..."
       Height          =   315
       Left            =   4980
       TabIndex        =   5
       ToolTipText     =   "Remove Selected Button"
       Top             =   120
       Width           =   1035
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Caption         =   "PPToolBarButtons.pgx":0362
    End
-   Begin VBCCR15.CommandButtonW CommandInsert 
+   Begin VB.CommandButton CommandInsert 
+      Caption         =   "I&nsert..."
       Height          =   315
       Left            =   3840
       TabIndex        =   4
       ToolTipText     =   "Insert Button"
       Top             =   120
       Width           =   1035
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Caption         =   "PPToolBarButtons.pgx":0396
    End
    Begin VB.Label LabelForeColor 
       Caption         =   "&ForeColor:"
@@ -647,6 +603,7 @@ End Type
 Private Declare Function OleCreatePropertyFrame Lib "olepro32" (ByVal hWndOwner As Long, ByVal X As Long, ByVal Y As Long, ByVal lpszCaption As Long, ByVal cObjects As Long, ByRef pUnk As IUnknown, ByVal cPages As Long, ByRef pPageCLSID As Any, ByVal LCID As Long, ByVal dwReserved As Long, ByVal pvReserved As Long) As Long
 Private Declare Function CLSIDFromString Lib "ole32" (ByVal lpszProgID As Long, ByRef pCLSID As Any) As Long
 Private Const CLSID_StandardColorPage As String = "{7EBDAAE1-8120-11CF-899F-00AA00688B10}"
+Private SelectedControl As Object
 Private CurrIndex As Long, CurrButtonMenuIndex As Long
 Private PropShadowButtons() As ShadowButtonStruct
 Private FreezeChanged As Boolean
@@ -685,7 +642,6 @@ On Error GoTo 0
 If CurrIndex > 0 Then
     With PropShadowButtons(CurrIndex)
     .Caption = TextCaption.Text
-    .Key = TextKey.Text
     .Tag = TextTag.Text
     .Style = ComboStyle.ItemData(ComboStyle.ListIndex)
     If IsNumeric(TextImage.Text) Then
@@ -708,7 +664,6 @@ If CurrIndex > 0 Then
     If CurrButtonMenuIndex > 0 Then
         With .ButtonMenus(CurrButtonMenuIndex)
         .Text = TextButtonMenuText.Text
-        .Key = TextButtonMenuKey.Text
         .Tag = TextButtonMenuTag.Text
         .Enabled = CBool(CheckButtonMenuEnabled.Value = vbChecked)
         .Visible = CBool(CheckButtonMenuVisible.Value = vbChecked)
@@ -720,7 +675,7 @@ If CurrIndex > 0 Then
     Dim i As Long
     With PropertyPage.SelectedControls(0)
     .Buttons.Remove CurrIndex
-    With .Buttons.Add(CurrIndex, PropShadowButtons(CurrIndex).Key, PropShadowButtons(CurrIndex).Caption, PropShadowButtons(CurrIndex).Style, PropShadowButtons(CurrIndex).Image)
+    With .Buttons.Add(CurrIndex, , PropShadowButtons(CurrIndex).Caption, PropShadowButtons(CurrIndex).Style, PropShadowButtons(CurrIndex).Image)
     .Tag = PropShadowButtons(CurrIndex).Tag
     .ToolTipText = PropShadowButtons(CurrIndex).ToolTipText
     .Description = PropShadowButtons(CurrIndex).Description
@@ -736,24 +691,60 @@ If CurrIndex > 0 Then
     If PropShadowButtons(CurrIndex).CustomWidth > 0 Then .CustomWidth = PropShadowButtons(CurrIndex).CustomWidth
     For i = 0 To UBound(PropShadowButtons(CurrIndex).ButtonMenus())
         If i > 0 Then
-            With .ButtonMenus.Add(i, PropShadowButtons(CurrIndex).ButtonMenus(i).Key, PropShadowButtons(CurrIndex).ButtonMenus(i).Text)
+            If i <> CurrButtonMenuIndex Then
+                .ButtonMenus.Add i, PropShadowButtons(CurrIndex).ButtonMenus(i).Key, PropShadowButtons(CurrIndex).ButtonMenus(i).Text
+            Else
+                .ButtonMenus.Add i, , PropShadowButtons(CurrIndex).ButtonMenus(i).Text
+            End If
+            With .ButtonMenus(i)
             .Tag = PropShadowButtons(CurrIndex).ButtonMenus(i).Tag
-            If PropShadowButtons(CurrIndex).ButtonMenus(i).Enabled = False Then .Enabled = False
-            If PropShadowButtons(CurrIndex).ButtonMenus(i).Visible = False Then .Visible = False
-            If PropShadowButtons(CurrIndex).ButtonMenus(i).Checked = True Then .Checked = True
-            If PropShadowButtons(CurrIndex).ButtonMenus(i).Separator = True Then .Separator = True
+            .Enabled = PropShadowButtons(CurrIndex).ButtonMenus(i).Enabled
+            .Visible = PropShadowButtons(CurrIndex).ButtonMenus(i).Visible
+            .Checked = PropShadowButtons(CurrIndex).ButtonMenus(i).Checked
+            .Separator = PropShadowButtons(CurrIndex).ButtonMenus(i).Separator
             End With
         End If
     Next i
     TextCustomWidth.Text = CStr(.CustomWidth)
     End With
     .Refresh
+    If Not TextKey.Text = vbNullString Then
+        If .Buttons.Exists(TextKey.Text) = True Then
+            .Buttons(CurrIndex).Key = PropShadowButtons(CurrIndex).Key
+            MsgBox "This key is already associated with an element of this collection.", vbCritical + vbOKOnly
+            FreezeChanged = True
+            TextKey.Text = PropShadowButtons(CurrIndex).Key
+            FreezeChanged = False
+        Else
+            PropShadowButtons(CurrIndex).Key = TextKey.Text
+            .Buttons(CurrIndex).Key = PropShadowButtons(CurrIndex).Key
+        End If
+    Else
+        PropShadowButtons(CurrIndex).Key = vbNullString
+    End If
+    If CurrButtonMenuIndex > 0 Then
+        If Not TextButtonMenuKey.Text = vbNullString Then
+            If .Buttons(CurrIndex).ButtonMenus.Exists(TextButtonMenuKey.Text) = True Then
+                .Buttons(CurrIndex).ButtonMenus(CurrButtonMenuIndex).Key = PropShadowButtons(CurrIndex).ButtonMenus(CurrButtonMenuIndex).Key
+                MsgBox "This key is already associated with an element of this collection.", vbCritical + vbOKOnly
+                FreezeChanged = True
+                TextButtonMenuKey.Text = PropShadowButtons(CurrIndex).ButtonMenus(CurrButtonMenuIndex).Key
+                FreezeChanged = False
+            Else
+                PropShadowButtons(CurrIndex).ButtonMenus(CurrButtonMenuIndex).Key = TextButtonMenuKey.Text
+                .Buttons(CurrIndex).ButtonMenus(CurrButtonMenuIndex).Key = PropShadowButtons(CurrIndex).ButtonMenus(CurrButtonMenuIndex).Key
+            End If
+        Else
+            PropShadowButtons(CurrIndex).ButtonMenus(CurrButtonMenuIndex).Key = vbNullString
+        End If
+    End If
     End With
 End If
 Call PropertyPage_SelectionChanged
 End Sub
 
 Private Sub PropertyPage_SelectionChanged()
+If Not SelectedControl Is PropertyPage.SelectedControls(0) Then Set SelectedControl = PropertyPage.SelectedControls(0): CurrIndex = 0: CurrButtonMenuIndex = 0
 With PropertyPage.SelectedControls(0)
 If .Buttons.Count > 0 And CurrIndex = 0 Then
     Call FillShadowButtons
@@ -801,9 +792,14 @@ If .Buttons.Count > 0 And CurrIndex = 0 Then
         CheckButtonMenuChecked.Value = IIf(.Checked = True, vbChecked, vbUnchecked)
         CheckButtonMenuSeparator.Value = IIf(.Separator = True, vbChecked, vbUnchecked)
         End With
+    Else
+        TextButtonMenuIndex.Text = "0 of 0"
     End If
     FreezeChanged = False
     End With
+ElseIf CurrIndex = 0 Then
+    TextIndex.Text = "0 of 0"
+    TextButtonMenuIndex.Text = "0 of 0"
 End If
 Call ApplyControlStates
 End With
@@ -1303,7 +1299,6 @@ CurrButtonMenuIndex = CurrButtonMenuIndex + 1
 With PropertyPage.SelectedControls(0).Buttons(CurrIndex)
 .ButtonMenus.Add CurrButtonMenuIndex
 TextButtonMenuIndex.Text = CurrButtonMenuIndex & " of " & .ButtonMenus.Count
-With .ButtonMenus(CurrButtonMenuIndex)
 TextButtonMenuText.Text = vbNullString
 TextButtonMenuKey.Text = vbNullString
 TextButtonMenuTag.Text = vbNullString
@@ -1311,7 +1306,6 @@ CheckButtonMenuEnabled.Value = vbChecked
 CheckButtonMenuVisible.Value = vbChecked
 CheckButtonMenuChecked.Value = vbUnchecked
 CheckButtonMenuSeparator.Value = vbUnchecked
-End With
 End With
 Call ApplyControlStates
 Call FillShadowButtons
@@ -1384,6 +1378,7 @@ Private Sub ApplyControlStates()
 With PropertyPage.SelectedControls(0)
 FreezeChanged = True
 If .Buttons.Count > 0 Then
+    TextIndex.Enabled = True
     If CurrIndex > 1 Then
         CommandBack.Enabled = True
     Else
@@ -1432,6 +1427,7 @@ If .Buttons.Count > 0 Then
     Dim Success As Boolean
     If CurrIndex > 0 Then
         If .Buttons(CurrIndex).ButtonMenus.Count > 0 Then
+            TextButtonMenuIndex.Enabled = True
             If CurrButtonMenuIndex > 1 Then
                 PictureCommandButtonMenuBack.Enabled = True
                 CommandButtonMenuBack.Enabled = True
@@ -1462,6 +1458,7 @@ If .Buttons.Count > 0 Then
         End If
     End If
     If Success = False Then
+        TextButtonMenuIndex.Enabled = False
         PictureCommandButtonMenuBack.Enabled = False
         CommandButtonMenuBack.Enabled = False
         PictureCommandButtonMenuNext.Enabled = False
@@ -1487,6 +1484,7 @@ If .Buttons.Count > 0 Then
         CheckButtonMenuSeparator.Enabled = False
     End If
 Else
+    TextIndex.Enabled = False
     CommandBack.Enabled = False
     CommandNext.Enabled = False
     CommandRemove.Enabled = False
@@ -1532,6 +1530,7 @@ Else
     TextCustomWidth.Text = vbNullString
     TextCustomWidth.BackColor = vbButtonFace
     TextCustomWidth.Enabled = False
+    TextButtonMenuIndex.Enabled = False
     PictureCommandButtonMenuBack.Enabled = False
     CommandButtonMenuBack.Enabled = False
     PictureCommandButtonMenuNext.Enabled = False

@@ -37,12 +37,25 @@ Friend Sub FInit(ByVal Object As ImageList)
 ShadowObjectPointer = ObjPtr(Object)
 End Sub
 
+Friend Sub FChangeKey(ByVal Index As Long, ByRef OldKey As String, ByVal NewKey As String)
+Dim Item As Variant
+Set Item = PropListImage(Index)
+If NewKey = vbNullString Then
+    PropListImage.Add Item, , Index
+    OldKey = vbNullString
+Else
+    PropListImage.Add Item, NewKey, Index
+    OldKey = NewKey
+End If
+PropListImage.Remove Index + 1
+End Sub
+
 Public Function Add(Optional ByVal Index As Long, Optional ByVal Key As String, Optional ByVal Picture As IPictureDisp) As ImlListImage
 Attribute Add.VB_Description = "Adds a list image to the list images collection."
 If Index > (PropListImage.Count + 1) Or Index < 0 Then Err.Raise Number:=35600, Description:="Index out of bounds"
 ShadowImageList.FListImagesAdd Index, Picture
 Dim NewListImage As New ImlListImage
-NewListImage.FInit ShadowImageList, Key, Picture
+NewListImage.FInit ShadowObjectPointer, Key, Picture
 If Key = vbNullString Then
     If Index > 0 And Index <= PropListImage.Count Then
         PropListImage.Add NewListImage, , Index

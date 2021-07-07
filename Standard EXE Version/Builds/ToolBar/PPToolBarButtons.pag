@@ -226,11 +226,11 @@ Begin VB.PropertyPage PPToolBarButtons
       End
       Begin VB.TextBox TextButtonMenuIndex 
          BackColor       =   &H8000000F&
+         Enabled         =   0   'False
          Height          =   315
          Left            =   1200
          Locked          =   -1  'True
          TabIndex        =   35
-         Text            =   "0 of 0"
          Top             =   240
          Width           =   870
       End
@@ -426,11 +426,11 @@ Begin VB.PropertyPage PPToolBarButtons
    End
    Begin VB.TextBox TextIndex 
       BackColor       =   &H8000000F&
+      Enabled         =   0   'False
       Height          =   315
       Left            =   1200
       Locked          =   -1  'True
       TabIndex        =   1
-      Text            =   "0 of 0"
       Top             =   120
       Width           =   870
    End
@@ -579,6 +579,7 @@ End Type
 Private Declare Function OleCreatePropertyFrame Lib "olepro32" (ByVal hWndOwner As Long, ByVal X As Long, ByVal Y As Long, ByVal lpszCaption As Long, ByVal cObjects As Long, ByRef pUnk As IUnknown, ByVal cPages As Long, ByRef pPageCLSID As Any, ByVal LCID As Long, ByVal dwReserved As Long, ByVal pvReserved As Long) As Long
 Private Declare Function CLSIDFromString Lib "ole32" (ByVal lpszProgID As Long, ByRef pCLSID As Any) As Long
 Private Const CLSID_StandardColorPage As String = "{7EBDAAE1-8120-11CF-899F-00AA00688B10}"
+Private SelectedControl As Object
 Private CurrIndex As Long, CurrButtonMenuIndex As Long
 Private PropShadowButtons() As ShadowButtonStruct
 Private FreezeChanged As Boolean
@@ -617,7 +618,6 @@ On Error GoTo 0
 If CurrIndex > 0 Then
     With PropShadowButtons(CurrIndex)
     .Caption = TextCaption.Text
-    .Key = TextKey.Text
     .Tag = TextTag.Text
     .Style = ComboStyle.ItemData(ComboStyle.ListIndex)
     If IsNumeric(TextImage.Text) Then
@@ -640,7 +640,6 @@ If CurrIndex > 0 Then
     If CurrButtonMenuIndex > 0 Then
         With .ButtonMenus(CurrButtonMenuIndex)
         .Text = TextButtonMenuText.Text
-        .Key = TextButtonMenuKey.Text
         .Tag = TextButtonMenuTag.Text
         .Enabled = CBool(CheckButtonMenuEnabled.Value = vbChecked)
         .Visible = CBool(CheckButtonMenuVisible.Value = vbChecked)
@@ -652,7 +651,7 @@ If CurrIndex > 0 Then
     Dim i As Long
     With PropertyPage.SelectedControls(0)
     .Buttons.Remove CurrIndex
-    With .Buttons.Add(CurrIndex, PropShadowButtons(CurrIndex).Key, PropShadowButtons(CurrIndex).Caption, PropShadowButtons(CurrIndex).Style, PropShadowButtons(CurrIndex).Image)
+    With .Buttons.Add(CurrIndex, , PropShadowButtons(CurrIndex).Caption, PropShadowButtons(CurrIndex).Style, PropShadowButtons(CurrIndex).Image)
     .Tag = PropShadowButtons(CurrIndex).Tag
     .ToolTipText = PropShadowButtons(CurrIndex).ToolTipText
     .Description = PropShadowButtons(CurrIndex).Description
@@ -668,24 +667,60 @@ If CurrIndex > 0 Then
     If PropShadowButtons(CurrIndex).CustomWidth > 0 Then .CustomWidth = PropShadowButtons(CurrIndex).CustomWidth
     For i = 0 To UBound(PropShadowButtons(CurrIndex).ButtonMenus())
         If i > 0 Then
-            With .ButtonMenus.Add(i, PropShadowButtons(CurrIndex).ButtonMenus(i).Key, PropShadowButtons(CurrIndex).ButtonMenus(i).Text)
+            If i <> CurrButtonMenuIndex Then
+                .ButtonMenus.Add i, PropShadowButtons(CurrIndex).ButtonMenus(i).Key, PropShadowButtons(CurrIndex).ButtonMenus(i).Text
+            Else
+                .ButtonMenus.Add i, , PropShadowButtons(CurrIndex).ButtonMenus(i).Text
+            End If
+            With .ButtonMenus(i)
             .Tag = PropShadowButtons(CurrIndex).ButtonMenus(i).Tag
-            If PropShadowButtons(CurrIndex).ButtonMenus(i).Enabled = False Then .Enabled = False
-            If PropShadowButtons(CurrIndex).ButtonMenus(i).Visible = False Then .Visible = False
-            If PropShadowButtons(CurrIndex).ButtonMenus(i).Checked = True Then .Checked = True
-            If PropShadowButtons(CurrIndex).ButtonMenus(i).Separator = True Then .Separator = True
+            .Enabled = PropShadowButtons(CurrIndex).ButtonMenus(i).Enabled
+            .Visible = PropShadowButtons(CurrIndex).ButtonMenus(i).Visible
+            .Checked = PropShadowButtons(CurrIndex).ButtonMenus(i).Checked
+            .Separator = PropShadowButtons(CurrIndex).ButtonMenus(i).Separator
             End With
         End If
     Next i
     TextCustomWidth.Text = CStr(.CustomWidth)
     End With
     .Refresh
+    If Not TextKey.Text = vbNullString Then
+        If .Buttons.Exists(TextKey.Text) = True Then
+            .Buttons(CurrIndex).Key = PropShadowButtons(CurrIndex).Key
+            MsgBox "This key is already associated with an element of this collection.", vbCritical + vbOKOnly
+            FreezeChanged = True
+            TextKey.Text = PropShadowButtons(CurrIndex).Key
+            FreezeChanged = False
+        Else
+            PropShadowButtons(CurrIndex).Key = TextKey.Text
+            .Buttons(CurrIndex).Key = PropShadowButtons(CurrIndex).Key
+        End If
+    Else
+        PropShadowButtons(CurrIndex).Key = vbNullString
+    End If
+    If CurrButtonMenuIndex > 0 Then
+        If Not TextButtonMenuKey.Text = vbNullString Then
+            If .Buttons(CurrIndex).ButtonMenus.Exists(TextButtonMenuKey.Text) = True Then
+                .Buttons(CurrIndex).ButtonMenus(CurrButtonMenuIndex).Key = PropShadowButtons(CurrIndex).ButtonMenus(CurrButtonMenuIndex).Key
+                MsgBox "This key is already associated with an element of this collection.", vbCritical + vbOKOnly
+                FreezeChanged = True
+                TextButtonMenuKey.Text = PropShadowButtons(CurrIndex).ButtonMenus(CurrButtonMenuIndex).Key
+                FreezeChanged = False
+            Else
+                PropShadowButtons(CurrIndex).ButtonMenus(CurrButtonMenuIndex).Key = TextButtonMenuKey.Text
+                .Buttons(CurrIndex).ButtonMenus(CurrButtonMenuIndex).Key = PropShadowButtons(CurrIndex).ButtonMenus(CurrButtonMenuIndex).Key
+            End If
+        Else
+            PropShadowButtons(CurrIndex).ButtonMenus(CurrButtonMenuIndex).Key = vbNullString
+        End If
+    End If
     End With
 End If
 Call PropertyPage_SelectionChanged
 End Sub
 
 Private Sub PropertyPage_SelectionChanged()
+If Not SelectedControl Is PropertyPage.SelectedControls(0) Then Set SelectedControl = PropertyPage.SelectedControls(0): CurrIndex = 0: CurrButtonMenuIndex = 0
 With PropertyPage.SelectedControls(0)
 If .Buttons.Count > 0 And CurrIndex = 0 Then
     Call FillShadowButtons
@@ -733,9 +768,14 @@ If .Buttons.Count > 0 And CurrIndex = 0 Then
         CheckButtonMenuChecked.Value = IIf(.Checked = True, vbChecked, vbUnchecked)
         CheckButtonMenuSeparator.Value = IIf(.Separator = True, vbChecked, vbUnchecked)
         End With
+    Else
+        TextButtonMenuIndex.Text = "0 of 0"
     End If
     FreezeChanged = False
     End With
+ElseIf CurrIndex = 0 Then
+    TextIndex.Text = "0 of 0"
+    TextButtonMenuIndex.Text = "0 of 0"
 End If
 Call ApplyControlStates
 End With
@@ -1235,7 +1275,6 @@ CurrButtonMenuIndex = CurrButtonMenuIndex + 1
 With PropertyPage.SelectedControls(0).Buttons(CurrIndex)
 .ButtonMenus.Add CurrButtonMenuIndex
 TextButtonMenuIndex.Text = CurrButtonMenuIndex & " of " & .ButtonMenus.Count
-With .ButtonMenus(CurrButtonMenuIndex)
 TextButtonMenuText.Text = vbNullString
 TextButtonMenuKey.Text = vbNullString
 TextButtonMenuTag.Text = vbNullString
@@ -1243,7 +1282,6 @@ CheckButtonMenuEnabled.Value = vbChecked
 CheckButtonMenuVisible.Value = vbChecked
 CheckButtonMenuChecked.Value = vbUnchecked
 CheckButtonMenuSeparator.Value = vbUnchecked
-End With
 End With
 Call ApplyControlStates
 Call FillShadowButtons
@@ -1316,6 +1354,7 @@ Private Sub ApplyControlStates()
 With PropertyPage.SelectedControls(0)
 FreezeChanged = True
 If .Buttons.Count > 0 Then
+    TextIndex.Enabled = True
     If CurrIndex > 1 Then
         CommandBack.Enabled = True
     Else
@@ -1364,6 +1403,7 @@ If .Buttons.Count > 0 Then
     Dim Success As Boolean
     If CurrIndex > 0 Then
         If .Buttons(CurrIndex).ButtonMenus.Count > 0 Then
+            TextButtonMenuIndex.Enabled = True
             If CurrButtonMenuIndex > 1 Then
                 PictureCommandButtonMenuBack.Enabled = True
                 CommandButtonMenuBack.Enabled = True
@@ -1394,6 +1434,7 @@ If .Buttons.Count > 0 Then
         End If
     End If
     If Success = False Then
+        TextButtonMenuIndex.Enabled = False
         PictureCommandButtonMenuBack.Enabled = False
         CommandButtonMenuBack.Enabled = False
         PictureCommandButtonMenuNext.Enabled = False
@@ -1419,6 +1460,7 @@ If .Buttons.Count > 0 Then
         CheckButtonMenuSeparator.Enabled = False
     End If
 Else
+    TextIndex.Enabled = False
     CommandBack.Enabled = False
     CommandNext.Enabled = False
     CommandRemove.Enabled = False
@@ -1464,6 +1506,7 @@ Else
     TextCustomWidth.Text = vbNullString
     TextCustomWidth.BackColor = vbButtonFace
     TextCustomWidth.Enabled = False
+    TextButtonMenuIndex.Enabled = False
     PictureCommandButtonMenuBack.Enabled = False
     CommandButtonMenuBack.Enabled = False
     PictureCommandButtonMenuNext.Enabled = False

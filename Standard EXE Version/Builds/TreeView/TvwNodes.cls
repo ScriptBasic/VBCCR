@@ -37,6 +37,19 @@ Friend Sub FInit(ByVal Object As TreeView)
 ShadowObjectPointer = ObjPtr(Object)
 End Sub
 
+Friend Sub FChangeKey(ByVal Index As Long, ByRef OldKey As String, ByVal NewKey As String)
+Dim Item As Variant
+Set Item = PropNode(Index)
+If NewKey = vbNullString Then
+    PropNode.Add Item, , Index
+    OldKey = vbNullString
+Else
+    PropNode.Add Item, NewKey, Index
+    OldKey = NewKey
+End If
+PropNode.Remove Index + 1
+End Sub
+
 Public Function Add(Optional ByVal Relative As Variant, Optional ByVal Relationship As TvwNodeRelationshipConstants = TvwNodeRelationshipNext, Optional ByVal Key As String, Optional ByVal Text As String, Optional ByVal Image As Variant, Optional ByVal SelectedImage As Variant) As TvwNode
 Attribute Add.VB_Description = "Adds a node to the nodes collection."
 Dim ImageIndex As Long, SelectedImageIndex As Long
@@ -101,21 +114,22 @@ End Sub
 
 Public Sub Remove(ByVal Index As Variant)
 Attribute Remove.VB_Description = "Removes a node from the collection."
-With ShadowTreeView.FNodesRemove(PropNode(Index).Handle)
+Dim PtrColl As Collection
+Set PtrColl = ShadowTreeView.FNodesRemove(PropNode(Index).Handle)
 PropNode.Remove Index
-Dim Ptr As Long, Item As Variant, i As Long, j As Long
-For i = 1 To .Count
+Dim Ptr As Variant, Item As TvwNode, i As Long
+For Each Ptr In PtrColl
     For Each Item In PropNode
-        j = j + 1
-        If ObjPtr(Item) = .Item(CStr(i)) Then
-            PropNode.Remove j
+        i = i + 1
+        If ObjPtr(Item) = Ptr Then
+            PropNode.Remove i
             Exit For
         End If
     Next Item
-    j = 0
-Next i
-For i = 1 To PropNode.Count
-    Me.Item(i).Index = i
-Next i
-End With
+    i = 0
+Next Ptr
+For Each Item In PropNode
+    i = i + 1
+    Item.Index = i
+Next Item
 End Sub

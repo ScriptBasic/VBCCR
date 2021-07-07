@@ -7,13 +7,13 @@ Begin VB.UserControl ProgressBar
    ClientLeft      =   0
    ClientTop       =   0
    ClientWidth     =   2400
-   DrawStyle       =   2  'Dot
+   DrawStyle       =   5  'Transparent
    HasDC           =   0   'False
    PropertyPages   =   "ProgressBar.ctx":0000
    ScaleHeight     =   120
    ScaleMode       =   3  'Pixel
    ScaleWidth      =   160
-   ToolboxBitmap   =   "ProgressBar.ctx":003D
+   ToolboxBitmap   =   "ProgressBar.ctx":004C
 End
 Attribute VB_Name = "ProgressBar"
 Attribute VB_GlobalNameSpace = False
@@ -127,6 +127,12 @@ Private Declare Function SendMessage Lib "user32" Alias "SendMessageW" (ByVal hW
 Private Declare Function SetParent Lib "user32" (ByVal hWndChild As Long, ByVal hWndNewParent As Long) As Long
 Private Declare Function LockWindowUpdate Lib "user32" (ByVal hWndLock As Long) As Long
 Private Declare Function RedrawWindow Lib "user32" (ByVal hWnd As Long, ByVal lprcUpdate As Long, ByVal hrgnUpdate As Long, ByVal fuRedraw As Long) As Long
+Private Declare Function InvalidateRect Lib "user32" (ByVal hWnd As Long, ByRef lpRect As Any, ByVal bErase As Long) As Long
+Private Declare Function GetClientRect Lib "user32" (ByVal hWnd As Long, ByRef lpRect As RECT) As Long
+Private Declare Function GetDC Lib "user32" (ByVal hWnd As Long) As Long
+Private Declare Function ReleaseDC Lib "user32" (ByVal hWnd As Long, ByVal hDC As Long) As Long
+Private Declare Function SelectObject Lib "gdi32" (ByVal hDC As Long, ByVal hObject As Long) As Long
+Private Declare Function DeleteObject Lib "gdi32" (ByVal hObject As Long) As Long
 Private Declare Function LoadCursor Lib "user32" Alias "LoadCursorW" (ByVal hInstance As Long, ByVal lpCursorName As Any) As Long
 Private Declare Function SetCursor Lib "user32" (ByVal hCursor As Long) As Long
 Private Declare Function GetTickCount Lib "kernel32" () As Long
@@ -134,11 +140,19 @@ Private Declare Function GetDoubleClickTime Lib "user32" () As Long
 Private Declare Function GetSystemMetrics Lib "user32" (ByVal nIndex As Long) As Long
 Private Declare Function PtInRect Lib "user32" (ByRef lpRect As RECT, ByVal X As Long, ByVal Y As Long) As Long
 Private Declare Function GetClassLong Lib "user32" Alias "GetClassLongW" (ByVal hWnd As Long, ByVal nIndex As Long) As Long
+Private Declare Function DrawText Lib "user32" Alias "DrawTextW" (ByVal hDC As Long, ByVal lpchText As Long, ByVal nCount As Long, ByRef lpRect As RECT, ByVal uFormat As Long) As Long
+Private Declare Function SetTextColor Lib "gdi32" (ByVal hDC As Long, ByVal crColor As Long) As Long
+Private Declare Function SetBkMode Lib "gdi32" (ByVal hDC As Long, ByVal nBkMode As Long) As Long
 Private Const ICC_PROGRESS_CLASS As Long = &H20
 Private Const CLSID_ITaskBarList As String = "{56FDF344-FD6D-11D0-958A-006097C9A090}"
 Private Const IID_ITaskBarList3 As String = "{EA1AFB91-9E28-4B86-90E9-9E9F8A5EEFAF}"
 Private Const CLSCTX_INPROC_SERVER As Long = 1, S_OK As Long = 0
 Private Const RDW_UPDATENOW As Long = &H100, RDW_INVALIDATE As Long = &H1, RDW_ERASE As Long = &H4, RDW_ALLCHILDREN As Long = &H80
+Private Const DT_CENTER As Long = &H1
+Private Const DT_VCENTER As Long = &H4
+Private Const DT_SINGLELINE As Long = &H20
+Private Const DT_NOCLIP As Long = &H100
+Private Const DT_RTLREADING As Long = &H20000
 Private Const GCL_STYLE As Long = (-26)
 Private Const CS_DBLCLKS As Long = &H8
 Private Const GWL_EXSTYLE As Long = (-20)
@@ -159,18 +173,24 @@ Private Const WM_MBUTTONDBLCLK As Long = &H209
 Private Const WM_RBUTTONDBLCLK As Long = &H206
 Private Const WM_MOUSEMOVE As Long = &H200
 Private Const WM_MOUSELEAVE As Long = &H2A3
+Private Const WM_DESTROY As Long = &H2
+Private Const WM_NCDESTROY As Long = &H82
+Private Const WM_SETFONT As Long = &H30
+Private Const WM_GETFONT As Long = &H31
 Private Const WM_SETCURSOR As Long = &H20, HTCLIENT As Long = 1
+Private Const WM_PAINT As Long = &HF
+Private Const WM_PRINTCLIENT As Long = &H318
 Private Const CCM_FIRST As Long = &H2000
 Private Const CCM_SETBKCOLOR As Long = (CCM_FIRST + 1)
 Private Const WM_USER As Long = &H400
 Private Const PBM_SETBKCOLOR As Long = CCM_SETBKCOLOR
-Private Const PBM_SETRANGE As Long = (WM_USER + 1)
+Private Const PBM_SETRANGE As Long = (WM_USER + 1) ' 16 bit
 Private Const PBM_SETPOS As Long = (WM_USER + 2)
 Private Const PBM_DELTAPOS As Long = (WM_USER + 3)
 Private Const PBM_SETSTEP As Long = (WM_USER + 4)
 Private Const PBM_STEPIT As Long = (WM_USER + 5)
 Private Const PBM_SETRANGE32 As Long = (WM_USER + 6)
-Private Const PBM_GETRANGE As Long = (WM_USER + 7)
+Private Const PBM_GETRANGE As Long = (WM_USER + 7) ' 16 bit
 Private Const PBM_GETPOS As Long = (WM_USER + 8)
 Private Const PBM_SETBARCOLOR As Long = (WM_USER + 9)
 Private Const PBM_SETMARQUEE As Long = (WM_USER + 10)
@@ -185,15 +205,19 @@ Implements ISubclass
 Implements OLEGuids.IObjectSafety
 Implements OLEGuids.IPerPropertyBrowsingVB
 Private ProgressBarHandle As Long
+Private ProgressBarFontHandle As Long
 Private ProgressBarITaskBarList3 As IUnknown
 Private ProgressBarIsClick As Boolean
 Private ProgressBarMouseOver As Boolean
+Private ProgressBarDesignMode As Boolean
 Private ProgressBarDblClickSupported As Boolean, ProgressBarIsDblClick As Boolean
 Private ProgressBarDblClickTime As Long, ProgressBarDblClickTickCount As Double
 Private ProgressBarDblClickCX As Long, ProgressBarDblClickCY As Long
 Private ProgressBarDblClickX As Long, ProgressBarDblClickY As Long
 Private ProgressBarAlignable As Boolean
 Private DispIDMousePointer As Long
+Private WithEvents PropFont As StdFont
+Attribute PropFont.VB_VarHelpID = -1
 Private PropVisualStyles As Boolean
 Private PropMousePointer As Integer, PropMouseIcon As IPictureDisp
 Private PropMouseTrack As Boolean
@@ -212,6 +236,8 @@ Private PropBackColor As OLE_COLOR
 Private PropForeColor As OLE_COLOR
 Private PropState As PrbStateConstants
 Private PropShowInTaskBar As Boolean
+Private PropText As String
+Private PropTextColor As OLE_COLOR
 
 Private Sub IObjectSafety_GetInterfaceSafetyOptions(ByRef riid As OLEGuids.OLECLSID, ByRef pdwSupportedOptions As Long, ByRef pdwEnabledOptions As Long)
 Const INTERFACESAFE_FOR_UNTRUSTED_CALLER As Long = &H1, INTERFACESAFE_FOR_UNTRUSTED_DATA As Long = &H2
@@ -246,7 +272,7 @@ End Sub
 Private Sub UserControl_Initialize()
 Call ComCtlsLoadShellMod
 Call ComCtlsInitCC(ICC_PROGRESS_CLASS)
-Call SetVTableSubclass(Me, VTableInterfacePerPropertyBrowsing)
+Call SetVTableHandling(Me, VTableInterfacePerPropertyBrowsing)
 ProgressBarDblClickTime = GetDoubleClickTime()
 Const SM_CXDOUBLECLK As Long = 36
 Const SM_CYDOUBLECLK As Long = 37
@@ -264,7 +290,9 @@ Private Sub UserControl_InitProperties()
 If DispIDMousePointer = 0 Then DispIDMousePointer = GetDispID(Me, "MousePointer")
 On Error Resume Next
 If UserControl.ParentControls.Count = 0 Then ProgressBarAlignable = False Else ProgressBarAlignable = True
+ProgressBarDesignMode = Not Ambient.UserMode
 On Error GoTo 0
+Set PropFont = Ambient.Font
 PropVisualStyles = True
 PropMousePointer = 0: Set PropMouseIcon = Nothing
 PropMouseTrack = False
@@ -287,6 +315,8 @@ PropBackColor = vbButtonFace
 PropForeColor = vbHighlight
 PropState = PrbStateNormal
 PropShowInTaskBar = False
+PropText = vbNullString
+PropTextColor = vbWindowText
 Call CreateProgressBar
 End Sub
 
@@ -294,8 +324,10 @@ Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
 If DispIDMousePointer = 0 Then DispIDMousePointer = GetDispID(Me, "MousePointer")
 On Error Resume Next
 If UserControl.ParentControls.Count = 0 Then ProgressBarAlignable = False Else ProgressBarAlignable = True
+ProgressBarDesignMode = Not Ambient.UserMode
 On Error GoTo 0
 With PropBag
+Set PropFont = .ReadProperty("Font", Nothing)
 PropVisualStyles = .ReadProperty("VisualStyles", True)
 Me.Enabled = .ReadProperty("Enabled", True)
 Me.OLEDropMode = .ReadProperty("OLEDropMode", vbOLEDropNone)
@@ -321,12 +353,15 @@ PropBackColor = .ReadProperty("BackColor", vbButtonFace)
 PropForeColor = .ReadProperty("ForeColor", vbHighlight)
 PropState = .ReadProperty("State", PrbStateNormal)
 PropShowInTaskBar = .ReadProperty("ShowInTaskBar", False)
+PropText = VarToStr(.ReadProperty("Text", vbNullString))
+PropTextColor = .ReadProperty("TextColor", vbWindowText)
 End With
 Call CreateProgressBar
 End Sub
 
 Private Sub UserControl_WriteProperties(PropBag As PropertyBag)
 With PropBag
+.WriteProperty "Font", IIf(OLEFontIsEqual(PropFont, Ambient.Font) = False, PropFont, Nothing), Nothing
 .WriteProperty "VisualStyles", PropVisualStyles, True
 .WriteProperty "Enabled", Me.Enabled, True
 .WriteProperty "OLEDropMode", Me.OLEDropMode, vbOLEDropNone
@@ -351,6 +386,8 @@ With PropBag
 .WriteProperty "ForeColor", PropForeColor, vbHighlight
 .WriteProperty "State", PropState, PrbStateNormal
 .WriteProperty "ShowInTaskBar", PropShowInTaskBar, False
+.WriteProperty "Text", StrToVar(PropText), vbNullString
+.WriteProperty "TextColor", PropTextColor, vbWindowText
 End With
 End Sub
 
@@ -410,17 +447,14 @@ LastWidth = .Width
 LastAlign = Align
 End With
 With UserControl
-If DPICorrectionFactor() <> 1 Then
-    .Extender.Move .Extender.Left + .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top + .ScaleY(1, vbPixels, vbContainerPosition)
-    .Extender.Move .Extender.Left - .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top - .ScaleY(1, vbPixels, vbContainerPosition)
-End If
+If DPICorrectionFactor() <> 1 Then Call SyncObjectRectsToContainer(Me)
 If ProgressBarHandle <> 0 Then MoveWindow ProgressBarHandle, 0, 0, .ScaleWidth, .ScaleHeight, 1
 End With
 InProc = False
 End Sub
 
 Private Sub UserControl_Terminate()
-Call RemoveVTableSubclass(Me, VTableInterfacePerPropertyBrowsing)
+Call RemoveVTableHandling(Me, VTableInterfacePerPropertyBrowsing)
 Call DestroyProgressBar
 Call ComCtlsReleaseShellMod
 End Sub
@@ -573,6 +607,36 @@ Attribute hWndUserControl.VB_Description = "Returns a handle to a control."
 hWndUserControl = UserControl.hWnd
 End Property
 
+Public Property Get Font() As StdFont
+Attribute Font.VB_Description = "Returns a Font object."
+Attribute Font.VB_UserMemId = -512
+Set Font = PropFont
+End Property
+
+Public Property Let Font(ByVal NewFont As StdFont)
+Set Me.Font = NewFont
+End Property
+
+Public Property Set Font(ByVal NewFont As StdFont)
+If NewFont Is Nothing Then Set NewFont = Ambient.Font
+Dim OldFontHandle As Long
+Set PropFont = NewFont
+OldFontHandle = ProgressBarFontHandle
+ProgressBarFontHandle = CreateGDIFontFromOLEFont(PropFont)
+If ProgressBarHandle <> 0 Then SendMessage ProgressBarHandle, WM_SETFONT, ProgressBarFontHandle, ByVal 1&
+If OldFontHandle <> 0 Then DeleteObject OldFontHandle
+UserControl.PropertyChanged "Font"
+End Property
+
+Private Sub PropFont_FontChanged(ByVal PropertyName As String)
+Dim OldFontHandle As Long
+OldFontHandle = ProgressBarFontHandle
+ProgressBarFontHandle = CreateGDIFontFromOLEFont(PropFont)
+If ProgressBarHandle <> 0 Then SendMessage ProgressBarHandle, WM_SETFONT, ProgressBarFontHandle, ByVal 1&
+If OldFontHandle <> 0 Then DeleteObject OldFontHandle
+UserControl.PropertyChanged "Font"
+End Sub
+
 Public Property Get VisualStyles() As Boolean
 Attribute VisualStyles.VB_Description = "Returns/sets a value that determines whether the visual styles are enabled or not. Requires comctl32.dll version 6.0 or higher."
 VisualStyles = PropVisualStyles
@@ -638,6 +702,7 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
+If ProgressBarDesignMode = False Then Call RefreshMousePointer
 UserControl.PropertyChanged "MousePointer"
 End Property
 
@@ -657,7 +722,7 @@ Else
     If Value.Type = vbPicTypeIcon Or Value.Handle = 0 Then
         Set PropMouseIcon = Value
     Else
-        If Ambient.UserMode = False Then
+        If ProgressBarDesignMode = True Then
             MsgBox "Invalid property value", vbCritical + vbOKOnly
             Exit Property
         Else
@@ -665,6 +730,7 @@ Else
         End If
     End If
 End If
+If ProgressBarDesignMode = False Then Call RefreshMousePointer
 UserControl.PropertyChanged "MouseIcon"
 End Property
 
@@ -690,7 +756,7 @@ UserControl.RightToLeft = PropRightToLeft
 Call ComCtlsCheckRightToLeft(PropRightToLeft, UserControl.RightToLeft, PropRightToLeftMode)
 Dim dwMask As Long
 If PropRightToLeft = True And PropRightToLeftLayout = True Then dwMask = WS_EX_LAYOUTRTL
-If Ambient.UserMode = True Then Call ComCtlsSetRightToLeft(UserControl.hWnd, dwMask)
+If ProgressBarDesignMode = False Then Call ComCtlsSetRightToLeft(UserControl.hWnd, dwMask)
 If ProgressBarHandle <> 0 Then Call ComCtlsSetRightToLeft(ProgressBarHandle, dwMask)
 UserControl.PropertyChanged "RightToLeft"
 End Property
@@ -737,7 +803,7 @@ If Value < Me.Max Then
     PropRange.Max = Me.Max
     If PropValue < PropRange.Min Then PropValue = PropRange.Min
 Else
-    If Ambient.UserMode = False Then
+    If ProgressBarDesignMode = True Then
         MsgBox "Invalid property value", vbCritical + vbOKOnly
         Exit Property
     Else
@@ -763,7 +829,7 @@ If Value > Me.Min Then
     PropRange.Max = Value
     If PropValue > PropRange.Max Then PropValue = PropRange.Max
 Else
-    If Ambient.UserMode = False Then
+    If ProgressBarDesignMode = True Then
         MsgBox "Invalid property value", vbCritical + vbOKOnly
         Exit Property
     Else
@@ -851,7 +917,7 @@ Public Property Let MarqueeSpeed(ByVal Value As Long)
 If Value > 0 Then
     PropMarqueeSpeed = Value
 Else
-    If Ambient.UserMode = False Then
+    If ProgressBarDesignMode = True Then
         MsgBox "Invalid property value", vbCritical + vbOKOnly
         Exit Property
     Else
@@ -965,7 +1031,7 @@ End Property
 
 Public Property Let ShowInTaskBar(ByVal Value As Boolean)
 PropShowInTaskBar = Value
-If Ambient.UserMode = True And ComCtlsSupportLevel() >= 2 Then
+If ProgressBarDesignMode = False And ComCtlsSupportLevel() >= 2 Then
     If ProgressBarITaskBarList3 Is Nothing Then Set ProgressBarITaskBarList3 = CreateITaskBarList3()
     If PropShowInTaskBar = True Then
         Call CheckTaskBarProgress
@@ -974,12 +1040,44 @@ If Ambient.UserMode = True And ComCtlsSupportLevel() >= 2 Then
             If Not ProgressBarITaskBarList3 Is Nothing Then
                 Dim hWnd As Long
                 hWnd = GetAncestor(ProgressBarHandle, GA_ROOT)
-                If hWnd <> 0 Then VTableCall vbLong, ProgressBarITaskBarList3, VTableIndexITaskBarList3SetProgressState, hWnd, TBPF_NOPROGRESS
+                If hWnd <> 0 Then VTableCall vbEmpty, ObjPtr(ProgressBarITaskBarList3), VTableIndexITaskBarList3SetProgressState, hWnd, TBPF_NOPROGRESS
             End If
         End If
     End If
 End If
 UserControl.PropertyChanged "ShowInTaskBar"
+End Property
+
+Public Property Get Text() As String
+Attribute Text.VB_Description = "Returns/sets the text contained in an object. Placeholders: {0} = Value, {1} = Min, {2} = Max and {3} = Percent value between 0 and 100."
+Text = PropText
+End Property
+
+Public Property Let Text(ByVal Value As String)
+If PropText = Value Then Exit Property
+If ProgressBarDesignMode = True Then
+    If ProgressBarHandle <> 0 Then
+        If Value = vbNullString And Not PropText = vbNullString Then
+            Call ComCtlsRemoveSubclass(ProgressBarHandle)
+        ElseIf Not Value = vbNullString And PropText = vbNullString Then
+            Call ComCtlsSetSubclass(ProgressBarHandle, Me, 2)
+        End If
+    End If
+End If
+PropText = Value
+If ProgressBarHandle <> 0 Then InvalidateRect ProgressBarHandle, ByVal 0&, 1
+UserControl.PropertyChanged "Text"
+End Property
+
+Public Property Get TextColor() As OLE_COLOR
+Attribute TextColor.VB_Description = "Returns/sets the foreground color used to display text and graphics in an object."
+TextColor = PropTextColor
+End Property
+
+Public Property Let TextColor(ByVal Value As OLE_COLOR)
+PropTextColor = Value
+If ProgressBarHandle <> 0 Then InvalidateRect ProgressBarHandle, ByVal 0&, 1
+UserControl.PropertyChanged "TextColor"
 End Property
 
 Private Sub CreateProgressBar()
@@ -995,12 +1093,13 @@ Select Case PropScrolling
         If ComCtlsSupportLevel() >= 1 Then
             dwStyle = dwStyle Or PBS_MARQUEE
         Else
-            If Ambient.UserMode = True Then PropScrolling = PrbScrollingStandard
+            If ProgressBarDesignMode = False Then PropScrolling = PrbScrollingStandard
         End If
 End Select
 If PropSmoothReverse = True Then If ComCtlsSupportLevel() >= 1 Then dwStyle = dwStyle Or PBS_SMOOTHREVERSE
-ProgressBarHandle = CreateWindowEx(dwExStyle, StrPtr("msctls_progress32"), StrPtr("Progress Bar"), dwStyle, 0, 0, UserControl.ScaleWidth, UserControl.ScaleHeight, UserControl.hWnd, 0, App.hInstance, ByVal 0&)
+ProgressBarHandle = CreateWindowEx(dwExStyle, StrPtr("msctls_progress32"), 0, dwStyle, 0, 0, UserControl.ScaleWidth, UserControl.ScaleHeight, UserControl.hWnd, 0, App.hInstance, ByVal 0&)
 If ProgressBarHandle <> 0 Then SendMessage ProgressBarHandle, PBM_SETRANGE32, PropRange.Min, ByVal PropRange.Max
+Set Me.Font = PropFont
 Me.VisualStyles = PropVisualStyles
 Me.Value = PropValue
 Me.Step = PropStep
@@ -1008,16 +1107,18 @@ Me.MarqueeAnimation = PropMarqueeAnimation
 Me.BackColor = PropBackColor
 Me.ForeColor = PropForeColor
 Me.State = PropState
-If Ambient.UserMode = True Then
+If ProgressBarDesignMode = False Then
     If ProgressBarHandle <> 0 Then
         ProgressBarDblClickSupported = CBool((GetClassLong(ProgressBarHandle, GCL_STYLE) And CS_DBLCLKS) <> 0)
-        Call ComCtlsSetSubclass(ProgressBarHandle, Me, 0)
+        Call ComCtlsSetSubclass(ProgressBarHandle, Me, 1)
     End If
+ElseIf Not PropText = vbNullString Then
+    If ProgressBarHandle <> 0 Then Call ComCtlsSetSubclass(ProgressBarHandle, Me, 2)
 End If
 End Sub
 
 Private Sub ReCreateProgressBar()
-If Ambient.UserMode = True Then
+If ProgressBarDesignMode = False Then
     Dim Locked As Boolean
     Locked = CBool(LockWindowUpdate(UserControl.hWnd) <> 0)
     Call DestroyProgressBar
@@ -1107,7 +1208,7 @@ If ProgressBarHandle <> 0 Then
                 Case PrbStatePaused
                     TaskBarState = TBPF_PAUSED
             End Select
-            VTableCall vbLong, ProgressBarITaskBarList3, VTableIndexITaskBarList3SetProgressValue, hWnd, PropValue, 0&, CLng(Me.Max - Me.Min), 0&
+            VTableCall vbEmpty, ObjPtr(ProgressBarITaskBarList3), VTableIndexITaskBarList3SetProgressValue, hWnd, PropValue, 0&, CLng(Me.Max - Me.Min), 0&
         Else
             If PropMarqueeAnimation = True Then
                 TaskBarState = TBPF_INDETERMINATE
@@ -1115,7 +1216,7 @@ If ProgressBarHandle <> 0 Then
                 TaskBarState = TBPF_NOPROGRESS
             End If
         End If
-        VTableCall vbLong, ProgressBarITaskBarList3, VTableIndexITaskBarList3SetProgressState, hWnd, TaskBarState
+        VTableCall vbEmpty, ObjPtr(ProgressBarITaskBarList3), VTableIndexITaskBarList3SetProgressState, hWnd, TaskBarState
     End If
 End If
 End Sub
@@ -1126,11 +1227,57 @@ On Error Resume Next
 CLSIDFromString StrPtr(CLSID_ITaskBarList), CLSID
 CLSIDFromString StrPtr(IID_ITaskBarList3), IID
 CoCreateInstance CLSID, 0, CLSCTX_INPROC_SERVER, IID, CreateITaskBarList3
-If Not CreateITaskBarList3 Is Nothing Then If VTableCall(vbLong, CreateITaskBarList3, VTableIndexITaskBarList3HrInit) <> S_OK Then Set CreateITaskBarList3 = Nothing
+If Not CreateITaskBarList3 Is Nothing Then
+    VTableCall vbEmpty, ObjPtr(CreateITaskBarList3), VTableIndexITaskBarList3HrInit
+    If Err.LastDllError <> S_OK Then Set CreateITaskBarList3 = Nothing
+End If
 End Function
 
+Private Sub TextDraw(ByVal hWnd As Long, ByVal hDC As Long)
+If hWnd = 0 Or hDC = 0 Then Exit Sub
+If PropText = vbNullString Then Exit Sub
+Dim hFont As Long, hFontOld As Long
+hFont = SendMessage(hWnd, WM_GETFONT, 0, ByVal 0&)
+hFontOld = SelectObject(hDC, hFont)
+Dim OldBkMode As Long, OldTextColor As Long
+OldBkMode = SetBkMode(hDC, 1)
+OldTextColor = SetTextColor(hDC, WinColor(PropTextColor))
+Dim DrawFlags As Long, RC As RECT
+DrawFlags = DT_CENTER Or DT_VCENTER Or DT_SINGLELINE Or DT_NOCLIP
+If PropRightToLeft = True And PropRightToLeftLayout = False Then DrawFlags = DrawFlags Or DT_RTLREADING
+GetClientRect hWnd, RC
+Dim Text As String, Pos As Long
+For Pos = 1 To Len(PropText)
+    Select Case Mid$(PropText, Pos, 3)
+        Case "{0}" ' Value
+            Text = Text & CStr(Me.Value)
+            Pos = Pos + 2
+        Case "{1}" ' Min
+            Text = Text & CStr(Me.Min)
+            Pos = Pos + 2
+        Case "{2}" ' Max
+            Text = Text & CStr(Me.Max)
+            Pos = Pos + 2
+        Case "{3}" ' Percent value between 0 and 100
+            Text = Text & Format$((CDbl(Me.Value - Me.Min) / CDbl(Me.Max - Me.Min)) * 100, "0")
+            Pos = Pos + 2
+        Case Else
+            Text = Text & Mid$(PropText, Pos, 1)
+    End Select
+Next Pos
+DrawText hDC, StrPtr(Text), -1, RC, DrawFlags
+SetBkMode hDC, OldBkMode
+SetTextColor hDC, OldTextColor
+If hFontOld <> 0 Then SelectObject hDC, hFontOld
+End Sub
+
 Private Function ISubclass_Message(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal dwRefData As Long) As Long
-ISubclass_Message = WindowProcControl(hWnd, wMsg, wParam, lParam)
+Select Case dwRefData
+    Case 1
+        ISubclass_Message = WindowProcControl(hWnd, wMsg, wParam, lParam)
+    Case 2
+        ISubclass_Message = WindowProcControlDesignMode(hWnd, wMsg, wParam, lParam)
+End Select
 End Function
 
 Private Function WindowProcControl(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
@@ -1185,6 +1332,19 @@ Select Case wMsg
 End Select
 WindowProcControl = ComCtlsDefaultProc(hWnd, wMsg, wParam, lParam)
 Select Case wMsg
+    Case WM_PAINT, WM_PRINTCLIENT
+        If Not PropText = vbNullString Then
+            If wMsg = WM_PAINT Then
+                Dim hDC As Long
+                hDC = GetDC(hWnd)
+                If hDC <> 0 Then
+                    Call TextDraw(hWnd, hDC)
+                    ReleaseDC hWnd, hDC
+                End If
+            ElseIf wMsg = WM_PRINTCLIENT Then
+                If wParam <> 0 Then Call TextDraw(hWnd, wParam)
+            End If
+        End If
     Case WM_LBUTTONDBLCLK, WM_MBUTTONDBLCLK, WM_RBUTTONDBLCLK
         RaiseEvent DblClick
     Case WM_LBUTTONDOWN, WM_MBUTTONDOWN, WM_RBUTTONDOWN, WM_MOUSEMOVE, WM_LBUTTONUP, WM_MBUTTONUP, WM_RBUTTONUP
@@ -1228,5 +1388,18 @@ Select Case wMsg
             ProgressBarMouseOver = False
             RaiseEvent MouseLeave
         End If
+End Select
+End Function
+
+Private Function WindowProcControlDesignMode(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Select Case wMsg
+    Case WM_PAINT, WM_PRINTCLIENT
+        WindowProcControlDesignMode = WindowProcControl(hWnd, wMsg, wParam, lParam)
+        Exit Function
+End Select
+WindowProcControlDesignMode = ComCtlsDefaultProc(hWnd, wMsg, wParam, lParam)
+Select Case wMsg
+    Case WM_DESTROY, WM_NCDESTROY
+        Call ComCtlsRemoveSubclass(hWnd)
 End Select
 End Function

@@ -7,6 +7,7 @@ Begin VB.UserControl CoolBar
    ClientTop       =   0
    ClientWidth     =   2400
    ControlContainer=   -1  'True
+   DrawStyle       =   5  'Transparent
    HasDC           =   0   'False
    PropertyPages   =   "CoolBar.ctx":0000
    ScaleHeight     =   120
@@ -104,6 +105,11 @@ CXIdeal As Long
 lParam As Long
 CXHeader As Long
 End Type
+Private Type REBARBANDINFO_V61
+RBBI As REBARBANDINFO
+RCChevronLocation As RECT
+uChevronState As Long
+End Type
 Private Type RBHITTESTINFO
 PT As POINTAPI
 Flag As Long
@@ -156,12 +162,6 @@ uBand As Long
 fStyle As Long
 wID As Long
 lParam As Long
-End Type
-Private Type NMRBAUTOSIZE
-hdr As NMHDR
-fChanged As Long
-RCTarget As RECT
-RCActual As RECT
 End Type
 Private Type NMREBARCHILDSIZE
 hdr As NMHDR
@@ -237,6 +237,7 @@ Public Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
 Attribute OLEStartDrag.VB_Description = "Occurs when an OLE drag/drop operation is initiated either manually or automatically."
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (ByRef Destination As Any, ByRef Source As Any, ByVal Length As Long)
 Private Declare Function SendMessage Lib "user32" Alias "SendMessageW" (ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByRef lParam As Any) As Long
+Private Declare Function DefWindowProc Lib "user32" Alias "DefWindowProcW" (ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 Private Declare Function CreateWindowEx Lib "user32" Alias "CreateWindowExW" (ByVal dwExStyle As Long, ByVal lpClassName As Long, ByVal lpWindowName As Long, ByVal dwStyle As Long, ByVal X As Long, ByVal Y As Long, ByVal nWidth As Long, ByVal nHeight As Long, ByVal hWndParent As Long, ByVal hMenu As Long, ByVal hInstance As Long, ByRef lpParam As Any) As Long
 Private Declare Function ShowWindow Lib "user32" (ByVal hWnd As Long, ByVal nCmdShow As Long) As Long
 Private Declare Function MoveWindow Lib "user32" (ByVal hWnd As Long, ByVal X As Long, ByVal Y As Long, ByVal nWidth As Long, ByVal nHeight As Long, ByVal bRepaint As Long) As Long
@@ -279,6 +280,11 @@ RP_GRIPPERVERT = 2
 RP_BAND = 3
 RP_CHEVRON = 4
 RP_CHEVRONVERT = 5
+End Enum
+Private Enum UxThemeChevronStates
+CHEVS_NORMAL = 1
+CHEVS_HOT = 2
+CHEVS_PRESSED = 3
 End Enum
 Private Const DTT_TEXTCOLOR As Long = 1
 Private Type DTTOPTS
@@ -351,7 +357,6 @@ Private Const WM_SIZE As Long = &H5
 Private Const WM_SETCURSOR As Long = &H20, HTCLIENT As Long = 1
 Private Const WM_DESTROY As Long = &H2
 Private Const WM_NCDESTROY As Long = &H82
-Private Const WM_STYLECHANGED As Long = &H7D
 Private Const WM_ERASEBKGND As Long = &H14
 Private Const WM_PAINT As Long = &HF
 Private Const WM_PRINT As Long = &H317, PRF_CLIENT As Long = &H4, PRF_ERASEBKGND As Long = &H8
@@ -374,8 +379,6 @@ Private Const RB_GETBANDCOUNT As Long = (WM_USER + 12)
 Private Const RB_GETROWCOUNT As Long = (WM_USER + 13)
 Private Const RB_GETROWHEIGHT As Long = (WM_USER + 14)
 Private Const RB_IDTOINDEX As Long = (WM_USER + 16)
-Private Const RB_GETTOOLTIPS As Long = (WM_USER + 17)
-Private Const RB_SETTOOLTIPS As Long = (WM_USER + 18)
 Private Const RB_SETBKCOLOR As Long = (WM_USER + 19)
 Private Const RB_GETBKCOLOR As Long = (WM_USER + 20)
 Private Const RB_SETTEXTCOLOR As Long = (WM_USER + 21)
@@ -392,24 +395,16 @@ Private Const RB_MINIMIZEBAND As Long = (WM_USER + 30)
 Private Const RB_MAXIMIZEBAND As Long = (WM_USER + 31)
 Private Const RB_GETBANDBORDERS As Long = (WM_USER + 34)
 Private Const RB_SHOWBAND As Long = (WM_USER + 35)
-Private Const RB_SETPALETTE As Long = (WM_USER + 37)
-Private Const RB_GETPALETTE As Long = (WM_USER + 38)
 Private Const RB_MOVEBAND As Long = (WM_USER + 39)
 Private Const RB_GETBANDMARGINS As Long = (WM_USER + 40)
-Private Const RB_SETEXTENDEDSTYLE As Long = (WM_USER + 41)
-Private Const RB_GETEXTENDEDSTYLE As Long = (WM_USER + 42)
 Private Const RB_PUSHCHEVRON As Long = (WM_USER + 43)
 Private Const TTM_POP As Long = (WM_USER + 28)
-Private Const TTM_UPDATE As Long = (WM_USER + 29)
 Private Const TTM_ADDTOOLA As Long = (WM_USER + 4)
 Private Const TTM_ADDTOOLW As Long = (WM_USER + 50)
 Private Const TTM_ADDTOOL As Long = TTM_ADDTOOLW
 Private Const TTM_NEWTOOLRECTA As Long = (WM_USER + 6)
 Private Const TTM_NEWTOOLRECTW As Long = (WM_USER + 52)
 Private Const TTM_NEWTOOLRECT As Long = TTM_NEWTOOLRECTW
-Private Const TTM_SETTOOLINFOA As Long = (WM_USER + 9)
-Private Const TTM_SETTOOLINFOW As Long = (WM_USER + 54)
-Private Const TTM_SETTOOLINFO As Long = TTM_SETTOOLINFOW
 Private Const LPSTR_TEXTCALLBACK As Long = (-1)
 Private Const TTF_SUBCLASS As Long = &H10
 Private Const TTF_PARSELINKS As Long = &H1000
@@ -456,14 +451,11 @@ Private Const CCS_VERT As Long = &H80
 Private Const CCS_NORESIZE As Long = &H4
 Private Const CCS_NODIVIDER As Long = &H40
 Private Const RBIM_IMAGELIST As Long = &H1
-Private Const H_MAX As Long = (&HFFFF + 1)
-Private Const NM_FIRST As Long = H_MAX
+Private Const NM_FIRST As Long = 0
 Private Const NM_CUSTOMDRAW As Long = (NM_FIRST - 12)
-Private Const RBN_FIRST As Long = (H_MAX - 831)
+Private Const RBN_FIRST As Long = (-831)
 Private Const RBN_HEIGHTCHANGE As Long = (RBN_FIRST - 0)
-Private Const RBN_GETOBJECT As Long = (RBN_FIRST - 1)
 Private Const RBN_LAYOUTCHANGED As Long = (RBN_FIRST - 2)
-Private Const RBN_AUTOSIZE As Long = (RBN_FIRST - 3)
 Private Const RBN_BEGINDRAG As Long = (RBN_FIRST - 4)
 Private Const RBN_ENDDRAG As Long = (RBN_FIRST - 5)
 Private Const RBN_DELETINGBAND As Long = (RBN_FIRST - 6)
@@ -478,7 +470,6 @@ Private Const RBS_TOOLTIPS As Long = &H100 ' Unsupported
 Private Const RBS_VARHEIGHT As Long = &H200
 Private Const RBS_BANDBORDERS As Long = &H400
 Private Const RBS_FIXEDORDER As Long = &H800
-Private Const RBS_AUTOSIZE As Long = &H2000
 Private Const RBS_VERTICALGRIPPER As Long = &H4000
 Private Const RBS_DBLCLKTOGGLE As Long = &H8000&
 Implements ISubclass
@@ -514,10 +505,12 @@ Private CoolBarHandle As Long, CoolBarToolTipHandle As Long
 Private CoolBarFontHandle As Long
 Private CoolBarIsClick As Boolean
 Private CoolBarMouseOver As Boolean, CoolBarMouseOverIndex As Long
+Private CoolBarDesignMode As Boolean
 Private CoolBarToolTipIndex As Long
 Private CoolBarDoubleBufferEraseBkgDC As Long
 Private CoolBarAlignable As Boolean
 Private CoolBarTheme As Long
+Private CoolBarImageListObjectPointer As Long
 Private DispIDMousePointer As Long
 Private DispIDBorderStyle As Long
 Private DispIDImageList As Long, ImageListArray() As String
@@ -530,7 +523,7 @@ Private PropMouseTrack As Boolean
 Private PropRightToLeft As Boolean
 Private PropRightToLeftLayout As Boolean
 Private PropRightToLeftMode As CCRightToLeftModeConstants
-Private PropImageListName As String, PropImageListControl As Object, PropImageListInit As Boolean
+Private PropImageListName As String, PropImageListInit As Boolean
 Private PropBackColor As OLE_COLOR
 Private PropForeColor As OLE_COLOR
 Private PropBorderStyle As Integer
@@ -606,7 +599,7 @@ End Sub
 Private Sub UserControl_Initialize()
 Call ComCtlsLoadShellMod
 Call ComCtlsInitCC(ICC_COOL_CLASSES)
-Call SetVTableSubclass(Me, VTableInterfacePerPropertyBrowsing)
+Call SetVTableHandling(Me, VTableInterfacePerPropertyBrowsing)
 ReDim ImageListArray(0) As String
 CoolBarToolTipIndex = -1
 End Sub
@@ -617,6 +610,7 @@ If DispIDBorderStyle = 0 Then DispIDBorderStyle = GetDispID(Me, "BorderStyle")
 If DispIDImageList = 0 Then DispIDImageList = GetDispID(Me, "ImageList")
 On Error Resume Next
 If UserControl.ParentControls.Count = 0 Then CoolBarAlignable = False Else CoolBarAlignable = True
+CoolBarDesignMode = Not Ambient.UserMode
 On Error GoTo 0
 Set PropFont = Ambient.Font
 PropVisualStyles = True
@@ -627,7 +621,7 @@ PropRightToLeft = Ambient.RightToLeft
 PropRightToLeftLayout = False
 PropRightToLeftMode = CCRightToLeftModeVBAME
 If PropRightToLeft = True Then Me.RightToLeft = True
-PropImageListName = "(None)": Set PropImageListControl = Nothing
+PropImageListName = "(None)"
 PropBackColor = vbButtonFace
 PropForeColor = vbButtonText
 PropBorderStyle = vbFixedSingle
@@ -647,7 +641,7 @@ Me.Bands.Add().Width = UserControl.ScaleX((96 * PixelsPerDIP_X()), vbPixels, vbC
 End Sub
 
 Private Sub UserControl_Paint()
-If Ambient.UserMode = False Then RedrawWindow UserControl.hWnd, 0, 0, RDW_UPDATENOW Or RDW_INVALIDATE Or RDW_ERASE Or RDW_ALLCHILDREN
+If CoolBarDesignMode = True Then RedrawWindow UserControl.hWnd, 0, 0, RDW_UPDATENOW Or RDW_INVALIDATE Or RDW_ERASE Or RDW_ALLCHILDREN
 End Sub
 
 Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
@@ -656,6 +650,7 @@ If DispIDBorderStyle = 0 Then DispIDBorderStyle = GetDispID(Me, "BorderStyle")
 If DispIDImageList = 0 Then DispIDImageList = GetDispID(Me, "ImageList")
 On Error Resume Next
 If UserControl.ParentControls.Count = 0 Then CoolBarAlignable = False Else CoolBarAlignable = True
+CoolBarDesignMode = Not Ambient.UserMode
 On Error GoTo 0
 With PropBag
 Set PropFont = .ReadProperty("Font", Nothing)
@@ -889,10 +884,7 @@ LastWidth = .Width
 LastAlign = Align
 End With
 With UserControl
-If DPICorrectionFactor() <> 1 Then
-    .Extender.Move .Extender.Left + .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top + .ScaleY(1, vbPixels, vbContainerPosition)
-    .Extender.Move .Extender.Left - .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top - .ScaleY(1, vbPixels, vbContainerPosition)
-End If
+If DPICorrectionFactor() <> 1 Then Call SyncObjectRectsToContainer(Me)
 If CoolBarHandle = 0 Then InProc = False: Exit Sub
 Dim Count As Long, Size As SIZEAPI, WndRect As RECT, Rows As Long
 Count = SendMessage(CoolBarHandle, RB_GETBANDCOUNT, 0, ByVal 0&)
@@ -903,27 +895,14 @@ If Count > 0 Then
     Rows = SendMessage(CoolBarHandle, RB_GETROWCOUNT, 0, ByVal 0&)
     If (GetWindowLong(CoolBarHandle, GWL_STYLE) And CCS_VERT) = 0 Then
         Size.CY = SendMessage(CoolBarHandle, RB_GETBARHEIGHT, 0, ByVal 0&) + ((WndRect.Bottom - WndRect.Top) - (ClientRect.Bottom - ClientRect.Top))
-        If DPICorrectionFactor() <> 1 Then
-            Size.CX = .ScaleX(.Extender.Width, vbContainerSize, vbPixels)
-        Else
-            Size.CX = UserControl.ScaleWidth
-        End If
+        Size.CX = UserControl.ScaleWidth
     Else
         Size.CX = SendMessage(CoolBarHandle, RB_GETBARHEIGHT, 0, ByVal 0&) + ((WndRect.Bottom - WndRect.Top) - (ClientRect.Bottom - ClientRect.Top))
-        If DPICorrectionFactor() <> 1 Then
-            Size.CY = .ScaleY(.Extender.Height, vbContainerSize, vbPixels)
-        Else
-            Size.CY = UserControl.ScaleHeight
-        End If
+        Size.CY = UserControl.ScaleHeight
     End If
 Else
-    If DPICorrectionFactor() <> 1 Then
-        Size.CY = .ScaleY(.Extender.Height, vbContainerSize, vbPixels)
-        Size.CX = .ScaleX(.Extender.Width, vbContainerSize, vbPixels)
-    Else
-        Size.CY = UserControl.ScaleHeight
-        Size.CX = UserControl.ScaleWidth
-    End If
+    Size.CY = UserControl.ScaleHeight
+    Size.CX = UserControl.ScaleWidth
 End If
 Select Case Align
     Case vbAlignNone
@@ -933,10 +912,7 @@ Select Case Align
     Case vbAlignLeft, vbAlignRight
         .Extender.Width = .ScaleX(Size.CX, vbPixels, vbContainerSize)
 End Select
-If DPICorrectionFactor() <> 1 Then
-    .Extender.Move .Extender.Left + .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top + .ScaleY(1, vbPixels, vbContainerPosition)
-    .Extender.Move .Extender.Left - .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top - .ScaleY(1, vbPixels, vbContainerPosition)
-End If
+If DPICorrectionFactor() <> 1 Then Call SyncObjectRectsToContainer(Me)
 MoveWindow CoolBarHandle, 0, 0, .ScaleWidth, .ScaleHeight, 1
 End With
 InProc = False
@@ -953,7 +929,7 @@ End With
 End Sub
 
 Private Sub UserControl_Terminate()
-Call RemoveVTableSubclass(Me, VTableInterfacePerPropertyBrowsing)
+Call RemoveVTableHandling(Me, VTableInterfacePerPropertyBrowsing)
 Call DestroyCoolBar
 Call ComCtlsReleaseShellMod
 End Sub
@@ -971,7 +947,7 @@ Dim Count As Long
 Count = Me.Bands.Count
 If Count > 0 Then
     Dim i As Long
-    If Ambient.UserMode = True Then
+    If CoolBarDesignMode = False Then
         For i = 1 To Count
             With Me.Bands(i)
             Set .Child = .Child
@@ -1243,6 +1219,7 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
+If CoolBarDesignMode = False Then Call RefreshMousePointer
 UserControl.PropertyChanged "MousePointer"
 End Property
 
@@ -1262,7 +1239,7 @@ Else
     If Value.Type = vbPicTypeIcon Or Value.Handle = 0 Then
         Set PropMouseIcon = Value
     Else
-        If Ambient.UserMode = False Then
+        If CoolBarDesignMode = True Then
             MsgBox "Invalid property value", vbCritical + vbOKOnly
             Exit Property
         Else
@@ -1270,6 +1247,7 @@ Else
         End If
     End If
 End If
+If CoolBarDesignMode = False Then Call RefreshMousePointer
 UserControl.PropertyChanged "MouseIcon"
 End Property
 
@@ -1295,10 +1273,10 @@ UserControl.RightToLeft = PropRightToLeft
 Call ComCtlsCheckRightToLeft(PropRightToLeft, UserControl.RightToLeft, PropRightToLeftMode)
 Dim dwMask As Long
 If PropRightToLeft = True And PropRightToLeftLayout = True Then dwMask = WS_EX_LAYOUTRTL
-If Ambient.UserMode = True Then Call ComCtlsSetRightToLeft(UserControl.hWnd, dwMask)
+If CoolBarDesignMode = False Then Call ComCtlsSetRightToLeft(UserControl.hWnd, dwMask)
 If CoolBarHandle <> 0 Then
     Call ComCtlsSetRightToLeft(CoolBarHandle, dwMask)
-    If Ambient.UserMode = True Then
+    If CoolBarDesignMode = False Then
         Dim Band As CbrBand, Child As Object
         For Each Band In Me.Bands
             Set Child = Band.Child
@@ -1358,8 +1336,8 @@ End Property
 
 Public Property Get ImageList() As Variant
 Attribute ImageList.VB_Description = "Returns/sets the image list control to be used."
-If Ambient.UserMode = True Then
-    If PropImageListInit = False And PropImageListControl Is Nothing Then
+If CoolBarDesignMode = False Then
+    If PropImageListInit = False And CoolBarImageListObjectPointer = 0 Then
         If Not PropImageListName = "(None)" Then Me.ImageList = PropImageListName
         PropImageListInit = True
     End If
@@ -1388,8 +1366,8 @@ If CoolBarHandle <> 0 Then
         If Success = True Then
             RBI.hImageList = Handle
             SendMessage CoolBarHandle, RB_SETBARINFO, 0, ByVal VarPtr(RBI)
+            CoolBarImageListObjectPointer = ObjPtr(Value)
             PropImageListName = ProperControlName(Value)
-            Set PropImageListControl = Value
         End If
     ElseIf VarType(Value) = vbString Then
         Dim ControlEnum As Object, CompareName As String
@@ -1403,10 +1381,10 @@ If CoolBarHandle <> 0 Then
                     If Success = True Then
                         RBI.hImageList = Handle
                         SendMessage CoolBarHandle, RB_SETBARINFO, 0, ByVal VarPtr(RBI)
+                        If CoolBarDesignMode = False Then CoolBarImageListObjectPointer = ObjPtr(ControlEnum)
                         PropImageListName = Value
-                        If Ambient.UserMode = True Then Set PropImageListControl = ControlEnum
                         Exit For
-                    ElseIf Ambient.UserMode = False Then
+                    ElseIf CoolBarDesignMode = True Then
                         PropImageListName = Value
                         Success = True
                         Exit For
@@ -1422,8 +1400,8 @@ If CoolBarHandle <> 0 Then
             RBI.hImageList = 0
             SendMessage CoolBarHandle, RB_SETBARINFO, 0, ByVal VarPtr(RBI)
         End If
+        CoolBarImageListObjectPointer = 0
         PropImageListName = "(None)"
-        Set PropImageListControl = Nothing
     ElseIf Handle = 0 Then
         SendMessage CoolBarHandle, RB_GETBARINFO, 0, ByVal VarPtr(RBI)
         If RBI.hImageList <> 0 Then
@@ -1618,7 +1596,7 @@ Else
     If Value.Type = vbPicTypeBitmap Or Value.Handle = 0 Then
         Set PropPicture = Value
     Else
-        If Ambient.UserMode = False Then
+        If CoolBarDesignMode = True Then
             MsgBox "Invalid picture", vbCritical + vbOKOnly
             Exit Property
         Else
@@ -1701,7 +1679,7 @@ End Property
 
 Public Property Let ShowTips(ByVal Value As Boolean)
 PropShowTips = Value
-If CoolBarHandle <> 0 And Ambient.UserMode = True Then
+If CoolBarHandle <> 0 And CoolBarDesignMode = False Then
     If PropShowTips = False Then
         Call DestroyToolTip
     Else
@@ -2449,13 +2427,14 @@ If CoolBarHandle <> 0 Then
         Dim RBBI As REBARBANDINFO
         With RBBI
         .cbSize = LenB(RBBI)
-        .fMask = RBBIM_STYLE
+        .fMask = RBBIM_STYLE Or RBBIM_HEADERSIZE
         SendMessage CoolBarHandle, RB_GETBANDINFO, Index, ByVal VarPtr(RBBI)
         If Value = True Then
             If Not (.fStyle And RBBS_USECHEVRON) = RBBS_USECHEVRON Then .fStyle = .fStyle Or RBBS_USECHEVRON
         Else
             If (.fStyle And RBBS_USECHEVRON) = RBBS_USECHEVRON Then .fStyle = .fStyle And Not RBBS_USECHEVRON
         End If
+        .CXHeader = -1
         SendMessage CoolBarHandle, RB_SETBANDINFO, Index, ByVal VarPtr(RBBI)
         End With
     End If
@@ -2585,12 +2564,12 @@ If PropFixedOrder = True Then dwStyle = dwStyle Or RBS_FIXEDORDER
 If PropVariantHeight = True Then dwStyle = dwStyle Or RBS_VARHEIGHT
 If PropDblClickToggle = True Then dwStyle = dwStyle Or RBS_DBLCLKTOGGLE
 If PropVerticalGripper = True Then dwStyle = dwStyle Or RBS_VERTICALGRIPPER
-If Ambient.UserMode = True Then
+If CoolBarDesignMode = False Then
     ' The WM_NOTIFYFORMAT notification must be handled, which will be sent on control creation.
     ' Thus it is necessary to subclass the parent before the control is created.
     Call ComCtlsSetSubclass(UserControl.hWnd, Me, 2)
 End If
-CoolBarHandle = CreateWindowEx(dwExStyle, StrPtr("ReBarWindow32"), StrPtr("Cool Bar"), dwStyle, 0, 0, UserControl.ScaleWidth, UserControl.ScaleHeight, UserControl.hWnd, 0, App.hInstance, ByVal 0&)
+CoolBarHandle = CreateWindowEx(dwExStyle, StrPtr("ReBarWindow32"), 0, dwStyle, 0, 0, UserControl.ScaleWidth, UserControl.ScaleHeight, UserControl.hWnd, 0, App.hInstance, ByVal 0&)
 Set Me.Font = PropFont
 Me.VisualStyles = PropVisualStyles
 Me.Enabled = UserControl.Enabled
@@ -2606,7 +2585,7 @@ If CoolBarHandle <> 0 Then
         SendMessage CoolBarHandle, CCM_SETVERSION, 5, ByVal 0&
     End If
 End If
-If Ambient.UserMode = True Then
+If CoolBarDesignMode = False Then
     If CoolBarHandle <> 0 Then Call ComCtlsSetSubclass(CoolBarHandle, Me, 1)
 Else
     Call ComCtlsSetSubclass(UserControl.hWnd, Me, 3)
@@ -2668,7 +2647,6 @@ End Sub
 
 Private Sub DestroyToolTip()
 If CoolBarToolTipHandle = 0 Then Exit Sub
-SetParent CoolBarToolTipHandle, 0
 DestroyWindow CoolBarToolTipHandle
 CoolBarToolTipHandle = 0
 CoolBarToolTipIndex = -1
@@ -2807,7 +2785,7 @@ End Sub
 
 Private Sub CheckToolTipIndex(ByVal X As Long, ByVal Y As Long)
 If CoolBarHandle <> 0 And CoolBarToolTipHandle <> 0 Then
-    Dim Text As String, RBHTI As RBHITTESTINFO
+    Dim RBHTI As RBHITTESTINFO
     With RBHTI
     .PT.X = X
     .PT.Y = Y
@@ -2837,6 +2815,10 @@ ControlIsValid = CBool(Err.Number = 0 And Not Control Is Extender And Container 
 On Error GoTo 0
 End Function
 
+Private Function PropImageListControl() As Object
+If CoolBarImageListObjectPointer <> 0 Then Set PropImageListControl = PtrToObj(CoolBarImageListObjectPointer)
+End Function
+
 Private Function ISubclass_Message(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal dwRefData As Long) As Long
 Select Case dwRefData
     Case 1
@@ -2852,16 +2834,20 @@ Private Function WindowProcControl(ByVal hWnd As Long, ByVal wMsg As Long, ByVal
 Select Case wMsg
     Case WM_SETCURSOR
         If LoWord(lParam) = HTCLIENT Then
+            Dim hCursor As Long
             If MousePointerID(PropMousePointer) <> 0 Then
-                SetCursor LoadCursor(0, MousePointerID(PropMousePointer))
+                hCursor = LoadCursor(0, MousePointerID(PropMousePointer))
+            ElseIf PropMousePointer = 99 Then
+                If Not PropMouseIcon Is Nothing Then hCursor = PropMouseIcon.Handle
+            End If
+            If hCursor <> 0 Then
+                SetCursor hCursor
                 WindowProcControl = 1
                 Exit Function
-            ElseIf PropMousePointer = 99 Then
-                If Not PropMouseIcon Is Nothing Then
-                    SetCursor PropMouseIcon.Handle
-                    WindowProcControl = 1
-                    Exit Function
-                End If
+            ElseIf hWnd <> wParam And wParam <> 0 Then
+                ' Ensures that the cild controls can walk up the chain properly.
+                WindowProcControl = DefWindowProc(hWnd, wMsg, wParam, lParam)
+                Exit Function
             End If
         End If
     Case WM_ERASEBKGND
@@ -3067,7 +3053,9 @@ Select Case wMsg
                                 CloseThemeData CoolBarTheme
                                 CoolBarTheme = 0
                             End If
-                            If EnabledVisualStyles() = True And PropVisualStyles = True Then CoolBarTheme = OpenThemeData(CoolBarHandle, StrPtr("ReBar"))
+                            If EnabledVisualStyles() = True And PropVisualStyles = True Then
+                                If ComCtlsSupportLevel() >= 2 Then CoolBarTheme = OpenThemeData(CoolBarHandle, StrPtr("ReBar"))
+                            End If
                             If CoolBarTheme <> 0 Then
                                 WindowProcUserControl = CDRF_NOTIFYITEMDRAW Or CDRF_NOTIFYPOSTPAINT
                             Else
@@ -3176,6 +3164,32 @@ Select Case wMsg
                                         End If
                                         SetBkMode .hDC, OldBkMode
                                         If hFontOld <> 0 Then SelectObject .hDC, hFontOld
+                                    End If
+                                End If
+                                If (RBBI.fStyle And RBBS_USECHEVRON) = RBBS_USECHEVRON Then
+                                    If ComCtlsSupportLevel() >= 2 Then
+                                        Dim RBBI_V61 As REBARBANDINFO_V61
+                                        RBBI_V61.RBBI.cbSize = LenB(RBBI_V61)
+                                        RBBI_V61.RBBI.fMask = RBBIM_CHEVRONLOCATION Or RBBIM_CHEVRONSTATE
+                                        SendMessage CoolBarHandle, RB_GETBANDINFO, Index, ByVal VarPtr(RBBI_V61)
+                                        If (RBBI_V61.RCChevronLocation.Right - RBBI_V61.RCChevronLocation.Left) > 0 And (RBBI_V61.RCChevronLocation.Bottom - RBBI_V61.RCChevronLocation.Top) > 0 Then
+                                            Const STATE_SYSTEM_PRESSED As Long = &H8, STATE_SYSTEM_HOTTRACKED As Long = &H80
+                                            Dim ChevronPart As Long, ChevronState As Long
+                                            If (dwStyle And CCS_VERT) = CCS_VERT Then
+                                                ChevronPart = RP_CHEVRONVERT
+                                            Else
+                                                ChevronPart = RP_CHEVRON
+                                            End If
+                                            If (RBBI_V61.uChevronState And STATE_SYSTEM_PRESSED) = STATE_SYSTEM_PRESSED Then
+                                                ChevronState = CHEVS_PRESSED
+                                            ElseIf (RBBI_V61.uChevronState And STATE_SYSTEM_HOTTRACKED) = STATE_SYSTEM_HOTTRACKED Then
+                                                ChevronState = CHEVS_HOT
+                                            Else
+                                                ChevronState = CHEVS_NORMAL
+                                            End If
+                                            If IsThemeBackgroundPartiallyTransparent(CoolBarTheme, ChevronPart, ChevronState) <> 0 Then DrawThemeParentBackground CoolBarHandle, .hDC, RBBI_V61.RCChevronLocation
+                                            DrawThemeBackground CoolBarTheme, .hDC, ChevronPart, ChevronState, RBBI_V61.RCChevronLocation, RBBI_V61.RCChevronLocation
+                                        End If
                                     End If
                                 End If
                                 End With

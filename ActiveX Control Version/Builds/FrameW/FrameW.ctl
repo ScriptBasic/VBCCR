@@ -7,10 +7,11 @@ Begin VB.UserControl FrameW
    ClientTop       =   0
    ClientWidth     =   2400
    ControlContainer=   -1  'True
+   DrawStyle       =   5  'Transparent
+   ForwardFocus    =   -1  'True
    PropertyPages   =   "FrameW.ctx":0000
-   ScaleHeight     =   120
-   ScaleMode       =   3  'Pixel
-   ScaleWidth      =   160
+   ScaleHeight     =   1800
+   ScaleWidth      =   2400
    ToolboxBitmap   =   "FrameW.ctx":0035
 End
 Attribute VB_Name = "FrameW"
@@ -67,8 +68,9 @@ Public Event OLESetData(Data As DataObject, DataFormat As Integer)
 Attribute OLESetData.VB_Description = "Occurs at the OLE drag/drop source control when the drop target requests data that was not provided to the DataObject during the OLEDragStart event."
 Public Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
 Attribute OLEStartDrag.VB_Description = "Occurs when an OLE drag/drop operation is initiated either manually or automatically."
+Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (ByRef Destination As Any, ByRef Source As Any, ByVal Length As Long)
+Private Declare Function lstrlen Lib "kernel32" Alias "lstrlenW" (ByVal lpString As Long) As Long
 Private Declare Function DrawText Lib "user32" Alias "DrawTextW" (ByVal hDC As Long, ByVal lpchText As Long, ByVal nCount As Long, ByRef lpRect As RECT, ByVal uFormat As Long) As Long
-Private Declare Function DrawIconEx Lib "user32" (ByVal hDC As Long, ByVal XLeft As Long, ByVal YTop As Long, ByVal hIcon As Long, ByVal CXWidth As Long, ByVal CYWidth As Long, ByVal istepIfAniCur As Long, ByVal hbrFlickerFreeDraw As Long, ByVal diFlags As Long) As Long
 Private Declare Function SetTextColor Lib "gdi32" (ByVal hDC As Long, ByVal crColor As Long) As Long
 Private Declare Function SendMessage Lib "user32" Alias "SendMessageW" (ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByRef lParam As Any) As Long
 Private Declare Function RedrawWindow Lib "user32" (ByVal hWnd As Long, ByVal lprcUpdate As Long, ByVal hrgnUpdate As Long, ByVal fuRedraw As Long) As Long
@@ -83,6 +85,7 @@ Private Declare Function SetViewportOrgEx Lib "gdi32" (ByVal hDC As Long, ByVal 
 Private Declare Function LoadCursor Lib "user32" Alias "LoadCursorW" (ByVal hInstance As Long, ByVal lpCursorName As Any) As Long
 Private Declare Function DrawEdge Lib "user32" (ByVal hDC As Long, ByRef qRC As RECT, ByVal Edge As Long, ByVal grfFlags As Long) As Long
 Private Declare Function BitBlt Lib "gdi32" (ByVal hDestDC As Long, ByVal X As Long, ByVal Y As Long, ByVal nWidth As Long, ByVal nHeight As Long, ByVal hSrcDC As Long, ByVal XSrc As Long, ByVal YSrc As Long, ByVal dwRop As Long) As Long
+Private Declare Function RevokeDragDrop Lib "ole32" (ByVal hWnd As Long) As Long
 
 #If ImplementThemedButton = True Then
 
@@ -126,16 +129,19 @@ Private Declare Function CloseThemeData Lib "uxtheme" (ByVal Theme As Long) As L
 
 Private Const RDW_UPDATENOW As Long = &H100, RDW_INVALIDATE As Long = &H1, RDW_ERASE As Long = &H4, RDW_ALLCHILDREN As Long = &H80
 Private Const HWND_DESKTOP As Long = &H0
+Private Const WM_GETTEXTLENGTH As Long = &HE
+Private Const WM_GETTEXT As Long = &HD
+Private Const WM_SETTEXT As Long = &HC
 Private Const WM_PAINT As Long = &HF
 Private Const WM_PRINTCLIENT As Long = &H318
 Private Const WM_MOUSELEAVE As Long = &H2A3
-Private Const DI_NORMAL As Long = &H3
 Private Const DT_LEFT As Long = &H0
 Private Const DT_CENTER As Long = &H1
 Private Const DT_RIGHT As Long = &H2
-Private Const DT_RTLREADING As Long = &H20000
-Private Const DT_NOCLIP As Long = &H100
 Private Const DT_SINGLELINE As Long = &H20
+Private Const DT_NOCLIP As Long = &H100
+Private Const DT_NOPREFIX As Long = &H800
+Private Const DT_RTLREADING As Long = &H20000
 Private Const BDR_SUNKENOUTER As Long = &H2
 Private Const BDR_RAISEDINNER As Long = &H4
 Private Const EDGE_ETCHED As Long = (BDR_SUNKENOUTER Or BDR_RAISEDINNER)
@@ -149,6 +155,8 @@ Implements ISubclass
 Implements OLEGuids.IObjectSafety
 Implements OLEGuids.IPerPropertyBrowsingVB
 Private FrameMouseOver As Boolean
+Private FrameDesignMode As Boolean
+Private FramePictureRenderFlag As Integer
 Private DispIDMousePointer As Long
 Private DispIDBorderStyle As Long
 Private WithEvents PropFont As StdFont
@@ -160,6 +168,7 @@ Private PropRightToLeft As Boolean
 Private PropRightToLeftMode As CCRightToLeftModeConstants
 Private PropBorderStyle As Integer
 Private PropCaption As String
+Private PropUseMnemonic As Boolean
 Private PropAlignment As VBRUN.AlignmentConstants
 Private PropTransparent As Boolean
 Private PropPicture As IPictureDisp
@@ -212,12 +221,15 @@ End Sub
 
 Private Sub UserControl_Initialize()
 Call ComCtlsLoadShellMod
-Call SetVTableSubclass(Me, VTableInterfacePerPropertyBrowsing)
+Call SetVTableHandling(Me, VTableInterfacePerPropertyBrowsing)
 End Sub
 
 Private Sub UserControl_InitProperties()
 If DispIDMousePointer = 0 Then DispIDMousePointer = GetDispID(Me, "MousePointer")
 If DispIDBorderStyle = 0 Then DispIDBorderStyle = GetDispID(Me, "BorderStyle")
+On Error Resume Next
+FrameDesignMode = Not Ambient.UserMode
+On Error GoTo 0
 Set Me.Font = Ambient.Font
 PropVisualStyles = True
 PropMousePointer = 0: Set PropMouseIcon = Nothing
@@ -227,16 +239,20 @@ PropRightToLeftMode = CCRightToLeftModeVBAME
 If PropRightToLeft = True Then Me.RightToLeft = True
 PropBorderStyle = vbFixedSingle
 PropCaption = Ambient.DisplayName
+PropUseMnemonic = True
 If PropRightToLeft = False Then PropAlignment = vbLeftJustify Else PropAlignment = vbRightJustify
 PropTransparent = False
 Set PropPicture = Nothing
 If PropRightToLeft = False Then PropPictureAlignment = CCLeftRightAlignmentLeft Else PropPictureAlignment = CCLeftRightAlignmentRight
-If Ambient.UserMode = True Then Call ComCtlsSetSubclass(UserControl.hWnd, Me, 0)
+If FrameDesignMode = False Then Call ComCtlsSetSubclass(UserControl.hWnd, Me, 0)
 End Sub
 
 Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
 If DispIDMousePointer = 0 Then DispIDMousePointer = GetDispID(Me, "MousePointer")
 If DispIDBorderStyle = 0 Then DispIDBorderStyle = GetDispID(Me, "BorderStyle")
+On Error Resume Next
+FrameDesignMode = Not Ambient.UserMode
+On Error GoTo 0
 With PropBag
 Set Me.Font = .ReadProperty("Font", Nothing)
 PropVisualStyles = .ReadProperty("VisualStyles", True)
@@ -253,13 +269,19 @@ PropRightToLeft = .ReadProperty("RightToLeft", False)
 PropRightToLeftMode = .ReadProperty("RightToLeftMode", CCRightToLeftModeVBAME)
 If PropRightToLeft = True Then Me.RightToLeft = True
 PropBorderStyle = .ReadProperty("BorderStyle", vbFixedSingle)
-PropCaption = VarToStr(.ReadProperty("Caption", vbNullString))
+PropCaption = .ReadProperty("Caption", vbNullString) ' Unicode not necessary
+PropUseMnemonic = .ReadProperty("UseMnemonic", True)
 PropAlignment = .ReadProperty("Alignment", vbLeftJustify)
 PropTransparent = .ReadProperty("Transparent", False)
 Set PropPicture = .ReadProperty("Picture", Nothing)
 PropPictureAlignment = .ReadProperty("PictureAlignment", CCLeftRightAlignmentLeft)
 End With
-If Ambient.UserMode = True Then Call ComCtlsSetSubclass(UserControl.hWnd, Me, 0)
+If PropUseMnemonic = True Then
+    UserControl.AccessKeys = ChrW(AccelCharCode(PropCaption))
+Else
+    UserControl.AccessKeys = vbNullString
+End If
+If FrameDesignMode = False Then Call ComCtlsSetSubclass(UserControl.hWnd, Me, 0)
 End Sub
 
 Private Sub UserControl_WriteProperties(PropBag As PropertyBag)
@@ -277,7 +299,8 @@ With PropBag
 .WriteProperty "RightToLeft", PropRightToLeft, False
 .WriteProperty "RightToLeftMode", PropRightToLeftMode, CCRightToLeftModeVBAME
 .WriteProperty "BorderStyle", PropBorderStyle, vbFixedSingle
-.WriteProperty "Caption", StrToVar(PropCaption), vbNullString
+.WriteProperty "Caption", PropCaption, vbNullString ' Unicode not necessary
+.WriteProperty "UseMnemonic", PropUseMnemonic, True
 .WriteProperty "Alignment", PropAlignment, vbLeftJustify
 .WriteProperty "Transparent", PropTransparent, False
 .WriteProperty "Picture", PropPicture, Nothing
@@ -315,11 +338,11 @@ RaiseEvent OLECompleteDrag(Effect)
 End Sub
 
 Private Sub UserControl_OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
-RaiseEvent OLEDragDrop(Data, Effect, Button, Shift, UserControl.ScaleX(X, vbPixels, vbContainerPosition), UserControl.ScaleY(Y, vbPixels, vbContainerPosition))
+RaiseEvent OLEDragDrop(Data, Effect, Button, Shift, X, Y)
 End Sub
 
 Private Sub UserControl_OLEDragOver(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
-RaiseEvent OLEDragOver(Data, Effect, Button, Shift, UserControl.ScaleX(X, vbPixels, vbContainerPosition), UserControl.ScaleY(Y, vbPixels, vbContainerPosition), State)
+RaiseEvent OLEDragOver(Data, Effect, Button, Shift, X, Y, State)
 End Sub
 
 Private Sub UserControl_OLEGiveFeedback(Effect As Long, DefaultCursors As Boolean)
@@ -343,18 +366,13 @@ Private Sub UserControl_Resize()
 Static InProc As Boolean
 If InProc = True Then Exit Sub
 InProc = True
-With UserControl
-If DPICorrectionFactor() <> 1 Then
-    .Extender.Move .Extender.Left + .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top + .ScaleY(1, vbPixels, vbContainerPosition)
-    .Extender.Move .Extender.Left - .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top - .ScaleY(1, vbPixels, vbContainerPosition)
-End If
+If DPICorrectionFactor() <> 1 Then Call SyncObjectRectsToContainer(Me)
 Call DrawFrame
-End With
 InProc = False
 End Sub
 
 Private Sub UserControl_Terminate()
-Call RemoveVTableSubclass(Me, VTableInterfacePerPropertyBrowsing)
+Call RemoveVTableHandling(Me, VTableInterfacePerPropertyBrowsing)
 Call ComCtlsRemoveSubclass(UserControl.hWnd)
 Call ComCtlsReleaseShellMod
 End Sub
@@ -442,15 +460,6 @@ Public Property Let ToolTipText(ByVal Value As String)
 Extender.ToolTipText = Value
 End Property
 
-Public Property Get HelpContextID() As Long
-Attribute HelpContextID.VB_Description = "Specifies the default Help file context ID for an object."
-' HelpContextID = Extender.HelpContextID
-End Property
-
-Public Property Let HelpContextID(ByVal Value As Long)
-' Extender.HelpContextID = Value
-End Property
-
 Public Property Get WhatsThisHelpID() As Long
 Attribute WhatsThisHelpID.VB_Description = "Returns/sets an associated context number for an object."
 Attribute WhatsThisHelpID.VB_MemberFlags = "400"
@@ -488,11 +497,6 @@ End Property
 Public Sub Drag(Optional ByRef Action As Variant)
 Attribute Drag.VB_Description = "Begins, ends, or cancels a drag operation of any object except Line, Menu, Shape, and Timer."
 If IsMissing(Action) Then Extender.Drag Else Extender.Drag Action
-End Sub
-
-Public Sub SetFocus()
-Attribute SetFocus.VB_Description = "Moves the focus to the specified object."
-Extender.SetFocus
 End Sub
 
 Public Sub ZOrder(Optional ByRef Position As Variant)
@@ -601,9 +605,17 @@ OLEDropMode = UserControl.OLEDropMode
 End Property
 
 Public Property Let OLEDropMode(ByVal Value As OLEDropModeConstants)
+' Setting OLEDropMode to OLEDropModeManual will fail when windowless controls are contained in the user control.
+Const DRAGDROP_E_ALREADYREGISTERED As Long = &H80040101
 Select Case Value
     Case OLEDropModeNone, OLEDropModeManual
+        On Error Resume Next
         UserControl.OLEDropMode = Value
+        If Err.Number = DRAGDROP_E_ALREADYREGISTERED Then
+            RevokeDragDrop UserControl.hWnd
+            UserControl.OLEDropMode = Value
+        End If
+        On Error GoTo 0
     Case Else
         Err.Raise 380
 End Select
@@ -622,7 +634,7 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
-If Ambient.UserMode = True Then
+If FrameDesignMode = False Then
     Select Case PropMousePointer
         Case vbIconPointer, 16, vbCustom
             If PropMousePointer = vbCustom Then
@@ -654,7 +666,7 @@ Else
     If Value.Type = vbPicTypeIcon Or Value.Handle = 0 Then
         Set PropMouseIcon = Value
     Else
-        If Ambient.UserMode = False Then
+        If FrameDesignMode = True Then
             MsgBox "Invalid property value", vbCritical + vbOKOnly
             Exit Property
         Else
@@ -737,9 +749,27 @@ Caption = PropCaption
 End Property
 
 Public Property Let Caption(ByVal Value As String)
+If PropCaption = Value Then Exit Property
 PropCaption = Value
+If PropUseMnemonic = True Then UserControl.AccessKeys = ChrW(AccelCharCode(PropCaption))
 Call DrawFrame
 UserControl.PropertyChanged "Caption"
+End Property
+
+Public Property Get UseMnemonic() As Boolean
+Attribute UseMnemonic.VB_Description = "Returns/sets a value that specifies whether an & in the caption property defines an access key."
+UseMnemonic = PropUseMnemonic
+End Property
+
+Public Property Let UseMnemonic(ByVal Value As Boolean)
+PropUseMnemonic = Value
+If PropUseMnemonic = True Then
+    UserControl.AccessKeys = ChrW(AccelCharCode(PropCaption))
+Else
+    UserControl.AccessKeys = vbNullString
+End If
+Call DrawFrame
+UserControl.PropertyChanged "UseMnemonic"
 End Property
 
 Public Property Get Alignment() As VBRUN.AlignmentConstants
@@ -786,6 +816,7 @@ Else
     Set PropPicture = UserControl.Picture
     Set UserControl.Picture = Nothing
 End If
+FramePictureRenderFlag = 0
 Call DrawFrame
 UserControl.PropertyChanged "Picture"
 End Property
@@ -841,6 +872,7 @@ If PropBorderStyle <> vbBSNone Then
     BoundingRect.Right = BoundingRect.Right - BoundingRect.Left
     Format = DT_NOCLIP Or DT_SINGLELINE
     If PropRightToLeft = True Then Format = Format Or DT_RTLREADING
+    If PropUseMnemonic = False Then Format = Format Or DT_NOPREFIX
     Select Case PropAlignment
         Case vbLeftJustify
             Format = Format Or DT_LEFT
@@ -934,13 +966,7 @@ If PropBorderStyle <> vbBSNone Then
                     Else
                         PictureLeft = ExtentRect.Right - PictureWidth
                     End If
-                    With PropPicture
-                    If .Type = vbPicTypeIcon Then
-                        DrawIconEx hDC, PictureLeft, PictureTop, .Handle, PictureWidth, PictureHeight, 0, 0, DI_NORMAL
-                    Else
-                        .Render hDC Or 0&, PictureLeft Or 0&, PictureTop Or 0&, PictureWidth Or 0&, PictureHeight Or 0&, 0&, .Height, .Width, -.Height, ByVal 0&
-                    End If
-                    End With
+                    Call RenderPicture(PropPicture, hDC, PictureLeft, PictureTop, PictureWidth, PictureHeight, FramePictureRenderFlag)
                 End If
                 ExcludeClipRect .hDC, ExtentRect.Left - (2 * PixelsPerDIP_X()), ExtentRect.Top, ExtentRect.Right + (2 * PixelsPerDIP_X()), ExtentRect.Bottom
             ElseIf PictureWidth > 0 And PictureHeight > 0 Then
@@ -958,13 +984,7 @@ If PropBorderStyle <> vbBSNone Then
                         ExtentRect.Right = BoundingRect.Right
                 End Select
                 PictureLeft = ExtentRect.Left
-                With PropPicture
-                If .Type = vbPicTypeIcon Then
-                    DrawIconEx hDC, PictureLeft, PictureTop, .Handle, PictureWidth, PictureHeight, 0, 0, DI_NORMAL
-                Else
-                    .Render hDC Or 0&, PictureLeft Or 0&, PictureTop Or 0&, PictureWidth Or 0&, PictureHeight Or 0&, 0&, .Height, .Width, -.Height, ByVal 0&
-                End If
-                End With
+                Call RenderPicture(PropPicture, hDC, PictureLeft, PictureTop, PictureWidth, PictureHeight, FramePictureRenderFlag)
                 ExcludeClipRect .hDC, ExtentRect.Left - (2 * PixelsPerDIP_X()), ExtentRect.Top, ExtentRect.Right + (2 * PixelsPerDIP_X()), ExtentRect.Bottom
             End If
             If IsThemeBackgroundPartiallyTransparent(Theme, ButtonPart, GroupBoxState) <> 0 Then DrawThemeParentBackground .hWnd, .hDC, ClientRect
@@ -1033,13 +1053,7 @@ If PropBorderStyle <> vbBSNone Then
                     Else
                         PictureLeft = ExtentRect.Right - PictureWidth
                     End If
-                    With PropPicture
-                    If .Type = vbPicTypeIcon Then
-                        DrawIconEx hDC, PictureLeft, PictureTop, .Handle, PictureWidth, PictureHeight, 0, 0, DI_NORMAL
-                    Else
-                        .Render hDC Or 0&, PictureLeft Or 0&, PictureTop Or 0&, PictureWidth Or 0&, PictureHeight Or 0&, 0&, .Height, .Width, -.Height, ByVal 0&
-                    End If
-                    End With
+                    Call RenderPicture(PropPicture, hDC, PictureLeft, PictureTop, PictureWidth, PictureHeight, FramePictureRenderFlag)
                 End If
                 ExcludeClipRect .hDC, ExtentRect.Left - (2 * PixelsPerDIP_X()), ExtentRect.Top, ExtentRect.Right + (2 * PixelsPerDIP_X()), ExtentRect.Bottom
             ElseIf PictureWidth > 0 And PictureHeight > 0 Then
@@ -1057,13 +1071,7 @@ If PropBorderStyle <> vbBSNone Then
                         ExtentRect.Right = BoundingRect.Right
                 End Select
                 PictureLeft = ExtentRect.Left
-                With PropPicture
-                If .Type = vbPicTypeIcon Then
-                    DrawIconEx hDC, PictureLeft, PictureTop, .Handle, PictureWidth, PictureHeight, 0, 0, DI_NORMAL
-                Else
-                    .Render hDC Or 0&, PictureLeft Or 0&, PictureTop Or 0&, PictureWidth Or 0&, PictureHeight Or 0&, 0&, .Height, .Width, -.Height, ByVal 0&
-                End If
-                End With
+                Call RenderPicture(PropPicture, hDC, PictureLeft, PictureTop, PictureWidth, PictureHeight, FramePictureRenderFlag)
                 ExcludeClipRect .hDC, ExtentRect.Left - (2 * PixelsPerDIP_X()), ExtentRect.Top, ExtentRect.Right + (2 * PixelsPerDIP_X()), ExtentRect.Bottom
             End If
             DrawEdge .hDC, ClientRect, EDGE_ETCHED, BF_RECT Or IIf(.Appearance = CCAppearanceFlat, BF_MONO, 0)
@@ -1133,13 +1141,7 @@ If PropBorderStyle <> vbBSNone Then
                 Else
                     PictureLeft = ExtentRect.Right - PictureWidth
                 End If
-                With PropPicture
-                If .Type = vbPicTypeIcon Then
-                    DrawIconEx hDC, PictureLeft, PictureTop, .Handle, PictureWidth, PictureHeight, 0, 0, DI_NORMAL
-                Else
-                    .Render hDC Or 0&, PictureLeft Or 0&, PictureTop Or 0&, PictureWidth Or 0&, PictureHeight Or 0&, 0&, .Height, .Width, -.Height, ByVal 0&
-                End If
-                End With
+                Call RenderPicture(PropPicture, hDC, PictureLeft, PictureTop, PictureWidth, PictureHeight, FramePictureRenderFlag)
             End If
             ExcludeClipRect .hDC, ExtentRect.Left - (2 * PixelsPerDIP_X()), ExtentRect.Top, ExtentRect.Right + (2 * PixelsPerDIP_X()), ExtentRect.Bottom
         ElseIf PictureWidth > 0 And PictureHeight > 0 Then
@@ -1157,13 +1159,7 @@ If PropBorderStyle <> vbBSNone Then
                     ExtentRect.Right = BoundingRect.Right
             End Select
             PictureLeft = ExtentRect.Left
-            With PropPicture
-            If .Type = vbPicTypeIcon Then
-                DrawIconEx hDC, PictureLeft, PictureTop, .Handle, PictureWidth, PictureHeight, 0, 0, DI_NORMAL
-            Else
-                .Render hDC Or 0&, PictureLeft Or 0&, PictureTop Or 0&, PictureWidth Or 0&, PictureHeight Or 0&, 0&, .Height, .Width, -.Height, ByVal 0&
-            End If
-            End With
+            Call RenderPicture(PropPicture, hDC, PictureLeft, PictureTop, PictureWidth, PictureHeight, FramePictureRenderFlag)
             ExcludeClipRect .hDC, ExtentRect.Left - (2 * PixelsPerDIP_X()), ExtentRect.Top, ExtentRect.Right + (2 * PixelsPerDIP_X()), ExtentRect.Bottom
         End If
         DrawEdge .hDC, ClientRect, EDGE_ETCHED, BF_RECT Or IIf(.Appearance = CCAppearanceFlat, BF_MONO, 0)
@@ -1182,13 +1178,44 @@ ISubclass_Message = WindowProcUserControl(hWnd, wMsg, wParam, lParam)
 End Function
 
 Private Function WindowProcUserControl(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
-If wMsg = WM_PRINTCLIENT Then
-    Dim ClientRect As RECT
-    GetClientRect UserControl.hWnd, ClientRect
-    BitBlt wParam, 0, 0, ClientRect.Right - ClientRect.Left, ClientRect.Bottom - ClientRect.Top, UserControl.hDC, 0, 0, vbSrcCopy
-    WindowProcUserControl = 0
-    Exit Function
-End If
+Select Case wMsg
+    Case WM_PRINTCLIENT
+        Dim ClientRect As RECT
+        GetClientRect UserControl.hWnd, ClientRect
+        BitBlt wParam, 0, 0, ClientRect.Right - ClientRect.Left, ClientRect.Bottom - ClientRect.Top, UserControl.hDC, 0, 0, vbSrcCopy
+        WindowProcUserControl = 0
+        Exit Function
+    Case WM_GETTEXTLENGTH
+        WindowProcUserControl = Len(PropCaption)
+        Exit Function
+    Case WM_GETTEXT, WM_SETTEXT
+        Dim Length As Long, Text As String
+        If wMsg = WM_GETTEXT Then
+            If wParam > 0 And lParam <> 0 Then
+                Length = Len(PropCaption) + 1
+                If wParam < Length Then Length = wParam
+                Text = Left$(PropCaption, Length - 1) & vbNullChar
+                CopyMemory ByVal lParam, ByVal StrPtr(Text), Length * 2
+                WindowProcUserControl = Length - 1
+            Else
+                WindowProcUserControl = 0
+            End If
+        ElseIf wMsg = WM_SETTEXT Then
+            If lParam <> 0 Then Length = lstrlen(lParam)
+            If Length > 0 Then
+                Text = String$(Length, vbNullChar)
+                CopyMemory ByVal StrPtr(Text), ByVal lParam, Length * 2
+                Me.Caption = Text
+                WindowProcUserControl = 1
+            ElseIf lParam = 0 Then
+                Me.Caption = vbNullString
+                WindowProcUserControl = 1
+            Else
+                WindowProcUserControl = 0
+            End If
+        End If
+        Exit Function
+End Select
 WindowProcUserControl = ComCtlsDefaultProc(hWnd, wMsg, wParam, lParam)
 If wMsg = WM_MOUSELEAVE Then
     If FrameMouseOver = True Then

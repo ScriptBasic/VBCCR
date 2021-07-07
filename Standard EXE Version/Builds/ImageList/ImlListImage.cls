@@ -21,8 +21,8 @@ Private Function ShadowImageList() As ImageList
 ComCtlsPtrToShadowObj ShadowImageList, ShadowObjectPointer
 End Function
 
-Friend Sub FInit(ByVal Object As ImageList, ByVal Key As String, ByVal Picture As IPictureDisp)
-ShadowObjectPointer = ObjPtr(Object)
+Friend Sub FInit(ByVal ObjectPointer As Long, ByVal Key As String, ByVal Picture As IPictureDisp)
+ShadowObjectPointer = ObjectPointer
 PropKey = Key
 Set PropPicture = Picture
 End Sub
@@ -39,6 +39,10 @@ End Property
 Public Property Get Key() As String
 Attribute Key.VB_Description = "Returns the key used in the collection."
 Key = PropKey
+End Property
+
+Public Property Let Key(ByVal Value As String)
+ShadowImageList.ListImages.FChangeKey PropIndex, PropKey, Value
 End Property
 
 Public Property Get Tag() As Variant
@@ -67,6 +71,10 @@ End Property
 Public Property Get Picture() As IPictureDisp
 Attribute Picture.VB_Description = "Returns/sets the image picture."
 Set Picture = PropPicture
+End Property
+
+Public Property Let Picture(ByVal Value As IPictureDisp)
+Err.Raise Number:=383, Description:="Property is read-only"
 End Property
 
 Public Property Set Picture(ByVal Value As IPictureDisp)

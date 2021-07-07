@@ -19,8 +19,8 @@ Private Function ShadowLinkLabel() As LinkLabel
 ComCtlsPtrToShadowObj ShadowLinkLabel, ShadowObjectPointer
 End Function
 
-Friend Sub FInit(ByVal Object As LinkLabel, ByVal Index As Long)
-ShadowObjectPointer = ObjPtr(Object)
+Friend Sub FInit(ByVal ObjectPointer As Long, ByVal Index As Long)
+ShadowObjectPointer = ObjectPointer
 PropIndex = Index
 End Sub
 
@@ -112,7 +112,7 @@ Err.Raise Number:=383, Description:="Property is read-only"
 End Property
 
 Public Property Get Width() As Single
-Attribute Width.VB_Description = "Returns the width of the tab."
+Attribute Width.VB_Description = "Returns the width of the link."
 Width = ShadowLinkLabel.FLinkWidth(PropIndex)
 End Property
 
@@ -121,7 +121,7 @@ Err.Raise Number:=383, Description:="Property is read-only"
 End Property
 
 Public Property Get Height() As Single
-Attribute Height.VB_Description = "Returns the height of the tab."
+Attribute Height.VB_Description = "Returns the height of the link."
 Height = ShadowLinkLabel.FLinkHeight(PropIndex)
 End Property
 

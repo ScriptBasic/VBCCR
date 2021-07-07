@@ -5,6 +5,7 @@ Begin VB.UserControl ImageList
    ClientLeft      =   0
    ClientTop       =   0
    ClientWidth     =   2400
+   DrawStyle       =   5  'Transparent
    BeginProperty Font 
       Name            =   "Tahoma"
       Size            =   6.75
@@ -36,15 +37,9 @@ Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
 #If False Then
-Private ImlImageTypeBitmap, ImlImageTypeIcon, ImlImageTypeCursor
 Private ImlColorDepth4Bit, ImlColorDepth8Bit, ImlColorDepth16Bit, ImlColorDepth24Bit, ImlColorDepth32Bit
 Private ImlDrawNormal, ImlDrawTransparent, ImlDrawSelected, ImlDrawFocus, ImlDrawNoMask
 #End If
-Public Enum ImlImageTypeConstants
-ImlImageTypeBitmap = 0
-ImlImageTypeIcon = 1
-ImlImageTypeCursor = 2
-End Enum
 Public Enum ImlColorDepthConstants
 ImlColorDepth4Bit = &H4
 ImlColorDepth8Bit = &H8
@@ -107,8 +102,10 @@ Private Const BDR_RAISEDOUTER As Long = 1
 Private Const BDR_RAISEDINNER As Long = 4
 Private Const CLR_NONE As Long = -1
 Private Const CLR_DEFAULT As Long = -16777216
+Implements OLEGuids.IObjectSafety
 Private ImageListHandle As Long
 Private ImageListInitListImagesCount As Long
+Private ImageListDesignMode As Boolean
 Private PropListImages As ImlListImages
 Private PropImageWidth As Long
 Private PropImageHeight As Long
@@ -119,11 +116,23 @@ Private PropMaskColor As OLE_COLOR
 Private PropUseBackColor As Boolean
 Private PropBackColor As OLE_COLOR
 
+Private Sub IObjectSafety_GetInterfaceSafetyOptions(ByRef riid As OLEGuids.OLECLSID, ByRef pdwSupportedOptions As Long, ByRef pdwEnabledOptions As Long)
+Const INTERFACESAFE_FOR_UNTRUSTED_CALLER As Long = &H1, INTERFACESAFE_FOR_UNTRUSTED_DATA As Long = &H2
+pdwSupportedOptions = INTERFACESAFE_FOR_UNTRUSTED_CALLER Or INTERFACESAFE_FOR_UNTRUSTED_DATA
+pdwEnabledOptions = INTERFACESAFE_FOR_UNTRUSTED_CALLER Or INTERFACESAFE_FOR_UNTRUSTED_DATA
+End Sub
+
+Private Sub IObjectSafety_SetInterfaceSafetyOptions(ByRef riid As OLEGuids.OLECLSID, ByVal dwOptionsSetMask As Long, ByVal dwEnabledOptions As Long)
+End Sub
+
 Private Sub UserControl_Initialize()
 Call ComCtlsLoadShellMod
 End Sub
 
 Private Sub UserControl_InitProperties()
+On Error Resume Next
+ImageListDesignMode = Not Ambient.UserMode
+On Error GoTo 0
 PropImageWidth = 0
 PropImageHeight = 0
 PropColorDepth = ImlColorDepth24Bit
@@ -136,6 +145,9 @@ Call CreateImageList
 End Sub
 
 Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
+On Error Resume Next
+ImageListDesignMode = Not Ambient.UserMode
+On Error GoTo 0
 With PropBag
 PropImageWidth = .ReadProperty("ImageWidth", 0)
 PropImageHeight = .ReadProperty("ImageHeight", 0)
@@ -247,7 +259,7 @@ End Property
 
 Public Property Let ImageWidth(ByVal Value As Long)
 If Me.ListImages.Count > 0 Then
-    If Ambient.UserMode = False Then
+    If ImageListDesignMode = True Then
         MsgBox "Property is read-only if image list contains images", vbCritical + vbOKOnly
         Exit Property
     Else
@@ -257,7 +269,7 @@ Else
     If Value >= 0 Then
         PropImageWidth = Value
     Else
-        If Ambient.UserMode = False Then
+        If ImageListDesignMode = True Then
             MsgBox "Invalid property value", vbCritical + vbOKOnly
             Exit Property
         Else
@@ -277,7 +289,7 @@ End Property
 
 Public Property Let ImageHeight(ByVal Value As Long)
 If Me.ListImages.Count > 0 Then
-    If Ambient.UserMode = False Then
+    If ImageListDesignMode = True Then
         MsgBox "Property is read-only if image list contains images", vbCritical + vbOKOnly
         Exit Property
     Else
@@ -287,7 +299,7 @@ Else
     If Value >= 0 Then
         PropImageHeight = Value
     Else
-        If Ambient.UserMode = False Then
+        If ImageListDesignMode = True Then
             MsgBox "Invalid property value", vbCritical + vbOKOnly
             Exit Property
         Else
@@ -307,7 +319,7 @@ End Property
 
 Public Property Let ColorDepth(ByVal Value As ImlColorDepthConstants)
 If Me.ListImages.Count > 0 Then
-    If Ambient.UserMode = False Then
+    If ImageListDesignMode = True Then
         MsgBox "Property is read-only if image list contains images", vbCritical + vbOKOnly
         Exit Property
     Else
@@ -335,7 +347,7 @@ End Property
 
 Public Property Let RightToLeftMirror(ByVal Value As Boolean)
 If Me.ListImages.Count > 0 Then
-    If Ambient.UserMode = False Then
+    If ImageListDesignMode = True Then
         MsgBox "Property is read-only if image list contains images", vbCritical + vbOKOnly
         Exit Property
     Else
@@ -456,12 +468,25 @@ UserControl.PropertyChanged "InitImageLists"
 End Sub
 
 Friend Sub FListImagesRemove(ByVal Index As Long)
-If ImageListHandle <> 0 Then ImageList_Remove ImageListHandle, Index - 1
+If ImageListHandle <> 0 Then
+    ImageList_Remove ImageListHandle, Index - 1
+    If ImageList_GetImageCount(ImageListHandle) = 0 Then
+        PropImageWidth = 0
+        PropImageHeight = 0
+        If ImageListHandle <> 0 Then Call DestroyImageList
+        If ImageListHandle = 0 Then Call CreateImageList
+    End If
+End If
 UserControl.PropertyChanged "InitImageLists"
 End Sub
 
 Friend Sub FListImagesClear()
 If ImageListHandle <> 0 Then Do While ImageList_Remove(ImageListHandle, 0) <> 0: Loop
+PropImageWidth = 0
+PropImageHeight = 0
+If ImageListHandle <> 0 Then Call DestroyImageList
+If ImageListHandle = 0 Then Call CreateImageList
+UserControl.PropertyChanged "InitImageLists"
 End Sub
 
 Friend Sub FListImageDraw(ByVal Index As Long, ByVal hDC As Long, Optional ByVal X As Long, Optional ByVal Y As Long, Optional ByVal Style As ImlDrawConstants)
@@ -494,6 +519,7 @@ End Function
 
 Private Sub CreateImageList()
 If ImageListHandle <> 0 Then Exit Sub
+If PropImageWidth = 0 Or PropImageHeight = 0 Then Exit Sub
 If PropRightToLeftMirror = True And ComCtlsSupportLevel() >= 1 Then
     ImageListHandle = ImageList_Create(PropImageWidth, PropImageHeight, ILC_MASK Or ILC_MIRROR Or PropColorDepth, 4, 4)
 Else
@@ -512,8 +538,10 @@ Public Property Get SystemColorDepth() As ImlColorDepthConstants
 Attribute SystemColorDepth.VB_Description = "Returns the system color depth."
 Dim hDC As Long
 hDC = CreateDCAsNull(StrPtr("DISPLAY"), ByVal 0&, ByVal 0&, ByVal 0&)
-SystemColorDepth = GetDeviceCaps(hDC, BITSPIXEL)
-DeleteDC hDC
+If hDC <> 0 Then
+    SystemColorDepth = GetDeviceCaps(hDC, BITSPIXEL)
+    DeleteDC hDC
+End If
 End Property
 
 Public Function Overlay(ByVal Index1 As Variant, ByVal Index2 As Variant) As IPictureDisp

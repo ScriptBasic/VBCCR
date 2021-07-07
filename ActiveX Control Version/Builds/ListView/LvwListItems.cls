@@ -14,8 +14,6 @@ Attribute VB_Exposed = True
 Option Explicit
 Private ShadowObjectPointer As Long
 Private PropListItem As Collection
-Private WithEvents PropEnumeration As Enumeration
-Attribute PropEnumeration.VB_VarHelpID = -1
 
 Private Function ShadowListView() As ListView
 ComCtlsPtrToShadowObj ShadowListView, ShadowObjectPointer
@@ -29,29 +27,32 @@ Private Sub Class_Terminate()
 Set PropListItem = Nothing
 End Sub
 
-Private Sub PropEnumeration_GetNextItem(ByRef Index As Long, ByRef Control As Long, ByRef Data As Long, ByRef VNextItem As Variant, ByRef NoMoreItems As Boolean)
-ShadowListView.FListItemsNextItem Index, Control, Data, VNextItem, NoMoreItems
-If NoMoreItems = True Then Set PropEnumeration = Nothing
-End Sub
-
-Private Sub PropEnumeration_Reset(ByRef Index As Long, ByRef Control As Long, ByRef Data As Long)
-Index = -1
-Control = ShadowListView.FListItemsControl()
-End Sub
-
-Private Sub PropEnumeration_Skip(ByRef Index As Long, ByRef Control As Long, ByRef Data As Long, ByVal SkipCount As Long, ByRef SkippedAll As Boolean)
-Index = Index + SkipCount
-End Sub
-
 Public Function NewEnum() As IEnumVARIANT
 Attribute NewEnum.VB_UserMemId = -4
 Attribute NewEnum.VB_MemberFlags = "40"
-Set PropEnumeration = New Enumeration
-Set NewEnum = PropEnumeration.GetEnum(ShadowListView.FListItemsControl())
+Set NewEnum = GetNewEnum(Me, Me.Count, 1)
 End Function
 
 Friend Sub FInit(ByVal Object As ListView)
 ShadowObjectPointer = ObjPtr(Object)
+End Sub
+
+Friend Sub FChangeKey(ByVal Ptr As Long, ByRef OldKey As String, ByVal NewKey As String)
+Dim Item As Variant, i As Long
+For Each Item In PropListItem
+    i = i + 1
+    If ObjPtr(Item) = Ptr Then
+        If NewKey = vbNullString Then
+            PropListItem.Add Item
+            OldKey = vbNullString
+        Else
+            PropListItem.Add Item, NewKey
+            OldKey = NewKey
+        End If
+        PropListItem.Remove i
+        Exit For
+    End If
+Next Item
 End Sub
 
 Public Function Add(Optional ByVal Index As Long, Optional ByVal Key As String, Optional ByVal Text As String, Optional ByVal Icon As Variant, Optional ByVal SmallIcon As Variant) As LvwListItem
@@ -74,12 +75,12 @@ Dim Ptr As Long
 Ptr = ObjPtr(NewListItem)
 If Index = 0 Then Index = PropListItem.Count + 1
 NewListItem.FInit ShadowObjectPointer, Index, Key, Ptr, Text, Icon, IconIndex, SmallIcon, SmallIconIndex
-ShadowListView.FListItemsAdd Ptr, Index, Text
 If Key = vbNullString Then
     PropListItem.Add NewListItem
 Else
     PropListItem.Add NewListItem, Key
 End If
+ShadowListView.FListItemsAdd Ptr, Index, Text
 Set Add = NewListItem
 End Function
 
@@ -88,7 +89,13 @@ Attribute Item.VB_Description = "Returns a list item given its index or key."
 Attribute Item.VB_UserMemId = 0
 Select Case VarType(Index)
     Case vbLong, vbInteger, vbByte, vbDouble, vbSingle
-        Set Item = PtrToObj(ShadowListView.FListItemPtr(Index))
+        Dim Ptr As Long
+        Ptr = ShadowListView.FListItemPtr(Index)
+        If Ptr <> 0 Then
+            Set Item = PtrToObj(Ptr)
+        Else
+            Err.Raise Number:=35600, Description:="Index out of bounds"
+        End If
     Case vbString
         Set Item = PropListItem(Index)
     Case Else
