@@ -2,12 +2,13 @@ VERSION 5.00
 Begin VB.Form MainForm 
    Caption         =   "ComCtls Demo"
    ClientHeight    =   8805
-   ClientLeft      =   165
-   ClientTop       =   555
+   ClientLeft      =   225
+   ClientTop       =   570
    ClientWidth     =   9915
    KeyPreview      =   -1  'True
    ScaleHeight     =   8805
    ScaleWidth      =   9915
+   StartUpPosition =   3  'Windows Default
    Begin ComCtlsDemo.StatusBar StatusBar1 
       Align           =   2  'Align Bottom
       Height          =   345
@@ -28,12 +29,12 @@ Begin VB.Form MainForm
       _ExtentY        =   1588
       ImageList       =   "ImageList1"
       ShowTips        =   -1  'True
-      InitBands       =   "MainForm.frx":065C
+      InitBands       =   "MainForm.frx":0620
       Begin ComCtlsDemo.ImageCombo ImageCombo1 
-         Bindings        =   "MainForm.frx":0A3C
+         Bindings        =   "MainForm.frx":0A00
          Height          =   330
          Left            =   195
-         TabIndex        =   19
+         TabIndex        =   20
          Top             =   60
          Width           =   3630
          _ExtentX        =   6403
@@ -41,26 +42,27 @@ Begin VB.Form MainForm
          OLEDragMode     =   1
          ImageList       =   "ImageList1"
          Style           =   2
-         Text            =   "MainForm.frx":0A47
+         Text            =   "MainForm.frx":0A0B
       End
       Begin VB.CommandButton Command4 
          Caption         =   "Pager Demo"
          Height          =   360
          Left            =   2415
-         TabIndex        =   21
+         TabIndex        =   22
          Top             =   480
          Width           =   1410
       End
       Begin ComCtlsDemo.CheckBoxW CheckBoxW1 
-         Bindings        =   "MainForm.frx":0A7D
+         Bindings        =   "MainForm.frx":0A41
          Height          =   360
          Left            =   495
-         TabIndex        =   20
+         TabIndex        =   21
          Top             =   480
          Width           =   1665
          _ExtentX        =   2937
          _ExtentY        =   635
-         Caption         =   "MainForm.frx":0A88
+         Caption         =   "C&heckBoxW1"
+         Transparent     =   -1  'True
       End
    End
    Begin ComCtlsDemo.ImageList ImageList1 
@@ -71,66 +73,62 @@ Begin VB.Form MainForm
       ImageWidth      =   16
       ImageHeight     =   16
       BackColor       =   16777215
-      InitListImages  =   "MainForm.frx":0ABE
+      InitListImages  =   "MainForm.frx":0A4C
    End
    Begin ComCtlsDemo.ComboBoxW ComboBoxW1 
       Height          =   315
       Left            =   5880
-      TabIndex        =   22
+      TabIndex        =   23
       Top             =   5040
       Width           =   3855
       _ExtentX        =   6800
       _ExtentY        =   3069
       Style           =   2
-      Text            =   "MainForm.frx":0FCE
+      Text            =   "ComboBoxW1"
    End
    Begin ComCtlsDemo.TextBoxW TextBoxW1 
-      Bindings        =   "MainForm.frx":1002
       Height          =   315
       Left            =   4200
-      TabIndex        =   16
+      TabIndex        =   17
       Top             =   7920
       Width           =   1455
       _ExtentX        =   2566
       _ExtentY        =   556
       OLEDragMode     =   1
       OLEDropMode     =   2
-      Text            =   "MainForm.frx":100D
-      MaxLength       =   20
+      Text            =   "MainForm.frx":0F5C
    End
    Begin ComCtlsDemo.CommandButtonW CommandButtonW1 
       Height          =   375
       Left            =   3720
-      TabIndex        =   12
+      TabIndex        =   13
       Top             =   5040
       Width           =   1935
       _ExtentX        =   3413
       _ExtentY        =   661
-      Caption         =   "MainForm.frx":103F
+      Caption         =   "VirtualControls Demo"
    End
    Begin ComCtlsDemo.OptionButtonW OptionButtonW2 
       Height          =   315
       Left            =   7920
+      TabIndex        =   26
+      Top             =   8040
+      Width           =   1815
+      _ExtentX        =   3201
+      _ExtentY        =   556
+      Caption         =   "Op&tionButtonW2"
+   End
+   Begin ComCtlsDemo.OptionButtonW OptionButtonW1 
+      Height          =   315
+      Left            =   5880
       TabIndex        =   25
       Top             =   8040
       Width           =   1815
       _ExtentX        =   3201
       _ExtentY        =   556
-      Value           =   0   'False
-      Caption         =   "MainForm.frx":1087
-   End
-   Begin ComCtlsDemo.OptionButtonW OptionButtonW1 
-      Height          =   315
-      Left            =   5880
-      TabIndex        =   24
-      Top             =   8040
-      Width           =   1815
-      _ExtentX        =   3201
-      _ExtentY        =   556
       MouseTrack      =   -1  'True
-      Value           =   0   'False
-      Caption         =   "MainForm.frx":10C5
-      Picture         =   "MainForm.frx":1103
+      Caption         =   "&OptionButtonW1"
+      Picture         =   "MainForm.frx":0F8E
    End
    Begin ComCtlsDemo.UpDown UpDown1 
       Height          =   255
@@ -140,7 +138,7 @@ Begin VB.Form MainForm
       _ExtentX        =   5953
       _ExtentY        =   450
       BuddyControl    =   "Slider1"
-      BuddyProperty   =   "MainForm.frx":111F
+      BuddyProperty   =   "MainForm.frx":0FAA
       Value           =   5
       Wrap            =   -1  'True
       Orientation     =   1
@@ -170,12 +168,12 @@ Begin VB.Form MainForm
       Wrappable       =   0   'False
       ButtonHeight    =   30
       ButtonWidth     =   114
-      InitButtons     =   "MainForm.frx":114B
+      InitButtons     =   "MainForm.frx":0FDA
    End
    Begin ComCtlsDemo.TreeView TreeView1 
       Height          =   2415
       Left            =   5880
-      TabIndex        =   23
+      TabIndex        =   24
       Top             =   5520
       Width           =   3855
       _ExtentX        =   6800
@@ -190,14 +188,14 @@ Begin VB.Form MainForm
       Caption         =   "Command3"
       Height          =   375
       Left            =   2880
-      TabIndex        =   15
+      TabIndex        =   16
       Top             =   7920
       Width           =   1095
    End
    Begin ComCtlsDemo.IPAddress IPAddress1 
       Height          =   315
       Left            =   120
-      TabIndex        =   14
+      TabIndex        =   15
       Top             =   7920
       Width           =   2655
       _ExtentX        =   4683
@@ -220,7 +218,7 @@ Begin VB.Form MainForm
    Begin ComCtlsDemo.ListView ListView1 
       Height          =   2055
       Left            =   120
-      TabIndex        =   13
+      TabIndex        =   14
       Top             =   5760
       Width           =   5535
       _ExtentX        =   9763
@@ -237,6 +235,7 @@ Begin VB.Form MainForm
       HideSelection   =   0   'False
       ShowInfoTips    =   -1  'True
       ShowLabelTips   =   -1  'True
+      ShowColumnTips  =   -1  'True
       PictureAlignment=   5
       GroupView       =   -1  'True
       GroupSubsetCount=   3
@@ -251,10 +250,9 @@ Begin VB.Form MainForm
       _ExtentY        =   1058
       Value           =   5
       SelStart        =   5
-      Transparent     =   -1  'True
    End
    Begin ComCtlsDemo.MonthView MonthView1 
-      Bindings        =   "MainForm.frx":1F23
+      Bindings        =   "MainForm.frx":1DB2
       Height          =   2340
       Left            =   120
       TabIndex        =   2
@@ -263,8 +261,9 @@ Begin VB.Form MainForm
       _ExtentX        =   4551
       _ExtentY        =   4128
       BorderStyle     =   3
-      Value           =   42270
+      Value           =   44462
       DayState        =   -1  'True
+      UseShortestDayNames=   -1  'True
    End
    Begin ComCtlsDemo.DTPicker DTPicker1 
       Height          =   315
@@ -274,14 +273,10 @@ Begin VB.Form MainForm
       Width           =   1935
       _ExtentX        =   3413
       _ExtentY        =   556
-      RightToLeft     =   -1  'True
-      RightToLeftMode =   0
       CalendarDayState=   -1  'True
-      MinDate         =   36526
-      MaxDate         =   73050
-      Value           =   41455
+      Value           =   44012
       Format          =   3
-      CustomFormat    =   "MainForm.frx":1F2E
+      CustomFormat    =   "MainForm.frx":1DBD
    End
    Begin VB.PictureBox Picture2 
       AutoRedraw      =   -1  'True
@@ -289,7 +284,7 @@ Begin VB.Form MainForm
       Left            =   2160
       ScaleHeight     =   435
       ScaleWidth      =   555
-      TabIndex        =   11
+      TabIndex        =   12
       TabStop         =   0   'False
       Top             =   5040
       Width           =   615
@@ -297,10 +292,10 @@ Begin VB.Form MainForm
    Begin VB.PictureBox Picture1 
       Height          =   495
       Left            =   1440
-      Picture         =   "MainForm.frx":1F68
+      Picture         =   "MainForm.frx":1DF7
       ScaleHeight     =   435
       ScaleWidth      =   555
-      TabIndex        =   10
+      TabIndex        =   11
       TabStop         =   0   'False
       Top             =   5040
       Width           =   615
@@ -309,7 +304,7 @@ Begin VB.Form MainForm
       Caption         =   "Command2"
       Height          =   375
       Left            =   120
-      TabIndex        =   9
+      TabIndex        =   10
       Top             =   5040
       Width           =   1095
    End
@@ -321,7 +316,6 @@ Begin VB.Form MainForm
       _ExtentX        =   9763
       _ExtentY        =   450
       Step            =   5
-      Marquee         =   -1  'True
       MarqueeAnimation=   -1  'True
       MarqueeSpeed    =   40
       Scrolling       =   2
@@ -341,7 +335,7 @@ Begin VB.Form MainForm
       _ExtentY        =   1005
       ImageWidth      =   8
       ImageHeight     =   7
-      InitListImages  =   "MainForm.frx":22AC
+      InitListImages  =   "MainForm.frx":213B
    End
    Begin ComCtlsDemo.ImageList ImageList3 
       Left            =   3000
@@ -351,12 +345,12 @@ Begin VB.Form MainForm
       ImageWidth      =   32
       ImageHeight     =   32
       BackColor       =   16777215
-      InitListImages  =   "MainForm.frx":251C
+      InitListImages  =   "MainForm.frx":23AB
    End
    Begin ComCtlsDemo.ListView ListView3 
       Height          =   2895
       Left            =   5880
-      TabIndex        =   17
+      TabIndex        =   18
       Top             =   600
       Width           =   3855
       _ExtentX        =   6800
@@ -365,20 +359,21 @@ Begin VB.Form MainForm
       Icons           =   "ImageList3"
       View            =   4
       Arrange         =   3
+      MultiSelect     =   -1  'True
       GridLines       =   -1  'True
       LabelEdit       =   2
       TileViewLines   =   2
       SnapToGrid      =   -1  'True
    End
    Begin ComCtlsDemo.ListBoxW ListBoxW1 
-      Height          =   2790
+      Height          =   2595
       Left            =   5880
-      TabIndex        =   18
+      TabIndex        =   19
       Top             =   600
       Visible         =   0   'False
       Width           =   3855
       _ExtentX        =   6800
-      _ExtentY        =   4921
+      _ExtentY        =   4577
       BackColor       =   -2147483643
       ForeColor       =   -2147483640
       OLEDragMode     =   1
@@ -397,7 +392,7 @@ Begin VB.Form MainForm
       TabFixedWidth   =   133
       TabMinWidth     =   7
       ShowTips        =   -1  'True
-      InitTabs        =   "MainForm.frx":2A04
+      InitTabs        =   "MainForm.frx":2893
    End
    Begin VB.PictureBox Picture3 
       AutoRedraw      =   -1  'True
@@ -406,7 +401,7 @@ Begin VB.Form MainForm
       Left            =   3120
       ScaleHeight     =   1770
       ScaleWidth      =   2415
-      TabIndex        =   26
+      TabIndex        =   27
       TabStop         =   0   'False
       Top             =   2880
       Visible         =   0   'False
@@ -414,16 +409,17 @@ Begin VB.Form MainForm
       Begin ComCtlsDemo.FrameW FrameW1 
          Height          =   1755
          Left            =   0
+         TabIndex        =   7
          Top             =   0
          Width           =   2415
          _ExtentX        =   4260
          _ExtentY        =   3096
-         Caption         =   "MainForm.frx":2C00
+         Caption         =   "Fra&meW1"
          Transparent     =   -1  'True
          Begin ComCtlsDemo.HotKey HotKey1 
             Height          =   315
             Left            =   120
-            TabIndex        =   8
+            TabIndex        =   9
             Top             =   720
             Width           =   2175
             _ExtentX        =   3836
@@ -432,12 +428,12 @@ Begin VB.Form MainForm
          Begin ComCtlsDemo.CheckBoxW CheckBoxW2 
             Height          =   255
             Left            =   120
-            TabIndex        =   7
+            TabIndex        =   8
             Top             =   360
             Width           =   2175
             _ExtentX        =   3836
             _ExtentY        =   450
-            Caption         =   "MainForm.frx":2C2E
+            Caption         =   "CheckBoxW2"
             Transparent     =   -1  'True
          End
       End
@@ -445,12 +441,13 @@ Begin VB.Form MainForm
    Begin ComCtlsDemo.Animation Animation1 
       Height          =   660
       Left            =   3720
-      TabIndex        =   27
+      TabIndex        =   28
       Top             =   1560
       Width           =   1860
       _ExtentX        =   3281
       _ExtentY        =   1164
       Enabled         =   0   'False
+      AutoPlay        =   -1  'True
    End
 End
 Attribute VB_Name = "MainForm"
@@ -469,7 +466,7 @@ ToolBar1.ContainerKeyDown KeyCode, Shift
 End Sub
 
 Private Sub Form_Load()
-SetupVisualStyles Me
+Call SetupVisualStylesFixes(Me)
 If InIDE() = True Then
     Animation1.LoadFile AppPath() & "Resources\AnimationDemo.avi"
 Else
@@ -477,31 +474,39 @@ Else
 End If
 ListView1.ColumnHeaders.Add , , "Col1"
 ListView1.ColumnHeaders.Add , , "Col2"
-ListView1.ColumnHeaders.Add(, , "Col3").CheckBox = True
+With ListView1.ColumnHeaders.Add(, , "Col3")
+.CheckBox = True
+.ToolTipText = "click on the checkbox"
+End With
 ListView1.ColumnHeaders.Add , , "Col4"
 ListView1.ColumnHeaders.Add , , "Col5"
 ListView1.ColumnHeaders.Add , , "Col6"
 ListView1.ColumnHeaders.Add , , "Col7"
-If ComCtlsSupportLevel() = 0 Then
+If ComCtlsSupportLevel() >= 1 Then ' XP+
+    ListView1.SelectedColumn = ListView1.ColumnHeaders(1)
+    ListView1.ColumnHeaders(1).SortArrow = LvwColumnHeaderSortArrowDown
+Else
     ListView1.ColumnHeaders(1).Icon = 1
     Dim EnumColumn As LvwColumnHeader
     For Each EnumColumn In ListView1.ColumnHeaders
         EnumColumn.IconOnRight = True
     Next EnumColumn
-Else
-    ListView1.SelectedColumn = ListView1.ColumnHeaders(1)
-    ListView1.ColumnHeaders(1).SortArrow = LvwColumnHeaderSortArrowDown
 End If
-On Error Resume Next
-' Ignore error raise in case group is not supported. (Prior Windows XP)
-With ListView1.Groups.Add(, , "Group A")
-.SubsetLink = "Click here to display all items"
-.Subseted = True
-End With
-ListView1.Groups.Add , , "Group B"
-ListView1.Groups.Add , , "Group C"
-ListView1.Groups.Add , , "Group D"
-On Error GoTo 0
+Dim GroupsAvailable As Boolean
+If ComCtlsSupportLevel() >= 1 Then ' XP+
+    With ListView1.Groups.Add(, , "Group A")
+    If ComCtlsSupportLevel() >= 2 Then ' Vista+
+        .SubsetLink = "Click here to display all items"
+        .Subseted = True
+    End If
+    End With
+    ListView1.Groups.Add , , "Group B"
+    ListView1.Groups.Add , , "Group C"
+    ListView1.Groups.Add , , "Group D"
+    GroupsAvailable = True
+Else
+    ListView1.GroupView = False
+End If
 ListView1.Redraw = False
 Dim i As Long
 For i = 1 To 1000
@@ -517,18 +522,18 @@ For i = 1 To 1000
     .Add , , "sub text5_" & IIf(i Mod 2, "B", "A")
     .Add , , "sub text6_" & IIf(i Mod 2, "B", "A")
     End With
-    On Error Resume Next
-    Select Case i
-        Case Is > 750
-            Set .Group = ListView1.Groups(4)
-        Case Is > 500
-            Set .Group = ListView1.Groups(3)
-        Case Is > 250
-            Set .Group = ListView1.Groups(2)
-        Case Else
-            Set .Group = ListView1.Groups(1)
-    End Select
-    On Error GoTo 0
+    If GroupsAvailable = True Then
+        Select Case i
+            Case Is > 750
+                Set .Group = ListView1.Groups(4)
+            Case Is > 500
+                Set .Group = ListView1.Groups(3)
+            Case Is > 250
+                Set .Group = ListView1.Groups(2)
+            Case Else
+                Set .Group = ListView1.Groups(1)
+        End Select
+    End If
     End With
 Next i
 ListView1.Sorted = True
@@ -594,7 +599,9 @@ HotKey1.Value(vbCtrlMask + vbAltMask) = vbKeyA
 End Sub
 
 Private Sub Command1_Click()
-RichTextBoxForm.Show vbModal
+With New RichTextBoxForm
+.Show vbModal
+End With
 End Sub
 
 Private Sub Command2_Click()
@@ -610,33 +617,36 @@ End If
 End Sub
 
 Private Sub CommandButtonW1_Click()
-VirtualControlsForm.Show vbModal
+With New VirtualControlsForm
+.Show vbModal
+End With
 End Sub
 
 Private Sub Command3_Click()
-If IPAddress1.Address = vbNullString Then
+If IPAddress1.Text = vbNullString Then
     MsgBox "IP Address is blank"
 Else
-    MsgBox "IP Address: " & IPAddress1.Address & vbLf & _
-    "Field1: " & IIf(IPAddress1.IsEmptyField(1), "Blank", IPAddress1.FieldValue(1)) & vbLf & _
-    "Field2: " & IIf(IPAddress1.IsEmptyField(2), "Blank", IPAddress1.FieldValue(2)) & vbLf & _
-    "Field3: " & IIf(IPAddress1.IsEmptyField(3), "Blank", IPAddress1.FieldValue(3)) & vbLf & _
-    "Field4: " & IIf(IPAddress1.IsEmptyField(4), "Blank", IPAddress1.FieldValue(4)) & vbLf & _
-    "Content will be cleared now."
-    IPAddress1.Address = vbNullString
+    Dim Text4() As String
+    Text4() = Split(IPAddress1.Text, ".")
+    MsgBox "IP Address Text: " & IPAddress1.Text & vbLf & _
+    "IP Address Value: " & IPAddress1.Value & vbLf & _
+    "Item1: " & Text4(0) & vbLf & "Item2: " & Text4(1) & vbLf & _
+    "Item3: " & Text4(2) & vbLf & "Item4: " & Text4(3)
+    MsgBox "Content will be cleared now."
+    IPAddress1.Text = vbNullString
 End If
 End Sub
 
 Private Sub Command4_Click()
-PagerForm.Show vbModal
+With New PagerForm
+.Show vbModal
+End With
 End Sub
 
 Private Sub DTPicker1_CalendarGetDayBold(ByVal StartDate As Date, ByVal Count As Long, State() As Boolean)
 Dim i As Long
 For i = 1 To Count
-    If Weekday(DateAdd("d", i, StartDate), vbMonday) = vbSunday Then
-        State(i) = True
-    End If
+    If Weekday(DateAdd("d", i - 1, StartDate)) = vbSunday Then State(i) = True
 Next i
 End Sub
 
@@ -657,21 +667,24 @@ Private Sub DTPicker1_FormatString(ByVal CallbackField As String, FormattedStrin
 If CallbackField = "X" Then FormattedString = "M" & Format$(DTPicker1.Month, "00")
 End Sub
 
-Private Sub DTPicker1_GotFocus()
-DTPicker1.BackColor = vbYellow
-End Sub
-
-Private Sub DTPicker1_LostFocus()
-DTPicker1.BackColor = vbWindowBackground
-End Sub
-
 Private Sub MonthView1_GetDayBold(ByVal StartDate As Date, ByVal Count As Long, State() As Boolean)
 Dim i As Long
 For i = 1 To Count
-    If Weekday(DateAdd("d", i, StartDate), vbMonday) = vbSunday Then
-        State(i) = True
-    End If
+    If Weekday(DateAdd("d", i - 1, StartDate)) = vbSunday Then State(i) = True
 Next i
+End Sub
+
+Private Sub CoolBar1_HeightChanged(ByVal NewHeight As Single)
+' .Move will not always refresh the child when there was no change.
+' However, a height change can cause issues for the transparent background of the child controls.
+Dim Band As CbrBand
+For Each Band In CoolBar1.Bands
+    If Not Band.Child Is Nothing Then
+        On Error Resume Next
+        Band.Child.Refresh
+        On Error GoTo 0
+    End If
+Next Band
 End Sub
 
 Private Sub ListView1_ColumnCheck(ByVal ColumnHeader As LvwColumnHeader)
@@ -813,23 +826,47 @@ ElseIf DataString = ImageCombo1.Name Then
         End If
     End If
 ElseIf DataString = TreeView1.Name Then
-    Dim Node As TvwNode
-    Set Node = TreeView1.OLEDraggedItem
-    If Not Node Is Nothing Then
+    Dim DragNode As TvwNode
+    Set DragNode = TreeView1.OLEDraggedItem
+    If Not DragNode Is Nothing Then
+        Dim NewIndex As Long
         If ComCtlsSupportLevel() >= 2 Then
             If Not ListView2.InsertMark(After) Is Nothing Then
-                ListView2.ListItems.Add(IIf(After = True, ListView2.InsertMark.Index + 1, ListView2.InsertMark.Index), , Node.Text, , Node.Image).ForeColor = Node.ForeColor
+                With ListView2.ListItems.Add(IIf(After = True, ListView2.InsertMark.Index + 1, ListView2.InsertMark.Index), , DragNode.Text, , DragNode.Image)
+                .ForeColor = DragNode.ForeColor
+                NewIndex = .Index
+                End With
             Else
-                ListView2.ListItems.Add(, , Node.Text, , Node.Image).ForeColor = Node.ForeColor
+                With ListView2.ListItems.Add(, , DragNode.Text, , DragNode.Image)
+                .ForeColor = DragNode.ForeColor
+                NewIndex = .Index
+                End With
             End If
             Set ListView2.InsertMark = Nothing
         Else
             If Not ListView2.DropHighlight Is Nothing Then
-                ListView2.ListItems.Add(ListView2.DropHighlight.Index, , Node.Text, , Node.Image).ForeColor = Node.ForeColor
+                With ListView2.ListItems.Add(ListView2.DropHighlight.Index, , DragNode.Text, , DragNode.Image)
+                .ForeColor = DragNode.ForeColor
+                NewIndex = .Index
+                End With
             Else
-                ListView2.ListItems.Add(, , Node.Text, , Node.Image).ForeColor = Node.ForeColor
+                With ListView2.ListItems.Add(, , DragNode.Text, , DragNode.Image)
+                .ForeColor = DragNode.ForeColor
+                NewIndex = .Index
+                End With
             End If
             Set ListView2.DropHighlight = Nothing
+        End If
+        If TreeView1.MultiSelect <> TvwMultiSelectNone Then
+            Dim Node As TvwNode
+            For Each Node In TreeView1.SelectedNodes
+                If Not Node Is DragNode Then
+                    With ListView2.ListItems.Add(NewIndex + 1, , Node.Text, , Node.Image)
+                    .ForeColor = Node.ForeColor
+                    NewIndex = .Index
+                    End With
+                End If
+            Next Node
         End If
     End If
 ElseIf DataString = ListBoxW1.Name Then
@@ -868,7 +905,7 @@ End If
 Dim DataString As String
 DataString = VarToStr(Data.GetData(vbCFRTF))
 If DataString = ListView1.Name Or DataString = ImageCombo1.Name Or DataString = TreeView1.Name Or DataString = ListBoxW1.Name Then
-    Effect = vbDropEffectMove Or vbDropEffectCopy
+    Effect = vbDropEffectCopy Or vbDropEffectMove
 Else
     Effect = vbDropEffectNone
     Exit Sub
@@ -971,7 +1008,7 @@ End If
 Dim DataString As String
 DataString = VarToStr(Data.GetData(vbCFRTF))
 If DataString = ListView1.Name Or DataString = ImageCombo1.Name Or DataString = TreeView1.Name Then
-    Effect = vbDropEffectMove Or vbDropEffectCopy
+    Effect = vbDropEffectCopy Or vbDropEffectMove
 Else
     Effect = vbDropEffectNone
     Exit Sub
@@ -988,12 +1025,16 @@ Private Sub Slider1_Change()
 UpDown1.SyncFromBuddy
 End Sub
 
+Private Sub Slider1_Scroll()
+UpDown1.SyncFromBuddy
+End Sub
+
 Private Sub SpinBox1_LostFocus()
 SpinBox1.ValidateText
 End Sub
 
-Private Sub StatusBar1_PanelClick(ByVal Panel As SbrPanel, ByVal X As Single, ByVal Y As Single)
-MsgBox "clicked panel " & Panel.Index
+Private Sub StatusBar1_PanelClick(ByVal Panel As SbrPanel, ByVal Button As Integer)
+MsgBox "clicked panel " & Panel.Index & " with " & IIf(Button = vbLeftButton, "left", "right") & " button."
 End Sub
 
 Private Sub TabStrip1_OLEDragOver(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
@@ -1002,7 +1043,7 @@ Set TabItem = TabStrip1.HitTest(X, Y)
 If TabItem Is Nothing Then
     Effect = vbDropEffectNone
 Else
-    Effect = vbDropEffectMove Or vbDropEffectCopy
+    Effect = vbDropEffectCopy Or vbDropEffectMove
     TabItem.Selected = True
 End If
 End Sub
@@ -1097,7 +1138,7 @@ If Data.GetFormat(vbCFRTF) = False Then Exit Sub
 Dim DataString As String
 DataString = VarToStr(Data.GetData(vbCFRTF))
 If DataString = TreeView1.Name Then
-    Effect = vbDropEffectMove Or vbDropEffectCopy
+    Effect = vbDropEffectCopy Or vbDropEffectMove
     Dim Node As TvwNode, MarkNode As TvwNode, After As Boolean
     Set Node = TreeView1.OLEDraggedItem
     If Not Node Is Nothing Then

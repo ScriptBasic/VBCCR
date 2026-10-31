@@ -12,12 +12,24 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
-Private ShadowObjectPointer As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+Private ShadowObjectPointer As LongPtr
 Private PropIndex As Long, PropKey As String
 Private PropTag As Variant
 
 Private Function ShadowStatusBar() As StatusBar
-ComCtlsPtrToShadowObj ShadowStatusBar, ShadowObjectPointer
+ComCtlsObjSetAddRef ShadowStatusBar, ShadowObjectPointer
 End Function
 
 Friend Sub FInit(ByVal Object As StatusBar, ByVal Key As String)
@@ -37,6 +49,10 @@ End Property
 Public Property Get Key() As String
 Attribute Key.VB_Description = "Returns the key used in the collection."
 Key = PropKey
+End Property
+
+Public Property Let Key(ByVal Value As String)
+ShadowStatusBar.Panels.FChangeKey PropIndex, PropKey, Value
 End Property
 
 Public Property Get Tag() As Variant
@@ -64,6 +80,7 @@ End Property
 
 Public Property Get Text() As String
 Attribute Text.VB_Description = "Returns/sets the text of the panel."
+Attribute Text.VB_UserMemId = 0
 Text = ShadowStatusBar.FPanelText(PropIndex)
 End Property
 
@@ -125,6 +142,15 @@ Public Property Let DTFormat(ByVal Value As SbrPanelDTFormatConstants)
 ShadowStatusBar.FPanelDTFormat(PropIndex) = Value
 End Property
 
+Public Property Get TextIndent() As Single
+Attribute TextIndent.VB_Description = "Returns/sets the text indent of the panel."
+TextIndent = ShadowStatusBar.FPanelTextIndent(PropIndex)
+End Property
+
+Public Property Let TextIndent(ByVal Value As Single)
+ShadowStatusBar.FPanelTextIndent(PropIndex) = Value
+End Property
+
 Public Property Get ForeColor() As OLE_COLOR
 Attribute ForeColor.VB_Description = "Returns/sets the foreground color used to display text and graphics in an object."
 ForeColor = ShadowStatusBar.FPanelForeColor(PropIndex)
@@ -156,6 +182,15 @@ Public Property Set Picture(ByVal Value As IPictureDisp)
 Set ShadowStatusBar.FPanelPicture(PropIndex) = Value
 End Property
 
+Public Property Get PictureIndent() As Single
+Attribute PictureIndent.VB_Description = "Returns/sets the picture indent of the panel."
+PictureIndent = ShadowStatusBar.FPanelPictureIndent(PropIndex)
+End Property
+
+Public Property Let PictureIndent(ByVal Value As Single)
+ShadowStatusBar.FPanelPictureIndent(PropIndex) = Value
+End Property
+
 Public Property Get Enabled() As Boolean
 Attribute Enabled.VB_Description = "Returns/sets a value that determines whether the panel text appears as enabled or not."
 Enabled = ShadowStatusBar.FPanelEnabled(PropIndex)
@@ -183,6 +218,15 @@ Public Property Let Bold(ByVal Value As Boolean)
 ShadowStatusBar.FPanelBold(PropIndex) = Value
 End Property
 
+Public Property Get PictureOnRight() As Boolean
+Attribute PictureOnRight.VB_Description = "Returns/sets a value that determines if the picture appears on the right of the panel."
+PictureOnRight = ShadowStatusBar.FPanelPictureOnRight(PropIndex)
+End Property
+
+Public Property Let PictureOnRight(ByVal Value As Boolean)
+ShadowStatusBar.FPanelPictureOnRight(PropIndex) = Value
+End Property
+
 Public Property Get Left() As Single
 Attribute Left.VB_Description = "Returns the distance between the internal left edge of an object and the left edge of its container."
 Left = ShadowStatusBar.FPanelLeft(PropIndex)
@@ -193,10 +237,10 @@ Err.Raise Number:=383, Description:="Property is read-only"
 End Property
 
 Public Property Get Width() As Single
-Attribute Width.VB_Description = "Returns the width of the panel."
+Attribute Width.VB_Description = "Returns/sets the width of the panel."
 Width = ShadowStatusBar.FPanelWidth(PropIndex)
 End Property
 
 Public Property Let Width(ByVal Value As Single)
-Err.Raise Number:=383, Description:="Property is read-only"
+ShadowStatusBar.FPanelWidth(PropIndex) = Value
 End Property

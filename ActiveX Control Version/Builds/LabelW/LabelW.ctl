@@ -8,6 +8,7 @@ Begin VB.UserControl LabelW
    ClipBehavior    =   0  'None
    ClipControls    =   0   'False
    DataBindingBehavior=   1  'vbSimpleBound
+   DrawStyle       =   5  'Transparent
    ForwardFocus    =   -1  'True
    HasDC           =   0   'False
    PropertyPages   =   "LabelW.ctx":0000
@@ -29,6 +30,18 @@ Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
 Option Explicit
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
 #If False Then
 Private LblEllipsisFormatNone, LblEllipsisFormatEnd, LblEllipsisFormatPath, LblEllipsisFormatWord
 #End If
@@ -38,6 +51,18 @@ LblEllipsisFormatEnd = 1
 LblEllipsisFormatPath = 2
 LblEllipsisFormatWord = 3
 End Enum
+Private Type POINTAPI
+X As Long
+Y As Long
+End Type
+Private Type TMSG
+hWnd As LongPtr
+Message As Long
+wParam As LongPtr
+lParam As LongPtr
+Time As Long
+PT As POINTAPI
+End Type
 Private Type RECT
 Left As Long
 Top As Long
@@ -77,14 +102,40 @@ Public Event OLESetData(Data As DataObject, DataFormat As Integer)
 Attribute OLESetData.VB_Description = "Occurs at the OLE drag/drop source control when the drop target requests data that was not provided to the DataObject during the OLEDragStart event."
 Public Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
 Attribute OLEStartDrag.VB_Description = "Occurs when an OLE drag/drop operation is initiated either manually or automatically."
+#If VBA7 Then
+Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (ByRef Destination As Any, ByRef Source As Any, ByVal Length As LongPtr)
+Private Declare PtrSafe Function DrawText Lib "user32" Alias "DrawTextW" (ByVal hDC As LongPtr, ByVal lpchText As LongPtr, ByVal nCount As Long, ByRef lpRect As RECT, ByVal uFormat As Long) As Long
+Private Declare PtrSafe Function PeekMessage Lib "user32" Alias "PeekMessageW" (ByRef lpMsg As TMSG, ByVal hWnd As LongPtr, ByVal wMsgFilterMin As Long, ByVal wMsgFilterMax As Long, ByVal wRemoveMsg As Long) As Long
+Private Declare PtrSafe Function DispatchMessage Lib "user32" Alias "DispatchMessageW" (ByRef lpMsg As TMSG) As LongPtr
+Private Declare PtrSafe Function SetRect Lib "user32" (ByRef lpRect As RECT, ByVal X1 As Long, ByVal Y1 As Long, ByVal X2 As Long, ByVal Y2 As Long) As Long
+Private Declare PtrSafe Function LoadCursor Lib "user32" Alias "LoadCursorW" (ByVal hInstance As LongPtr, ByVal lpCursorName As Any) As LongPtr
+Private Declare PtrSafe Function SetCursor Lib "user32" (ByVal hCursor As LongPtr) As LongPtr
+Private Declare PtrSafe Function GetMessagePos Lib "user32" () As Long
+Private Declare PtrSafe Function GetCapture Lib "user32" () As LongPtr
+Private Declare PtrSafe Function WindowFromPoint Lib "user32" (ByVal XY As Currency) As LongPtr
+Private Declare PtrSafe Function DeleteObject Lib "gdi32" (ByVal hObject As LongPtr) As Long
+Private Declare PtrSafe Function SelectObject Lib "gdi32" (ByVal hDC As LongPtr, ByVal hObject As LongPtr) As LongPtr
+Private Declare PtrSafe Function SetTextColor Lib "gdi32" (ByVal hDC As LongPtr, ByVal crColor As Long) As Long
+Private Declare PtrSafe Function GetDC Lib "user32" (ByVal hWnd As LongPtr) As LongPtr
+Private Declare PtrSafe Function ReleaseDC Lib "user32" (ByVal hWnd As LongPtr, ByVal hDC As LongPtr) As Long
+Private Declare PtrSafe Function CreateCompatibleDC Lib "gdi32" (ByVal hDC As LongPtr) As LongPtr
+Private Declare PtrSafe Function DeleteDC Lib "gdi32" (ByVal hDC As LongPtr) As Long
+Private Declare PtrSafe Function GetSystemMetrics Lib "user32" (ByVal nIndex As Long) As Long
+Private Declare PtrSafe Function DrawEdge Lib "user32" (ByVal hDC As LongPtr, ByRef qRC As RECT, ByVal Edge As Long, ByVal grfFlags As Long) As Long
+Private Declare PtrSafe Function CreateRectRgn Lib "gdi32" (ByVal X1 As Long, ByVal Y1 As Long, ByVal X2 As Long, ByVal Y2 As Long) As LongPtr
+Private Declare PtrSafe Function GetClipRgn Lib "gdi32" (ByVal hDC As LongPtr, ByVal hRgn As LongPtr) As Long
+Private Declare PtrSafe Function SelectClipRgn Lib "gdi32" (ByVal hDC As LongPtr, ByVal hRgn As LongPtr) As Long
+#Else
+Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (ByRef Destination As Any, ByRef Source As Any, ByVal Length As Long)
 Private Declare Function DrawText Lib "user32" Alias "DrawTextW" (ByVal hDC As Long, ByVal lpchText As Long, ByVal nCount As Long, ByRef lpRect As RECT, ByVal uFormat As Long) As Long
+Private Declare Function PeekMessage Lib "user32" Alias "PeekMessageW" (ByRef lpMsg As TMSG, ByVal hWnd As Long, ByVal wMsgFilterMin As Long, ByVal wMsgFilterMax As Long, ByVal wRemoveMsg As Long) As Long
+Private Declare Function DispatchMessage Lib "user32" Alias "DispatchMessageW" (ByRef lpMsg As TMSG) As Long
 Private Declare Function SetRect Lib "user32" (ByRef lpRect As RECT, ByVal X1 As Long, ByVal Y1 As Long, ByVal X2 As Long, ByVal Y2 As Long) As Long
 Private Declare Function LoadCursor Lib "user32" Alias "LoadCursorW" (ByVal hInstance As Long, ByVal lpCursorName As Any) As Long
+Private Declare Function SetCursor Lib "user32" (ByVal hCursor As Long) As Long
 Private Declare Function GetMessagePos Lib "user32" () As Long
 Private Declare Function GetCapture Lib "user32" () As Long
-Private Declare Function WindowFromPoint Lib "user32" (ByVal X As Long, ByVal Y As Long) As Long
-Private Declare Function InvalidateRect Lib "user32" (ByVal hWnd As Long, ByRef lpRect As Any, ByVal bErase As Long) As Long
-Private Declare Function UpdateWindow Lib "user32" (ByVal hWnd As Long) As Long
+Private Declare Function WindowFromPoint Lib "user32" (ByVal XY As Currency) As Long
 Private Declare Function DeleteObject Lib "gdi32" (ByVal hObject As Long) As Long
 Private Declare Function SelectObject Lib "gdi32" (ByVal hDC As Long, ByVal hObject As Long) As Long
 Private Declare Function SetTextColor Lib "gdi32" (ByVal hDC As Long, ByVal crColor As Long) As Long
@@ -94,21 +145,26 @@ Private Declare Function CreateCompatibleDC Lib "gdi32" (ByVal hDC As Long) As L
 Private Declare Function DeleteDC Lib "gdi32" (ByVal hDC As Long) As Long
 Private Declare Function GetSystemMetrics Lib "user32" (ByVal nIndex As Long) As Long
 Private Declare Function DrawEdge Lib "user32" (ByVal hDC As Long, ByRef qRC As RECT, ByVal Edge As Long, ByVal grfFlags As Long) As Long
-Private Const DT_BOTTOM As Long = &H8
-Private Const DT_CALCRECT As Long = &H400
-Private Const DT_CENTER As Long = &H1
-Private Const DT_END_ELLIPSIS As Long = &H8000&
+Private Declare Function CreateRectRgn Lib "gdi32" (ByVal X1 As Long, ByVal Y1 As Long, ByVal X2 As Long, ByVal Y2 As Long) As Long
+Private Declare Function GetClipRgn Lib "gdi32" (ByVal hDC As Long, ByVal hRgn As Long) As Long
+Private Declare Function SelectClipRgn Lib "gdi32" (ByVal hDC As Long, ByVal hRgn As Long) As Long
+#End If
+Private Const WM_SETCURSOR As Long = &H20, HTCLIENT As Long = 1
 Private Const DT_LEFT As Long = &H0
-Private Const DT_MODIFYSTRING As Long = &H10000
-Private Const DT_NOCLIP As Long = &H100
-Private Const DT_NOPREFIX As Long = &H800
-Private Const DT_PATH_ELLIPSIS As Long = &H4000
+Private Const DT_CENTER As Long = &H1
 Private Const DT_RIGHT As Long = &H2
-Private Const DT_RTLREADING As Long = &H20000
-Private Const DT_SINGLELINE As Long = &H20
-Private Const DT_TOP As Long = &H0
 Private Const DT_VCENTER As Long = &H4
+Private Const DT_BOTTOM As Long = &H8
 Private Const DT_WORDBREAK As Long = &H10
+Private Const DT_SINGLELINE As Long = &H20
+Private Const DT_NOCLIP As Long = &H100
+Private Const DT_CALCRECT As Long = &H400
+Private Const DT_NOPREFIX As Long = &H800
+Private Const DT_EDITCONTROL As Long = &H2000
+Private Const DT_PATH_ELLIPSIS As Long = &H4000
+Private Const DT_END_ELLIPSIS As Long = &H8000&
+Private Const DT_MODIFYSTRING As Long = &H10000
+Private Const DT_RTLREADING As Long = &H20000
 Private Const DT_WORD_ELLIPSIS As Long = &H40000
 Private Const SM_CXBORDER As Long = 5
 Private Const SM_CYBORDER As Long = 6
@@ -126,15 +182,18 @@ Private Const BF_TOP As Long = &H2
 Private Const BF_BOTTOM As Long = &H8
 Private Const BF_RECT As Long = (BF_LEFT Or BF_TOP Or BF_RIGHT Or BF_BOTTOM)
 Implements OLEGuids.IObjectSafety
-Implements OLEGuids.IPerPropertyBrowsingVB
+Implements OLEGuids.IOleInPlaceObjectWindowlessVB
+Private LabelFontHandle As LongPtr
 Private LabelAutoSizeFlag As Boolean
 Private LabelDisplayedCaption As String
 Private LabelPaintFrozen As Boolean
 Private LabelMouseOver As Boolean, LabelMouseOverPos As Long
-Private DispIDMousePointer As Long
+Private LabelOverrideSetCursor As Boolean
+Private LabelDesignMode As Boolean
 Private WithEvents PropFont As StdFont
 Attribute PropFont.VB_VarHelpID = -1
-Private PropMousePointer As Integer, PropMouseIcon As IPictureDisp
+Private PropFontQuality As CCFontQualityConstants
+Private PropMousePointer As Integer
 Private PropMouseTrack As Boolean
 Private PropRightToLeft As Boolean
 Private PropRightToLeftMode As CCRightToLeftModeConstants
@@ -144,7 +203,9 @@ Private PropCaption As String
 Private PropUseMnemonic As Boolean
 Private PropAutoSize As Boolean
 Private PropWordWrap As Boolean
+Private PropSingleLine As Boolean
 Private PropEllipsisFormat As LblEllipsisFormatConstants
+Private PropMimicTextBox As Boolean
 Private PropVerticalAlignment As CCVerticalAlignmentConstants
 
 Private Sub IObjectSafety_GetInterfaceSafetyOptions(ByRef riid As OLEGuids.OLECLSID, ByRef pdwSupportedOptions As Long, ByRef pdwEnabledOptions As Long)
@@ -156,37 +217,35 @@ End Sub
 Private Sub IObjectSafety_SetInterfaceSafetyOptions(ByRef riid As OLEGuids.OLECLSID, ByVal dwOptionsSetMask As Long, ByVal dwEnabledOptions As Long)
 End Sub
 
-Private Sub IPerPropertyBrowsingVB_GetDisplayString(ByRef Handled As Boolean, ByVal DispID As Long, ByRef DisplayName As String)
-If DispID = DispIDMousePointer Then
-    Call ComCtlsIPPBSetDisplayStringMousePointer(PropMousePointer, DisplayName)
-    Handled = True
-End If
-End Sub
-
-Private Sub IPerPropertyBrowsingVB_GetPredefinedStrings(ByRef Handled As Boolean, ByVal DispID As Long, ByRef StringsOut() As String, ByRef CookiesOut() As Long)
-If DispID = DispIDMousePointer Then
-    Call ComCtlsIPPBSetPredefinedStringsMousePointer(StringsOut(), CookiesOut())
-    Handled = True
-End If
-End Sub
-
-Private Sub IPerPropertyBrowsingVB_GetPredefinedValue(ByRef Handled As Boolean, ByVal DispID As Long, ByVal Cookie As Long, ByRef Value As Variant)
-If DispID = DispIDMousePointer Then
-    Value = Cookie
-    Handled = True
+#If VBA7 Then
+Private Sub IOleInPlaceObjectWindowlessVB_OnWindowMessage(ByRef Handled As Boolean, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, ByRef Result As LongPtr)
+#Else
+Private Sub IOleInPlaceObjectWindowlessVB_OnWindowMessage(ByRef Handled As Boolean, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByRef Result As Long)
+#End If
+If wMsg = WM_SETCURSOR Then
+    If LoWord(CLng(lParam)) = HTCLIENT Then
+        If MousePointerID(PropMousePointer) <> 0 Then
+            SetCursor LoadCursor(NULL_PTR, MousePointerID(PropMousePointer))
+            Result = 1
+            Handled = True
+        End If
+    End If
 End If
 End Sub
 
 Private Sub UserControl_Initialize()
 Call ComCtlsLoadShellMod
-Call SetVTableSubclass(Me, VTableInterfacePerPropertyBrowsing)
 End Sub
 
 Private Sub UserControl_InitProperties()
-If DispIDMousePointer = 0 Then DispIDMousePointer = GetDispID(Me, "MousePointer")
+On Error Resume Next
+LabelDesignMode = Not Ambient.UserMode
+On Error GoTo 0
 Set PropFont = Ambient.Font
 Set UserControl.Font = PropFont
-PropMousePointer = 0: Set PropMouseIcon = Nothing
+PropFontQuality = CCFontQualityDefault
+Me.OLEDropMode = vbOLEDropNone
+PropMousePointer = 0
 PropMouseTrack = False
 PropRightToLeft = Ambient.RightToLeft
 PropRightToLeftMode = CCRightToLeftModeVBAME
@@ -197,36 +256,44 @@ PropCaption = Ambient.DisplayName
 PropUseMnemonic = True
 PropAutoSize = False
 PropWordWrap = False
+PropSingleLine = False
 PropEllipsisFormat = LblEllipsisFormatNone
+PropMimicTextBox = False
 PropVerticalAlignment = CCVerticalAlignmentTop
 End Sub
 
 Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
-If DispIDMousePointer = 0 Then DispIDMousePointer = GetDispID(Me, "MousePointer")
+On Error Resume Next
+LabelDesignMode = Not Ambient.UserMode
+On Error GoTo 0
 With PropBag
 Set PropFont = .ReadProperty("Font", Nothing)
 If PropFont Is Nothing Then Set PropFont = Ambient.Font
 Set UserControl.Font = PropFont
+PropFontQuality = .ReadProperty("FontQuality", CCFontQualityDefault)
+If PropFontQuality <> CCFontQualityDefault Then LabelFontHandle = CreateGDIFontFromOLEFont(PropFont, PropFontQuality)
 Me.Appearance = .ReadProperty("Appearance", CCAppearance3D)
 Me.BackColor = .ReadProperty("BackColor", vbButtonFace)
 Me.ForeColor = .ReadProperty("ForeColor", vbButtonText)
 Me.Enabled = .ReadProperty("Enabled", True)
 Me.OLEDropMode = .ReadProperty("OLEDropMode", vbOLEDropNone)
-PropMousePointer = .ReadProperty("MousePointer", 0)
-Set PropMouseIcon = .ReadProperty("MouseIcon", Nothing)
-Me.MousePointer = PropMousePointer
+Me.MousePointer = .ReadProperty("MousePointer", 0)
+Set Me.MouseIcon = .ReadProperty("MouseIcon", Nothing)
 PropMouseTrack = .ReadProperty("MouseTrack", False)
 PropRightToLeft = .ReadProperty("RightToLeft", False)
 PropRightToLeftMode = .ReadProperty("RightToLeftMode", CCRightToLeftModeVBAME)
 If PropRightToLeft = True Then Me.RightToLeft = True
 PropAlignment = .ReadProperty("Alignment", vbLeftJustify)
 PropBorderStyle = .ReadProperty("BorderStyle", CCBorderStyleNone)
+If PropBorderStyle = CCBorderStyleSingle Then UserControl.DrawStyle = vbSolid Else UserControl.DrawStyle = vbInvisible
 Me.BackStyle = .ReadProperty("BackStyle", CCBackStyleOpaque)
-PropCaption = .ReadProperty("Caption", vbNullString)
+PropCaption = .ReadProperty("Caption", vbNullString) ' Unicode not necessary
 PropUseMnemonic = .ReadProperty("UseMnemonic", True)
 PropAutoSize = .ReadProperty("AutoSize", False)
 PropWordWrap = .ReadProperty("WordWrap", False)
+PropSingleLine = .ReadProperty("SingleLine", False)
 PropEllipsisFormat = .ReadProperty("EllipsisFormat", LblEllipsisFormatNone)
+PropMimicTextBox = .ReadProperty("MimicTextBox", False)
 PropVerticalAlignment = .ReadProperty("VerticalAlignment", CCVerticalAlignmentTop)
 End With
 If PropUseMnemonic = True Then
@@ -239,32 +306,34 @@ End Sub
 Private Sub UserControl_WriteProperties(PropBag As PropertyBag)
 With PropBag
 .WriteProperty "Font", IIf(OLEFontIsEqual(PropFont, Ambient.Font) = False, PropFont, Nothing), Nothing
+.WriteProperty "FontQuality", PropFontQuality, CCFontQualityDefault
 .WriteProperty "Appearance", Me.Appearance, CCAppearance3D
 .WriteProperty "BackColor", Me.BackColor, vbButtonFace
 .WriteProperty "ForeColor", Me.ForeColor, vbButtonText
 .WriteProperty "Enabled", Me.Enabled, True
 .WriteProperty "OLEDropMode", Me.OLEDropMode, vbOLEDropNone
 .WriteProperty "MousePointer", PropMousePointer, 0
-.WriteProperty "MouseIcon", PropMouseIcon, Nothing
+.WriteProperty "MouseIcon", Me.MouseIcon, Nothing
 .WriteProperty "MouseTrack", PropMouseTrack, False
 .WriteProperty "RightToLeft", PropRightToLeft, False
 .WriteProperty "RightToLeftMode", PropRightToLeftMode, CCRightToLeftModeVBAME
 .WriteProperty "Alignment", PropAlignment, vbLeftJustify
 .WriteProperty "BorderStyle", PropBorderStyle, CCBorderStyleNone
 .WriteProperty "BackStyle", Me.BackStyle, CCBackStyleOpaque
-.WriteProperty "Caption", PropCaption, vbNullString
+.WriteProperty "Caption", PropCaption, vbNullString ' Unicode not necessary
 .WriteProperty "UseMnemonic", PropUseMnemonic, True
 .WriteProperty "AutoSize", PropAutoSize, False
 .WriteProperty "WordWrap", PropWordWrap, False
+.WriteProperty "SingleLine", PropSingleLine, False
 .WriteProperty "EllipsisFormat", PropEllipsisFormat, LblEllipsisFormatNone
+.WriteProperty "MimicTextBox", PropMimicTextBox, False
 .WriteProperty "VerticalAlignment", PropVerticalAlignment, CCVerticalAlignmentTop
 End With
 End Sub
 
 Private Sub UserControl_Paint()
-Static InProc As Boolean
-If InProc = True Or LabelPaintFrozen = True Then Exit Sub
-Dim RC As RECT, CalcRect As RECT, Format As Long, Buffer As String
+If LabelPaintFrozen = True Then Exit Sub
+Dim RC As RECT, CalcRect As RECT, DrawFlags As Long, Buffer As String
 Dim BorderWidth As Long, BorderHeight As Long
 With UserControl
 SetRect RC, 0, 0, .ScaleWidth, .ScaleHeight
@@ -286,46 +355,86 @@ Select Case PropBorderStyle
         BorderHeight = GetSystemMetrics(SM_CYDLGFRAME)
         DrawEdge .hDC, RC, BDR_RAISEDOUTER Or BDR_RAISEDINNER, BF_RECT
 End Select
+Dim hFontOld As LongPtr
+If LabelFontHandle <> NULL_PTR Then hFontOld = SelectObject(.hDC, LabelFontHandle)
 If .Enabled = False Then SetTextColor .hDC, WinColor(vbGrayText)
-Format = DT_NOCLIP
+DrawFlags = DT_NOCLIP
 Select Case PropAlignment
     Case vbLeftJustify
-        Format = Format Or DT_LEFT
+        DrawFlags = DrawFlags Or DT_LEFT
     Case vbCenter
-        Format = Format Or DT_CENTER
+        DrawFlags = DrawFlags Or DT_CENTER
     Case vbRightJustify
-        Format = Format Or DT_RIGHT
+        DrawFlags = DrawFlags Or DT_RIGHT
 End Select
-If PropRightToLeft = True Then Format = Format Or DT_RTLREADING
-If PropUseMnemonic = False Then Format = Format Or DT_NOPREFIX
-If PropWordWrap = True Then Format = Format Or DT_WORDBREAK
+If PropRightToLeft = True Then DrawFlags = DrawFlags Or DT_RTLREADING
+If PropUseMnemonic = False Then DrawFlags = DrawFlags Or DT_NOPREFIX
+If PropWordWrap = True Then
+    DrawFlags = DrawFlags Or DT_WORDBREAK
+ElseIf PropSingleLine = True Then
+    DrawFlags = DrawFlags Or DT_SINGLELINE
+End If
 Select Case PropEllipsisFormat
     Case LblEllipsisFormatEnd
-        Format = Format Or DT_END_ELLIPSIS
+        DrawFlags = DrawFlags Or DT_END_ELLIPSIS
     Case LblEllipsisFormatPath
-        Format = Format Or DT_PATH_ELLIPSIS
+        DrawFlags = DrawFlags Or DT_PATH_ELLIPSIS
     Case LblEllipsisFormatWord
-        Format = Format Or DT_WORD_ELLIPSIS
+        DrawFlags = DrawFlags Or DT_WORD_ELLIPSIS
 End Select
-If PropVerticalAlignment <> CCVerticalAlignmentTop Then
-    Dim Height As Long, Result As Long
-    Buffer = PropCaption
-    If Buffer = vbNullString Then Buffer = " "
-    LSet CalcRect = RC
-    Height = DrawText(.hDC, StrPtr(Buffer), -1, CalcRect, Format Or DT_CALCRECT)
+If PropMimicTextBox = True Then DrawFlags = DrawFlags Or DT_EDITCONTROL
+If Not (DrawFlags And DT_SINGLELINE) = DT_SINGLELINE Then
+    If PropVerticalAlignment <> CCVerticalAlignmentTop Then
+        Dim Height As Long, Result As Long
+        Buffer = PropCaption
+        If Buffer = vbNullString Then Buffer = " "
+        LSet CalcRect = RC
+        Height = DrawText(.hDC, StrPtr(Buffer), -1, CalcRect, DrawFlags Or DT_CALCRECT)
+        Select Case PropVerticalAlignment
+            Case CCVerticalAlignmentCenter
+                Result = ((((RC.Bottom - RC.Top) - (BorderHeight * 2)) - Height) \ 2)
+            Case CCVerticalAlignmentBottom
+                Result = (((RC.Bottom - RC.Top) - (BorderHeight * 2)) - Height)
+        End Select
+        If Result > 0 Then RC.Top = RC.Top + Result
+    End If
+Else
     Select Case PropVerticalAlignment
         Case CCVerticalAlignmentCenter
-            Result = ((((RC.Bottom - RC.Top) - (BorderHeight * 2)) - Height) / 2)
+            DrawFlags = DrawFlags Or DT_VCENTER
         Case CCVerticalAlignmentBottom
-            Result = (((RC.Bottom - RC.Top) - (BorderHeight * 2)) - Height)
+            DrawFlags = DrawFlags Or DT_BOTTOM
     End Select
-    If Result > 0 Then RC.Top = RC.Top + Result
 End If
-SetRect RC, RC.Left + BorderWidth, RC.Top + BorderHeight, RC.Right - (BorderWidth * 2), RC.Bottom - (BorderHeight * 2)
+SetRect RC, RC.Left + BorderWidth, RC.Top + BorderHeight, RC.Right - BorderWidth, RC.Bottom - BorderHeight
 If Not PropCaption = vbNullString Then
-    LabelDisplayedCaption = PropCaption
-    DrawText .hDC, StrPtr(LabelDisplayedCaption), -1, RC, Format Or DT_MODIFYSTRING
+    ' The function could add up to four additional characters to this string.
+    ' The buffer containing the string should be large enough to accommodate these extra characters.
+    Buffer = PropCaption & String$(4, vbNullChar) & vbNullChar
+    Dim hRgn As LongPtr
+    If PropAutoSize = True Then
+        ' Temporarily remove the clipping region in this case.
+        hRgn = CreateRectRgn(0, 0, 0, 0)
+        If hRgn <> NULL_PTR Then
+            If GetClipRgn(.hDC, hRgn) = 1 Then
+                SelectClipRgn .hDC, NULL_PTR
+            Else
+                DeleteObject hRgn
+                hRgn = NULL_PTR
+            End If
+        End If
+    End If
+    DrawText .hDC, StrPtr(Buffer), -1, RC, DrawFlags Or DT_MODIFYSTRING
+    If hRgn <> NULL_PTR Then
+        SelectClipRgn .hDC, hRgn
+        DeleteObject hRgn
+        hRgn = NULL_PTR
+    End If
+    LabelDisplayedCaption = Left$(Buffer, InStr(Buffer, vbNullChar) - 1)
+Else
+    LabelDisplayedCaption = vbNullString
 End If
+If hFontOld <> NULL_PTR Then SelectObject .hDC, hFontOld
 End With
 End Sub
 
@@ -390,13 +499,8 @@ Private Sub UserControl_Resize()
 Static InProc As Boolean
 If InProc = True Then Exit Sub
 InProc = True
-If DPICorrectionFactor() <> 1 Then
-    With UserControl
-    .Extender.Move .Extender.Left + .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top + .ScaleY(1, vbPixels, vbContainerPosition)
-    .Extender.Move .Extender.Left - .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top - .ScaleY(1, vbPixels, vbContainerPosition)
-    End With
-End If
-Me.Refresh
+If DPICorrectionFactor() <> 1 Then Call SyncObjectRectsToContainer(Me)
+Call RedrawLabel
 InProc = False
 End Sub
 
@@ -405,15 +509,25 @@ If HitResult = vbHitResultOutside Then HitResult = vbHitResultHit
 End Sub
 
 Private Sub UserControl_Terminate()
-Call RemoveVTableSubclass(Me, VTableInterfacePerPropertyBrowsing)
+If LabelOverrideSetCursor = True Then
+    Call RemoveVTableHandling(Me, VTableInterfaceInPlaceObjectWindowless)
+    LabelOverrideSetCursor = False
+End If
+If LabelFontHandle <> NULL_PTR Then
+    DeleteObject LabelFontHandle
+    LabelFontHandle = NULL_PTR
+End If
 Call ComCtlsReleaseShellMod
 End Sub
 
 Private Sub TimerMouseTrack_Timer()
 If GetCapture() <> UserControl.ContainerHwnd Then
-    Dim Pos As Long
+    Dim Pos As Long, P As POINTAPI, XY As Currency
     Pos = GetMessagePos()
-    If LabelMouseOverPos <> Pos Or WindowFromPoint(Get_X_lParam(Pos), Get_Y_lParam(Pos)) <> UserControl.ContainerHwnd Then
+    P.X = Get_X_lParam(Pos)
+    P.Y = Get_Y_lParam(Pos)
+    CopyMemory ByVal VarPtr(XY), ByVal VarPtr(P), 8
+    If LabelMouseOverPos <> Pos Or WindowFromPoint(XY) <> UserControl.ContainerHwnd Then
         LabelMouseOver = False
         TimerMouseTrack.Enabled = False
         RaiseEvent MouseLeave
@@ -562,19 +676,53 @@ End Property
 
 Public Property Set Font(ByVal NewFont As StdFont)
 If NewFont Is Nothing Then Set NewFont = Ambient.Font
+Dim OldFontHandle As LongPtr
 Set PropFont = NewFont
+If PropFontQuality <> CCFontQualityDefault Then
+    OldFontHandle = LabelFontHandle
+    LabelFontHandle = CreateGDIFontFromOLEFont(PropFont, PropFontQuality)
+ElseIf LabelFontHandle <> NULL_PTR Then
+    DeleteObject LabelFontHandle
+    LabelFontHandle = NULL_PTR
+End If
 Set UserControl.Font = PropFont
 LabelAutoSizeFlag = PropAutoSize
-Me.Refresh
+Call RedrawLabel
+If OldFontHandle <> NULL_PTR Then DeleteObject OldFontHandle
 UserControl.PropertyChanged "Font"
 End Property
 
 Private Sub PropFont_FontChanged(ByVal PropertyName As String)
+Dim OldFontHandle As LongPtr
+If PropFontQuality <> CCFontQualityDefault Then
+    OldFontHandle = LabelFontHandle
+    LabelFontHandle = CreateGDIFontFromOLEFont(PropFont, PropFontQuality)
+ElseIf LabelFontHandle <> NULL_PTR Then
+    DeleteObject LabelFontHandle
+    LabelFontHandle = NULL_PTR
+End If
 Set UserControl.Font = PropFont
 LabelAutoSizeFlag = PropAutoSize
-Me.Refresh
+Call RedrawLabel
+If OldFontHandle <> NULL_PTR Then DeleteObject OldFontHandle
 UserControl.PropertyChanged "Font"
 End Sub
+
+Public Property Get FontQuality() As CCFontQualityConstants
+Attribute FontQuality.VB_Description = "Returns/sets the font quality."
+FontQuality = PropFontQuality
+End Property
+
+Public Property Let FontQuality(ByVal Value As CCFontQualityConstants)
+Select Case Value
+    Case CCFontQualityDefault, CCFontQualityDraft, CCFontQualityProof, CCFontQualityNonAntiAliased, CCFontQualityAntiAliased, CCFontQualityClearType, CCFontQualityClearTypeNatural
+        PropFontQuality = Value
+    Case Else
+        Err.Raise 380
+End Select
+Set Me.Font = PropFont
+UserControl.PropertyChanged "FontQuality"
+End Property
 
 Public Property Get Appearance() As CCAppearanceConstants
 Attribute Appearance.VB_Description = "Returns/sets a value that determines whether an object is painted two-dimensional or with 3-D effects."
@@ -595,7 +743,7 @@ If UserControl.Appearance = CCAppearanceFlat Then
 Else
     If Not PropBorderStyle = CCBorderStyleNone Then PropBorderStyle = CCBorderStyleSunken
 End If
-Me.Refresh
+Call RedrawLabel
 UserControl.PropertyChanged "Appearance"
 End Property
 
@@ -607,7 +755,7 @@ End Property
 
 Public Property Let BackColor(ByVal Value As OLE_COLOR)
 UserControl.BackColor = Value
-Me.Refresh
+Call RedrawLabel
 UserControl.PropertyChanged "BackColor"
 End Property
 
@@ -619,7 +767,7 @@ End Property
 
 Public Property Let ForeColor(ByVal Value As OLE_COLOR)
 UserControl.ForeColor = Value
-Me.Refresh
+Call RedrawLabel
 UserControl.PropertyChanged "ForeColor"
 End Property
 
@@ -649,28 +797,31 @@ End Select
 UserControl.PropertyChanged "OLEDropMode"
 End Property
 
-Public Property Get MousePointer() As Integer
+Public Property Get MousePointer() As CCMousePointerConstants
 Attribute MousePointer.VB_Description = "Returns/sets the type of mouse pointer displayed when over part of an object."
 MousePointer = PropMousePointer
 End Property
 
-Public Property Let MousePointer(ByVal Value As Integer)
+Public Property Let MousePointer(ByVal Value As CCMousePointerConstants)
 Select Case Value
-    Case 0 To 16, 99
+    Case 0 To 30, 99
         PropMousePointer = Value
     Case Else
         Err.Raise 380
 End Select
-If Ambient.UserMode = True Then
+If LabelDesignMode = False Then
     Select Case PropMousePointer
-        Case vbIconPointer, 16, vbCustom
-            If PropMousePointer = vbCustom Then
-                Set UserControl.MouseIcon = PropMouseIcon
-            Else
-                Set UserControl.MouseIcon = PictureFromHandle(LoadCursor(0, MousePointerID(PropMousePointer)), vbPicTypeIcon)
+        Case vbIconPointer, 16 To 30
+            If LabelOverrideSetCursor = False Then
+                Call SetVTableHandling(Me, VTableInterfaceInPlaceObjectWindowless)
+                LabelOverrideSetCursor = True
             End If
-            UserControl.MousePointer = vbCustom
+            UserControl.MousePointer = vbDefault
         Case Else
+            If LabelOverrideSetCursor = True Then
+                Call RemoveVTableHandling(Me, VTableInterfaceInPlaceObjectWindowless)
+                LabelOverrideSetCursor = False
+            End If
             UserControl.MousePointer = PropMousePointer
     End Select
 End If
@@ -679,7 +830,7 @@ End Property
 
 Public Property Get MouseIcon() As IPictureDisp
 Attribute MouseIcon.VB_Description = "Returns/sets a custom mouse icon."
-Set MouseIcon = PropMouseIcon
+Set MouseIcon = UserControl.MouseIcon
 End Property
 
 Public Property Let MouseIcon(ByVal Value As IPictureDisp)
@@ -688,12 +839,12 @@ End Property
 
 Public Property Set MouseIcon(ByVal Value As IPictureDisp)
 If Value Is Nothing Then
-    Set PropMouseIcon = Nothing
+    Set UserControl.MouseIcon = Nothing
 Else
-    If Value.Type = vbPicTypeIcon Or Value.Handle = 0 Then
-        Set PropMouseIcon = Value
+    If Value.Type = vbPicTypeIcon Or Value.Handle = NULL_PTR Then
+        Set UserControl.MouseIcon = Value
     Else
-        If Ambient.UserMode = False Then
+        If LabelDesignMode = True Then
             MsgBox "Invalid property value", vbCritical + vbOKOnly
             Exit Property
         Else
@@ -701,7 +852,6 @@ Else
         End If
     End If
 End If
-Me.MousePointer = PropMousePointer
 UserControl.PropertyChanged "MouseIcon"
 End Property
 
@@ -725,7 +875,7 @@ Public Property Let RightToLeft(ByVal Value As Boolean)
 PropRightToLeft = Value
 UserControl.RightToLeft = PropRightToLeft
 Call ComCtlsCheckRightToLeft(PropRightToLeft, UserControl.RightToLeft, PropRightToLeftMode)
-Me.Refresh
+Call RedrawLabel
 UserControl.PropertyChanged "RightToLeft"
 End Property
 
@@ -757,7 +907,7 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
-Me.Refresh
+Call RedrawLabel
 UserControl.PropertyChanged "TextAlignment"
 End Property
 
@@ -771,11 +921,12 @@ Public Property Let BorderStyle(ByVal Value As CCBorderStyleConstants)
 Select Case Value
     Case CCBorderStyleNone, CCBorderStyleSingle, CCBorderStyleThin, CCBorderStyleSunken, CCBorderStyleRaised
         PropBorderStyle = Value
+        If PropBorderStyle = CCBorderStyleSingle Then UserControl.DrawStyle = vbSolid Else UserControl.DrawStyle = vbInvisible
     Case Else
         Err.Raise 380
 End Select
 LabelAutoSizeFlag = PropAutoSize
-Me.Refresh
+Call RedrawLabel
 UserControl.PropertyChanged "BorderStyle"
 End Property
 
@@ -792,7 +943,7 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
-Me.Refresh
+Call RedrawLabel
 UserControl.PropertyChanged "BackStyle"
 End Property
 
@@ -806,13 +957,9 @@ End Property
 Public Property Let Caption(ByVal Value As String)
 If PropCaption = Value Then Exit Property
 PropCaption = Value
-If PropUseMnemonic = True Then
-    UserControl.AccessKeys = ChrW(AccelCharCode(PropCaption))
-Else
-    UserControl.AccessKeys = vbNullString
-End If
+If PropUseMnemonic = True Then UserControl.AccessKeys = ChrW(AccelCharCode(PropCaption))
 LabelAutoSizeFlag = PropAutoSize
-Me.Refresh
+Call RedrawLabel
 UserControl.PropertyChanged "Caption"
 On Error Resume Next
 UserControl.Extender.DataChanged = True
@@ -843,7 +990,7 @@ Else
     UserControl.AccessKeys = vbNullString
 End If
 LabelAutoSizeFlag = PropAutoSize
-Me.Refresh
+Call RedrawLabel
 UserControl.PropertyChanged "UseMnemonic"
 End Property
 
@@ -856,7 +1003,7 @@ End Property
 Public Property Let AutoSize(ByVal Value As Boolean)
 PropAutoSize = Value
 LabelAutoSizeFlag = PropAutoSize
-Me.Refresh
+Call RedrawLabel
 UserControl.PropertyChanged "AutoSize"
 End Property
 
@@ -866,10 +1013,31 @@ WordWrap = PropWordWrap
 End Property
 
 Public Property Let WordWrap(ByVal Value As Boolean)
+If PropSingleLine = True And Value = True Then
+    If LabelDesignMode = True Then
+        MsgBox "WordWrap must be False when SingleLine is True", vbCritical + vbOKOnly
+        Exit Property
+    Else
+        Err.Raise Number:=383, Description:="WordWrap must be False when SingleLine is True"
+    End If
+End If
 PropWordWrap = Value
 LabelAutoSizeFlag = PropAutoSize
-Me.Refresh
+Call RedrawLabel
 UserControl.PropertyChanged "WordWrap"
+End Property
+
+Public Property Get SingleLine() As Boolean
+Attribute SingleLine.VB_Description = "Returns/sets whether text is displayed on a single line only."
+SingleLine = PropSingleLine
+End Property
+
+Public Property Let SingleLine(ByVal Value As Boolean)
+PropSingleLine = Value
+If PropSingleLine = True Then PropWordWrap = False
+LabelAutoSizeFlag = PropAutoSize
+Call RedrawLabel
+UserControl.PropertyChanged "SingleLine"
 End Property
 
 Public Property Get EllipsisFormat() As LblEllipsisFormatConstants
@@ -885,8 +1053,20 @@ Select Case Value
         Err.Raise 380
 End Select
 LabelAutoSizeFlag = PropAutoSize
-Me.Refresh
+Call RedrawLabel
 UserControl.PropertyChanged "EllipsisFormat"
+End Property
+
+Public Property Get MimicTextBox() As Boolean
+Attribute MimicTextBox.VB_Description = "Returns/sets a value that determines whether or not to mimic the text-displaying characteristics of a multiline text box. This includes to break on characters instead on words. This is only meaningful if the word wrap property is set to true."
+MimicTextBox = PropMimicTextBox
+End Property
+
+Public Property Let MimicTextBox(ByVal Value As Boolean)
+PropMimicTextBox = Value
+LabelAutoSizeFlag = PropAutoSize
+Call RedrawLabel
+UserControl.PropertyChanged "MimicTextBox"
 End Property
 
 Public Property Get VerticalAlignment() As CCVerticalAlignmentConstants
@@ -901,33 +1081,20 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
-Me.Refresh
+Call RedrawLabel
 UserControl.PropertyChanged "VerticalAlignment"
 End Property
 
 Public Sub Refresh()
 Attribute Refresh.VB_Description = "Forces a complete repaint of a object."
 Attribute Refresh.VB_UserMemId = -550
-If LabelAutoSizeFlag = False Then
-    UserControl.Refresh
-Else
-    Dim hDCScreen As Long, hDC As Long
-    hDCScreen = GetDC(0)
-    If hDCScreen <> 0 Then
-        hDC = CreateCompatibleDC(hDCScreen)
-        If hDC <> 0 Then
-            Dim hFontTemp As Long, hFontOld As Long
-            hFontTemp = CreateGDIFontFromOLEFont(PropFont)
-            hFontOld = SelectObject(hDC, hFontTemp)
-            Call DoAutoSize(hDC)
-            If hFontOld <> 0 Then SelectObject hDC, hFontOld
-            If hFontTemp <> 0 Then DeleteObject hFontTemp
-            DeleteDC hDC
-        End If
-        ReleaseDC 0, hDCScreen
-    End If
-    LabelAutoSizeFlag = False
-End If
+Call RedrawLabel
+Dim Msg As TMSG, hWndContainer As LongPtr
+hWndContainer = UserControl.ContainerHwnd
+Const WM_PAINT As Long = &HF, PM_REMOVE As Long = &H1
+Do While PeekMessage(Msg, hWndContainer, WM_PAINT, WM_PAINT, PM_REMOVE) <> 0
+    DispatchMessage Msg
+Loop
 End Sub
 
 Public Property Get DisplayedCaption() As String
@@ -936,8 +1103,9 @@ Attribute DisplayedCaption.VB_MemberFlags = "400"
 DisplayedCaption = LabelDisplayedCaption
 End Property
 
-Private Sub DoAutoSize(ByVal hDC As Long)
-Dim RC As RECT, CalcRect As RECT, Format As Long, Buffer As String
+Private Sub DoAutoSize(ByVal hDC As LongPtr)
+If hDC = NULL_PTR Then Exit Sub
+Dim RC As RECT, CalcRect As RECT, DrawFlags As Long, Buffer As String
 Dim BorderWidth As Long, BorderHeight As Long
 With UserControl
 SetRect RC, 0, 0, .ScaleWidth, .ScaleHeight
@@ -955,32 +1123,42 @@ Select Case PropBorderStyle
         BorderWidth = GetSystemMetrics(SM_CXDLGFRAME)
         BorderHeight = GetSystemMetrics(SM_CYDLGFRAME)
 End Select
-Format = DT_NOCLIP
+DrawFlags = DT_NOCLIP
 Select Case PropAlignment
     Case vbLeftJustify
-        Format = Format Or DT_LEFT
+        DrawFlags = DrawFlags Or DT_LEFT
     Case vbCenter
-        Format = Format Or DT_CENTER
+        DrawFlags = DrawFlags Or DT_CENTER
     Case vbRightJustify
-        Format = Format Or DT_RIGHT
+        DrawFlags = DrawFlags Or DT_RIGHT
 End Select
-If PropRightToLeft = True Then Format = Format Or DT_RTLREADING
-If PropUseMnemonic = False Then Format = Format Or DT_NOPREFIX
-If PropWordWrap = True Then Format = Format Or DT_WORDBREAK
+If PropRightToLeft = True Then DrawFlags = DrawFlags Or DT_RTLREADING
+If PropUseMnemonic = False Then DrawFlags = DrawFlags Or DT_NOPREFIX
+If PropWordWrap = True Then
+    DrawFlags = DrawFlags Or DT_WORDBREAK
+ElseIf PropSingleLine = True Then
+    DrawFlags = DrawFlags Or DT_SINGLELINE
+End If
+' Ellipsis format will be ignored.
+If PropMimicTextBox = True Then DrawFlags = DrawFlags Or DT_EDITCONTROL
 Buffer = PropCaption
 If Buffer = vbNullString Then Buffer = " "
 LSet CalcRect = RC
-DrawText hDC, StrPtr(Buffer), -1, CalcRect, Format Or DT_CALCRECT
+DrawText hDC, StrPtr(Buffer), -1, CalcRect, DrawFlags Or DT_CALCRECT
 Dim OldRight As Single, OldCenter As Single, OldBottom As Single, OldVCenter As Single
 OldRight = .Extender.Left + .Extender.Width
 OldCenter = .Extender.Left + (.Extender.Width / 2)
 OldBottom = .Extender.Top + .Extender.Height
 OldVCenter = .Extender.Top + (.Extender.Height / 2)
-RC.Left = .ScaleX(.Extender.Left, vbContainerPosition, vbPixels)
-RC.Top = .ScaleY(.Extender.Top, vbContainerPosition, vbPixels)
-RC.Right = RC.Right + RC.Left
-RC.Bottom = RC.Bottom + RC.Top
-.Extender.Move .Extender.Left, .Extender.Top, .ScaleX((CalcRect.Right - CalcRect.Left) + (BorderWidth * 2), vbPixels, vbContainerSize), .ScaleY((CalcRect.Bottom - CalcRect.Top) + (BorderHeight * 2), vbPixels, vbContainerSize)
+If (DrawFlags And DT_WORDBREAK) = DT_WORDBREAK Then
+    If .ScaleWidth < ((CalcRect.Right - CalcRect.Left) + (BorderWidth * 2)) Then
+        .Extender.Move .Extender.Left, .Extender.Top, .ScaleX((CalcRect.Right - CalcRect.Left) + (BorderWidth * 2), vbPixels, vbContainerSize), .ScaleY((CalcRect.Bottom - CalcRect.Top) + (BorderHeight * 2), vbPixels, vbContainerSize)
+    Else
+        .Extender.Height = .ScaleY((CalcRect.Bottom - CalcRect.Top) + (BorderHeight * 2), vbPixels, vbContainerSize)
+    End If
+Else
+    .Extender.Move .Extender.Left, .Extender.Top, .ScaleX((CalcRect.Right - CalcRect.Left) + (BorderWidth * 2), vbPixels, vbContainerSize), .ScaleY((CalcRect.Bottom - CalcRect.Top) + (BorderHeight * 2), vbPixels, vbContainerSize)
+End If
 LabelPaintFrozen = True
 Select Case PropAlignment
     Case vbCenter
@@ -995,7 +1173,31 @@ Select Case PropVerticalAlignment
         If .Extender.Top <> (OldBottom - .Extender.Height) Then .Extender.Top = (OldBottom - .Extender.Height)
 End Select
 LabelPaintFrozen = False
-InvalidateRect .ContainerHwnd, RC, 1
-UpdateWindow .ContainerHwnd
 End With
+End Sub
+
+Private Sub RedrawLabel()
+If LabelAutoSizeFlag = True Then
+    Dim hDCScreen As LongPtr, hDC As LongPtr
+    hDCScreen = GetDC(NULL_PTR)
+    If hDCScreen <> NULL_PTR Then
+        hDC = CreateCompatibleDC(hDCScreen)
+        If hDC <> NULL_PTR Then
+            Dim Font As IFont, hFontOld As LongPtr
+            If LabelFontHandle = NULL_PTR Then
+                Set Font = PropFont
+                If Not Font Is Nothing Then hFontOld = SelectObject(hDC, Font.hFont)
+            Else
+                hFontOld = SelectObject(hDC, LabelFontHandle)
+            End If
+            Call DoAutoSize(hDC)
+            If hFontOld <> NULL_PTR Then SelectObject hDC, hFontOld
+            Set Font = Nothing
+            DeleteDC hDC
+        End If
+        ReleaseDC NULL_PTR, hDCScreen
+    End If
+    LabelAutoSizeFlag = False
+End If
+UserControl.Refresh
 End Sub

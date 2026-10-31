@@ -12,17 +12,33 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
 Option Explicit
-Private ShadowObjectPointer As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+Private ShadowObjectPointer As LongPtr
 Private PropIndex As Long, PropKey As String, PropID As Long
 Private PropTag As Variant
 Private PropIcon As Variant, PropIconIndex As Long
 
 Private Function ShadowListView() As ListView
-ComCtlsPtrToShadowObj ShadowListView, ShadowObjectPointer
+ComCtlsObjSetAddRef ShadowListView, ShadowObjectPointer
 End Function
 
-Friend Sub FInit(ByVal Object As ListView, ByVal Key As String)
-ShadowObjectPointer = ObjPtr(Object)
+#If VBA7 Then
+Friend Sub FInit(ByVal ObjectPointer As LongPtr, ByVal Key As String)
+#Else
+Friend Sub FInit(ByVal ObjectPointer As Long, ByVal Key As String)
+#End If
+ShadowObjectPointer = ObjectPointer
 PropKey = Key
 End Sub
 
@@ -38,6 +54,10 @@ End Property
 Public Property Get Key() As String
 Attribute Key.VB_Description = "Returns the key used in the collection."
 Key = PropKey
+End Property
+
+Public Property Let Key(ByVal Value As String)
+ShadowListView.Groups.FChangeKey PropIndex, PropKey, Value
 End Property
 
 Public Property Get Tag() As Variant
@@ -111,7 +131,7 @@ End Property
 
 Public Property Get Hint() As String
 Attribute Hint.VB_Description = "Returns/sets the text displayed as a hint below the header for the group. Requires comctl32.dll version 6.1 or higher."
-Hint = ShadowListView.FGroupLink(PropID)
+Hint = ShadowListView.FGroupHint(PropID)
 End Property
 
 Public Property Let Hint(ByVal Value As String)
@@ -208,7 +228,7 @@ End Property
 Public Property Get IconIndex() As Long
 Attribute IconIndex.VB_Description = "Returns the index of an icon in an associated image list control."
 IconIndex = PropIconIndex
-End Function
+End Property
 
 Public Property Get Position() As Long
 Attribute Position.VB_Description = "Returns the current position of the group. Requires comctl32.dll version 6.1 or higher."
@@ -253,6 +273,11 @@ End Property
 
 Public Property Let Height(ByVal Value As Single)
 Err.Raise Number:=383, Description:="Property is read-only"
+End Property
+
+Public Property Get ListItemCount() As Long
+Attribute ListItemCount.VB_Description = "Returns the number of list items referring to this group. Requires comctl32.dll version 6.1 or higher."
+ListItemCount = ShadowListView.FGroupListItemCount(PropID)
 End Property
 
 Public Property Get ListItemIndices() As Collection

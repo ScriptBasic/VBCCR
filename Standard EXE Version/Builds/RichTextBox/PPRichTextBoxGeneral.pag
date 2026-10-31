@@ -1,14 +1,30 @@
 VERSION 5.00
 Begin VB.PropertyPage PPRichTextBoxGeneral 
    Caption         =   "General"
-   ClientHeight    =   4875
+   ClientHeight    =   5625
    ClientLeft      =   0
    ClientTop       =   0
    ClientWidth     =   6450
    LockControls    =   -1  'True
    PaletteMode     =   0  'Halftone
-   ScaleHeight     =   4875
+   ScaleHeight     =   5625
    ScaleWidth      =   6450
+   Begin VB.CheckBox CheckAutoVerbMenu 
+      Caption         =   "AutoVerbMenu"
+      Height          =   285
+      Left            =   4200
+      TabIndex        =   34
+      Top             =   5160
+      Width           =   2160
+   End
+   Begin VB.CheckBox CheckUseCrLf 
+      Caption         =   "UseCrLf"
+      Height          =   285
+      Left            =   4200
+      TabIndex        =   33
+      Top             =   4800
+      Width           =   2160
+   End
    Begin VB.CheckBox CheckMouseTrack 
       Caption         =   "MouseTrack"
       Height          =   285
@@ -149,8 +165,8 @@ Begin VB.PropertyPage PPRichTextBoxGeneral
       Top             =   120
       Width           =   1620
    End
-   Begin VB.CheckBox CheckOLEDragDrop 
-      Caption         =   "OLEDragDrop"
+   Begin VB.CheckBox CheckOLEDragDropRTF 
+      Caption         =   "OLEDragDropRTF"
       Height          =   285
       Left            =   4200
       TabIndex        =   23
@@ -327,7 +343,7 @@ If .TextMode <> ComboTextMode.ItemData(ComboTextMode.ListIndex) Then .TextMode =
 .UndoLimit = CLng(TextUndoLimit.Text)
 .IMEMode = ComboIMEMode.ItemData(ComboIMEMode.ListIndex)
 .MouseTrack = CBool(CheckMouseTrack.Value = vbChecked)
-.OLEDragDrop = CBool(CheckOLEDragDrop.Value = vbChecked)
+.OLEDragDropRTF = CBool(CheckOLEDragDropRTF.Value = vbChecked)
 .HideSelection = CBool(CheckHideSelection.Value = vbChecked)
 .UseSystemPasswordChar = CBool(CheckUseSystemPasswordChar.Value = vbChecked)
 .MultiLine = CBool(CheckMultiLine.Value = vbChecked)
@@ -337,6 +353,8 @@ If .TextMode <> ComboTextMode.ItemData(ComboTextMode.ListIndex) Then .TextMode =
 .SelectionBar = CBool(CheckSelectionBar.Value = vbChecked)
 .AllowOverType = CBool(CheckAllowOverType.Value = vbChecked)
 .OverTypeMode = CBool(CheckOverTypeMode.Value = vbChecked)
+.UseCrLf = CBool(CheckUseCrLf.Value = vbChecked)
+.AutoVerbMenu = CBool(CheckAutoVerbMenu.Value = vbChecked)
 If Not .FileName = TextFileName.Text Or Not TextFileName.Text = vbNullString Then .FileName = TextFileName.Text
 End With
 Call PropertyPage_SelectionChanged
@@ -378,7 +396,7 @@ For i = 0 To ComboIMEMode.ListCount - 1
     End If
 Next i
 CheckMouseTrack.Value = IIf(.MouseTrack = True, vbChecked, vbUnchecked)
-CheckOLEDragDrop.Value = IIf(.OLEDragDrop = True, vbChecked, vbUnchecked)
+CheckOLEDragDropRTF.Value = IIf(.OLEDragDropRTF = True, vbChecked, vbUnchecked)
 CheckHideSelection.Value = IIf(.HideSelection = True, vbChecked, vbUnchecked)
 CheckUseSystemPasswordChar.Value = IIf(.UseSystemPasswordChar = True, vbChecked, vbUnchecked)
 CheckMultiLine.Value = IIf(.MultiLine = True, vbChecked, vbUnchecked)
@@ -388,6 +406,8 @@ CheckAutoURLDetect.Value = IIf(.AutoURLDetect = True, vbChecked, vbUnchecked)
 CheckSelectionBar.Value = IIf(.SelectionBar = True, vbChecked, vbUnchecked)
 CheckAllowOverType.Value = IIf(.AllowOverType = True, vbChecked, vbUnchecked)
 CheckOverTypeMode.Value = IIf(.OverTypeMode = True, vbChecked, vbUnchecked)
+CheckUseCrLf.Value = IIf(.UseCrLf = True, vbChecked, vbUnchecked)
+CheckAutoVerbMenu.Value = IIf(.AutoVerbMenu = True, vbChecked, vbUnchecked)
 TextFileName.Text = .FileName
 End With
 FreezeChanged = False
@@ -620,7 +640,7 @@ If FreezeChanged = True Then Exit Sub
 PropertyPage.Changed = True
 End Sub
 
-Private Sub CheckOLEDragDrop_Click()
+Private Sub CheckOLEDragDropRTF_Click()
 If FreezeChanged = True Then Exit Sub
 PropertyPage.Changed = True
 End Sub
@@ -666,6 +686,16 @@ PropertyPage.Changed = True
 End Sub
 
 Private Sub CheckOverTypeMode_Click()
+If FreezeChanged = True Then Exit Sub
+PropertyPage.Changed = True
+End Sub
+
+Private Sub CheckUseCrLf_Click()
+If FreezeChanged = True Then Exit Sub
+PropertyPage.Changed = True
+End Sub
+
+Private Sub CheckAutoVerbMenu_Click()
 If FreezeChanged = True Then Exit Sub
 PropertyPage.Changed = True
 End Sub

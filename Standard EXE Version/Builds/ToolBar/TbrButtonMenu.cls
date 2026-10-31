@@ -12,7 +12,19 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
-Private ShadowObjectPointer As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+Private ShadowObjectPointer As LongPtr
 Private PropIndex As Long, PropKey As String, PropID As Long
 Private PropTag As Variant
 Private PropText As String
@@ -20,9 +32,10 @@ Private PropEnabled As Boolean
 Private PropVisible As Boolean
 Private PropChecked As Boolean
 Private PropSeparator As Boolean
+Private PropPicture As IPictureDisp
 
 Private Function ShadowToolBar() As ToolBar
-ComCtlsPtrToShadowObj ShadowToolBar, ShadowObjectPointer
+ComCtlsObjSetAddRef ShadowToolBar, ShadowObjectPointer
 End Function
 
 Friend Sub FInit(ByVal Object As ToolBar, ByVal Key As String, ByVal ID As Long, ByVal Text As String)
@@ -46,6 +59,10 @@ End Property
 Public Property Get Key() As String
 Attribute Key.VB_Description = "Returns the key used in the collection."
 Key = PropKey
+End Property
+
+Public Property Let Key(ByVal Value As String)
+ShadowToolBar.FButtonMenuParent(PropID).ButtonMenus.FChangeKey PropIndex, PropKey, Value
 End Property
 
 Public Property Get Tag() As Variant
@@ -115,6 +132,19 @@ End Property
 
 Public Property Let Separator(ByVal Value As Boolean)
 PropSeparator = Value
+End Property
+
+Public Property Get Picture() As IPictureDisp
+Attribute Picture.VB_Description = "Returns/sets the picture of the button menu."
+Set Picture = PropPicture
+End Property
+
+Public Property Let Picture(ByVal Value As IPictureDisp)
+Set Me.Picture = Value
+End Property
+
+Public Property Set Picture(ByVal Value As IPictureDisp)
+Set ShadowToolBar.FButtonMenuPicture(PropPicture) = Value
 End Property
 
 Public Property Get Parent() As TbrButton

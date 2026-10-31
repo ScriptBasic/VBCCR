@@ -12,11 +12,35 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
 Option Explicit
-Private ShadowObjectPointer As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+Private Type TINDEXPTR
+Ptr As LongPtr
+ShadowObjPtr As LongPtr
+End Type
+#If VBA7 Then
+Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (ByRef Destination As Any, ByRef Source As Any, ByVal Length As LongPtr)
+Private Declare PtrSafe Function PutMem4 Lib "msvbvm60.dll" (ByVal Addr As LongPtr, ByVal Value As Long) As Long
+#Else
+Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (ByRef Destination As Any, ByRef Source As Any, ByVal Length As Long)
+Private Declare Function PutMem4 Lib "msvbvm60.dll" (ByVal Addr As Long, ByVal Value As Long) As Long
+#End If
+Private ShadowObjectPointer As LongPtr
 Private PropComboItem As Collection
+Private PropIndexPtrArr() As TINDEXPTR
 
 Private Function ShadowImageCombo() As ImageCombo
-ComCtlsPtrToShadowObj ShadowImageCombo, ShadowObjectPointer
+ComCtlsObjSetAddRef ShadowImageCombo, ShadowObjectPointer
 End Function
 
 Private Sub Class_Initialize()
@@ -37,6 +61,19 @@ Friend Sub FInit(ByVal Object As ImageCombo)
 ShadowObjectPointer = ObjPtr(Object)
 End Sub
 
+Friend Sub FChangeKey(ByVal Index As Long, ByRef OldKey As String, ByVal NewKey As String)
+Dim Item As Variant
+Set Item = PropComboItem(Index)
+If NewKey = vbNullString Then
+    PropComboItem.Add Item, , Index
+    OldKey = vbNullString
+Else
+    PropComboItem.Add Item, NewKey, Index
+    OldKey = NewKey
+End If
+PropComboItem.Remove Index + 1
+End Sub
+
 Public Function Add(Optional ByVal Index As Long, Optional ByVal Key As String, Optional ByVal Text As String, Optional ByVal Image As Variant, Optional ByVal SelImage As Variant, Optional ByVal Indentation As Variant) As ImcComboItem
 Attribute Add.VB_Description = "Adds a combo item to the combo items collection."
 If Index > (PropComboItem.Count + 1) Or Index < 0 Then Err.Raise Number:=35600, Description:="Index out of bounds"
@@ -51,9 +88,9 @@ If IsMissing(SelImage) Then
 Else
     Call ComCtlsImlListImageIndex(ShadowImageCombo, ShadowImageCombo.ImageList, SelImage, SelImageIndex)
 End If
-ShadowImageCombo.FComboItemsAdd Index, Text, ImageIndex, SelImageIndex, Indentation
 Dim NewComboItem As New ImcComboItem
-NewComboItem.FInit ShadowImageCombo, Key, Image, ImageIndex, SelImage, SelImageIndex
+Dim IndexPtr As LongPtr
+NewComboItem.FInit ShadowObjectPointer, IndexPtr, Key, Image, ImageIndex, SelImage, SelImageIndex
 If Key = vbNullString Then
     If Index > 0 And Index <= PropComboItem.Count Then
         PropComboItem.Add NewComboItem, , Index
@@ -67,21 +104,41 @@ Else
         PropComboItem.Add NewComboItem, Key
     End If
 End If
-If Index = 0 Then
-    NewComboItem.Index = PropComboItem.Count
-Else
-    Dim i As Long
-    For i = Index To PropComboItem.Count
-        Me.Item(i).Index = i
-    Next i
+If Index = 0 Then Index = PropComboItem.Count
+ReDim Preserve PropIndexPtrArr(1 To PropComboItem.Count) As TINDEXPTR
+If Index < PropComboItem.Count Then
+    Dim Length As LongPtr
+    #If VBA7 Then
+    Length = CLngPtr(PropComboItem.Count - Index) * LenB(PropIndexPtrArr(Index))
+    #Else
+    Length = (PropComboItem.Count - Index) * LenB(PropIndexPtrArr(Index))
+    #End If
+    CopyMemory PropIndexPtrArr(Index + 1), PropIndexPtrArr(Index), Length
 End If
+PropIndexPtrArr(Index).Ptr = IndexPtr
+PropIndexPtrArr(Index).ShadowObjPtr = ObjPtr(NewComboItem)
+Dim i As Long
+For i = Index To PropComboItem.Count
+    PutMem4 PropIndexPtrArr(i).Ptr, i
+Next i
+ShadowImageCombo.FComboItemsAdd Index, Text, ImageIndex, SelImageIndex, Indentation
 Set Add = NewComboItem
 End Function
 
 Public Property Get Item(ByVal Index As Variant) As ImcComboItem
 Attribute Item.VB_Description = "Returns a combo item given its index or key."
 Attribute Item.VB_UserMemId = 0
-Set Item = PropComboItem(Index)
+If VarType(Index) = vbString Then
+    Set Item = PropComboItem(Index)
+Else
+    Dim IndexLong As Long
+    IndexLong = Index
+    If IndexLong > 0 And IndexLong <= PropComboItem.Count Then
+        Set Item = PtrToObj(PropIndexPtrArr(IndexLong).ShadowObjPtr)
+    Else
+        Err.Raise 9
+    End If
+End If
 End Property
 
 Public Function Exists(ByVal Index As Variant) As Boolean
@@ -101,14 +158,39 @@ Public Sub Clear()
 Attribute Clear.VB_Description = "Removes all combo items from the collection."
 ShadowImageCombo.FComboItemsClear
 Set PropComboItem = New Collection
+Erase PropIndexPtrArr()
 End Sub
 
 Public Sub Remove(ByVal Index As Variant)
 Attribute Remove.VB_Description = "Removes a combo item from the collection."
-ShadowImageCombo.FComboItemsRemove PropComboItem(Index).Index
-PropComboItem.Remove Index
-Dim i As Long
-For i = 1 To PropComboItem.Count
-    Me.Item(i).Index = i
-Next i
+Dim IndexLong As Long
+If VarType(Index) = vbString Then
+    IndexLong = PropComboItem(Index).Index
+Else
+    IndexLong = Index
+End If
+If IndexLong > 0 And IndexLong <= PropComboItem.Count Then
+    ShadowImageCombo.FComboItemsRemove IndexLong
+    PropComboItem.Remove Index
+    If IndexLong <= PropComboItem.Count Then
+        Dim Length As LongPtr
+        #If VBA7 Then
+        Length = CLngPtr(PropComboItem.Count - IndexLong + 1) * LenB(PropIndexPtrArr(IndexLong))
+        #Else
+        Length = (PropComboItem.Count - IndexLong + 1) * LenB(PropIndexPtrArr(IndexLong))
+        #End If
+        CopyMemory PropIndexPtrArr(IndexLong), PropIndexPtrArr(IndexLong + 1), Length
+    End If
+    If PropComboItem.Count > 0 Then
+        ReDim Preserve PropIndexPtrArr(1 To PropComboItem.Count) As TINDEXPTR
+    Else
+        Erase PropIndexPtrArr()
+    End If
+    Dim i As Long
+    For i = IndexLong To PropComboItem.Count
+        PutMem4 PropIndexPtrArr(i).Ptr, i
+    Next i
+Else
+    Err.Raise 9
+End If
 End Sub

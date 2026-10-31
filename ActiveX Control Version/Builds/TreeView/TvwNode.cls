@@ -12,8 +12,20 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
 Option Explicit
-Private ShadowObjectPointer As Long
-Private PropIndex As Long, PropKey As String, PropHandle As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+Private ShadowObjectPointer As LongPtr
+Private PropIndex As Long, PropKey As String, PropHandle As LongPtr
 Private PropTag As Variant
 Private PropToolTipText As String
 Private PropBackColor As OLE_COLOR
@@ -27,7 +39,7 @@ Private PropSortOrder As TvwSortOrderConstants
 Private PropSortType As TvwSortTypeConstants
 
 Private Function ShadowTreeView() As TreeView
-ComCtlsPtrToShadowObj ShadowTreeView, ShadowObjectPointer
+ComCtlsObjSetAddRef ShadowTreeView, ShadowObjectPointer
 End Function
 
 Private Sub Class_Initialize()
@@ -54,8 +66,12 @@ PropIndex = Value
 End Property
 
 Public Property Get Key() As String
-Attribute Key.VB_Description = "Returns the key used in the collection."
+Attribute Key.VB_Description = "Returns/sets the key used in the collection."
 Key = PropKey
+End Property
+
+Public Property Let Key(ByVal Value As String)
+ShadowTreeView.Nodes.FChangeKey PropIndex, PropKey, Value
 End Property
 
 Public Property Get Tag() As Variant
@@ -81,12 +97,21 @@ Else
 End If
 End Property
 
+#If VBA7 Then
+Public Property Get Handle() As LongPtr
+Attribute Handle.VB_Description = "Returns an internal identification of this node."
+#Else
 Public Property Get Handle() As Long
 Attribute Handle.VB_Description = "Returns an internal identification of this node."
+#End If
 Handle = PropHandle
 End Property
 
+#If VBA7 Then
+Friend Property Let Handle(ByVal Value As LongPtr)
+#Else
 Friend Property Let Handle(ByVal Value As Long)
+#End If
 PropHandle = Value
 End Property
 
@@ -155,7 +180,7 @@ End Property
 Public Property Get ImageIndex() As Long
 Attribute ImageIndex.VB_Description = "Returns the index of an image in an associated image list control."
 ImageIndex = PropImageIndex
-End Function
+End Property
 
 Public Property Get SelectedImage() As Variant
 Attribute SelectedImage.VB_Description = "Returns/sets the index or key of an image in an associated image list control."
@@ -175,7 +200,7 @@ End Property
 Public Property Get SelectedImageIndex() As Long
 Attribute SelectedImageIndex.VB_Description = "Returns the index of an image in an associated image list control."
 SelectedImageIndex = PropSelectedImageIndex
-End Function
+End Property
 
 Public Property Get ExpandedImage() As Variant
 Attribute ExpandedImage.VB_Description = "Returns/sets the index or key of an image in an associated image list control."
@@ -195,7 +220,7 @@ End Property
 Public Property Get ExpandedImageIndex() As Long
 Attribute ExpandedImageIndex.VB_Description = "Returns the index of an image in an associated image list control."
 ExpandedImageIndex = PropExpandedImageIndex
-End Function
+End Property
 
 Public Property Get NoImages() As Boolean
 Attribute NoImages.VB_Description = "Returns/sets a value indicating that no images will be drawn."
@@ -456,7 +481,17 @@ Attribute EnsureVisible.VB_Description = "Ensures a node is visible, scrolling o
 ShadowTreeView.FNodeEnsureVisible PropHandle
 End Sub
 
+#If VBA7 Then
+Public Function CreateDragImage() As LongPtr
+Attribute CreateDragImage.VB_Description = "Retrieves the handle to an image list containing a bitmap that can be used to visualize dragging of this node.Your application is responsible for destroying the image list when it is no longer needed."
+#Else
 Public Function CreateDragImage() As Long
 Attribute CreateDragImage.VB_Description = "Retrieves the handle to an image list containing a bitmap that can be used to visualize dragging of this node.Your application is responsible for destroying the image list when it is no longer needed."
+#End If
 CreateDragImage = ShadowTreeView.FNodeCreateDragImage(PropHandle, PropImageIndex)
+End Function
+
+Public Function SelectedIndex() As Long
+Attribute SelectedIndex.VB_Description = "Returns the index of the selected nodes collection associated with this node."
+SelectedIndex = ShadowTreeView.FSelectedNodesIndex(PropHandle)
 End Function

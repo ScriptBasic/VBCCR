@@ -14,6 +14,8 @@ Attribute VB_Exposed = True
 Option Explicit
 #If False Then
 Private OLEDropModeNone, OLEDropModeManual
+Private CCFontQualityDefault, CCFontQualityDraft, CCFontQualityProof, CCFontQualityNonAntiAliased, CCFontQualityAntiAliased, CCFontQualityClearType, CCFontQualityClearTypeNatural
+Private CCMousePointerDefault, CCMousePointerArrow, CCMousePointerCrosshair, CCMousePointerIbeam, CCMousePointerHand, CCMousePointerSizePointer, CCMousePointerSizeNESW, CCMousePointerSizeNS, CCMousePointerSizeNWSE, CCMousePointerSizeWE, CCMousePointerUpArrow, CCMousePointerHourglass, CCMousePointerNoDrop, CCMousePointerArrowHourglass, CCMousePointerArrowQuestion, CCMousePointerSizeAll, CCMousePointerArrowCD, CCMousePointerPin, CCMousePointerPerson, CCMousePointerPen, CCMousePointerScrollN, CCMousePointerScrollS, CCMousePointerScrollE, CCMousePointerScrollW, CCMousePointerScrollNS, CCMousePointerScrollWE, CCMousePointerScrollNW, CCMousePointerScrollNE, CCMousePointerScrollSW, CCMousePointerScrollSE, CCMousePointerScrollAll, CCMousePointerCustom
 Private CCAppearanceFlat, CCAppearance3D
 Private CCBorderStyleNone, CCBorderStyleSingle, CCBorderStyleThin, CCBorderStyleSunken, CCBorderStyleRaised
 Private CCBackStyleTransparent, CCBackStyleOpaque
@@ -21,10 +23,54 @@ Private CCLeftRightAlignmentLeft, CCLeftRightAlignmentRight
 Private CCVerticalAlignmentTop, CCVerticalAlignmentCenter, CCVerticalAlignmentBottom
 Private CCIMEModeNoControl, CCIMEModeOn, CCIMEModeOff, CCIMEModeDisable, CCIMEModeHiragana, CCIMEModeKatakana, CCIMEModeKatakanaHalf, CCIMEModeAlphaFull, CCIMEModeAlpha, CCIMEModeHangulFull, CCIMEModeHangul
 Private CCRightToLeftModeNoControl, CCRightToLeftModeVBAME, CCRightToLeftModeSystemLocale, CCRightToLeftModeUserLocale, CCRightToLeftModeOSLanguage
+Private CCScrollOrientationHorizontal, CCScrollOrientationVertical, CCScrollOrientationBoth
 #End If
 Public Enum OLEDropModeConstants
 OLEDropModeNone = vbOLEDropNone
 OLEDropModeManual = vbOLEDropManual
+End Enum
+Public Enum CCFontQualityConstants
+CCFontQualityDefault = 0
+CCFontQualityDraft = 1
+CCFontQualityProof = 2
+CCFontQualityNonAntiAliased = 3
+CCFontQualityAntiAliased = 4
+CCFontQualityClearType = 5
+CCFontQualityClearTypeNatural = 6
+End Enum
+Public Enum CCMousePointerConstants
+CCMousePointerDefault = 0
+CCMousePointerArrow = 1
+CCMousePointerCrosshair = 2
+CCMousePointerIbeam = 3
+CCMousePointerHand = 4
+CCMousePointerSizePointer = 5
+CCMousePointerSizeNESW = 6
+CCMousePointerSizeNS = 7
+CCMousePointerSizeNWSE = 8
+CCMousePointerSizeWE = 9
+CCMousePointerUpArrow = 10
+CCMousePointerHourglass = 11
+CCMousePointerNoDrop = 12
+CCMousePointerArrowHourglass = 13
+CCMousePointerArrowQuestion = 14
+CCMousePointerSizeAll = 15
+CCMousePointerArrowCD = 16
+CCMousePointerPin = 17
+CCMousePointerPerson = 18
+CCMousePointerPen = 19
+CCMousePointerScrollN = 20
+CCMousePointerScrollS = 21
+CCMousePointerScrollE = 22
+CCMousePointerScrollW = 23
+CCMousePointerScrollNS = 24
+CCMousePointerScrollWE = 25
+CCMousePointerScrollNW = 26
+CCMousePointerScrollNE = 27
+CCMousePointerScrollSW = 28
+CCMousePointerScrollSE = 29
+CCMousePointerScrollAll = 30
+CCMousePointerCustom = 99
 End Enum
 Public Enum CCAppearanceConstants
 CCAppearanceFlat = 0
@@ -70,7 +116,17 @@ CCRightToLeftModeSystemLocale = 2
 CCRightToLeftModeUserLocale = 3
 CCRightToLeftModeOSLanguage = 4
 End Enum
+Public Enum CCScrollOrientationConstants
+CCScrollOrientationHorizontal = 0
+CCScrollOrientationVertical = 1
+CCScrollOrientationBoth = 2
+End Enum
 
+#If VBA7 Then
+Public Function Message(ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, ByVal dwRefData As LongPtr) As LongPtr
+Attribute Message.VB_Description = "Interface function to forward window messages."
+#Else
 Public Function Message(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal dwRefData As Long) As Long
 Attribute Message.VB_Description = "Interface function to forward window messages."
+#End If
 End Function

@@ -12,16 +12,31 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
-Private ShadowObjectPointer As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+Private ShadowObjectPointer As LongPtr
 Private PropIndex As Long, PropKey As String
 Private PropTag As Variant
 Private PropIcon As Variant, PropIconIndex As Long
 Private PropResizable As Boolean
 Private PropBold As Boolean
 Private PropForeColor As OLE_COLOR
+Private PropToolTipText As String
+Private PropToolTipTextFilterBtn As String
+Private PropToolTipTextDropDown As String
 
 Private Function ShadowListView() As ListView
-ComCtlsPtrToShadowObj ShadowListView, ShadowObjectPointer
+ComCtlsObjSetAddRef ShadowListView, ShadowObjectPointer
 End Function
 
 Private Sub Class_Initialize()
@@ -29,8 +44,12 @@ PropResizable = True
 PropForeColor = vbButtonText
 End Sub
 
-Friend Sub FInit(ByVal Object As ListView, ByVal Key As String, ByVal Icon As Variant, ByVal IconIndex As Long)
-ShadowObjectPointer = ObjPtr(Object)
+#If VBA7 Then
+Friend Sub FInit(ByVal ObjectPointer As LongPtr, ByVal Key As String, ByVal Icon As Variant, ByVal IconIndex As Long)
+#Else
+Friend Sub FInit(ByVal ObjectPointer As Long, ByVal Key As String, ByVal Icon As Variant, ByVal IconIndex As Long)
+#End If
+ShadowObjectPointer = ObjectPointer
 PropKey = Key
 PropIcon = Icon
 PropIconIndex = IconIndex
@@ -46,8 +65,12 @@ PropIndex = Value
 End Property
 
 Public Property Get Key() As String
-Attribute Key.VB_Description = "Returns the key used in the collection."
+Attribute Key.VB_Description = "Returns/sets the key used in the collection."
 Key = PropKey
+End Property
+
+Public Property Let Key(ByVal Value As String)
+ShadowListView.ColumnHeaders.FChangeKey PropIndex, PropKey, Value
 End Property
 
 Public Property Get Tag() As Variant
@@ -101,7 +124,7 @@ End Property
 Public Property Get IconIndex() As Long
 Attribute IconIndex.VB_Description = "Returns the index of an icon in an associated image list control."
 IconIndex = PropIconIndex
-End Function
+End Property
 
 Public Property Get Width() As Single
 Attribute Width.VB_Description = "Returns/sets the width of the column header."
@@ -158,7 +181,7 @@ ShadowListView.FColumnHeaderResizable(PropIndex, PropResizable) = Value
 End Property
 
 Public Property Get SplitButton() As Boolean
-Attribute SplitButton.VB_Description = "Returns/sets a value that determines whether or not the column header displays a split button. The 'ColumnDropDown' event is fired when the split button is clicked. Requires comctl32.dll version 6.1 or higher."
+Attribute SplitButton.VB_Description = "Returns/sets a value that determines whether or not the column header displays a split button. The ColumnDropDown event is fired when the split button is clicked. Requires comctl32.dll version 6.1 or higher."
 SplitButton = ShadowListView.FColumnHeaderSplitButton(PropIndex)
 End Property
 
@@ -202,6 +225,33 @@ End Property
 Public Property Let ForeColor(ByVal Value As OLE_COLOR)
 PropForeColor = Value
 ShadowListView.FColumnHeadersRedraw
+End Property
+
+Public Property Get ToolTipText() As String
+Attribute ToolTipText.VB_Description = "Returns/sets the tool tip text of the column header. Requires that the show column tips property is set to true."
+ToolTipText = PropToolTipText
+End Property
+
+Public Property Let ToolTipText(ByVal Value As String)
+PropToolTipText = Value
+End Property
+
+Public Property Get ToolTipTextFilterBtn() As String
+Attribute ToolTipTextFilterBtn.VB_Description = "Returns/sets the tool tip text on the filter button of the column header. Requires that the show column tips property is set to true."
+ToolTipTextFilterBtn = PropToolTipTextFilterBtn
+End Property
+
+Public Property Let ToolTipTextFilterBtn(ByVal Value As String)
+PropToolTipTextFilterBtn = Value
+End Property
+
+Public Property Get ToolTipTextDropDown() As String
+Attribute ToolTipTextDropDown.VB_Description = "Returns/sets the tool tip text on the drop-down arrow on the split button of the column header. Requires that the show column tips property is set to true."
+ToolTipTextDropDown = PropToolTipTextDropDown
+End Property
+
+Public Property Let ToolTipTextDropDown(ByVal Value As String)
+PropToolTipTextDropDown = Value
 End Property
 
 Public Property Get FilterType() As LvwColumnHeaderFilterTypeConstants

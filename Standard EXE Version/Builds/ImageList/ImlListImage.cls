@@ -12,17 +12,33 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
-Private ShadowObjectPointer As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+Private ShadowObjectPointer As LongPtr
 Private PropIndex As Long, PropKey As String
 Private PropTag As Variant
 Private PropPicture As IPictureDisp
 
 Private Function ShadowImageList() As ImageList
-ComCtlsPtrToShadowObj ShadowImageList, ShadowObjectPointer
+ComCtlsObjSetAddRef ShadowImageList, ShadowObjectPointer
 End Function
 
-Friend Sub FInit(ByVal Object As ImageList, ByVal Key As String, ByVal Picture As IPictureDisp)
-ShadowObjectPointer = ObjPtr(Object)
+#If VBA7 Then
+Friend Sub FInit(ByVal ObjectPointer As LongPtr, ByVal Key As String, ByVal Picture As IPictureDisp)
+#Else
+Friend Sub FInit(ByVal ObjectPointer As Long, ByVal Key As String, ByVal Picture As IPictureDisp)
+#End If
+ShadowObjectPointer = ObjectPointer
 PropKey = Key
 Set PropPicture = Picture
 End Sub
@@ -39,6 +55,10 @@ End Property
 Public Property Get Key() As String
 Attribute Key.VB_Description = "Returns the key used in the collection."
 Key = PropKey
+End Property
+
+Public Property Let Key(ByVal Value As String)
+ShadowImageList.ListImages.FChangeKey PropIndex, PropKey, Value
 End Property
 
 Public Property Get Tag() As Variant
@@ -69,12 +89,21 @@ Attribute Picture.VB_Description = "Returns/sets the image picture."
 Set Picture = PropPicture
 End Property
 
+Public Property Let Picture(ByVal Value As IPictureDisp)
+Err.Raise Number:=383, Description:="Property is read-only"
+End Property
+
 Public Property Set Picture(ByVal Value As IPictureDisp)
 Err.Raise Number:=383, Description:="Property is read-only"
 End Property
 
+#If VBA7 Then
+Public Sub Draw(ByVal hDC As LongPtr, Optional ByVal X As Long, Optional ByVal Y As Long, Optional ByVal Style As ImlDrawConstants)
+Attribute Draw.VB_Description = "Draws the image to a given device context (DC) at a specified location using a specified style."
+#Else
 Public Sub Draw(ByVal hDC As Long, Optional ByVal X As Long, Optional ByVal Y As Long, Optional ByVal Style As ImlDrawConstants)
 Attribute Draw.VB_Description = "Draws the image to a given device context (DC) at a specified location using a specified style."
+#End If
 ShadowImageList.FListImageDraw PropIndex, hDC, X, Y, Style
 End Sub
 

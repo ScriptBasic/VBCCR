@@ -6,6 +6,7 @@ Begin VB.UserControl TextBoxW
    ClientTop       =   0
    ClientWidth     =   2400
    DataBindingBehavior=   1  'vbSimpleBound
+   DrawStyle       =   5  'Transparent
    ForeColor       =   &H80000008&
    HasDC           =   0   'False
    PropertyPages   =   "TextBoxW.ctx":0000
@@ -20,6 +21,21 @@ Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
 Option Explicit
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+
+#Const ImplementPreTranslateMsg = (VBCCR_OCX <> 0)
+
 #If False Then
 Private TxtCharacterCasingNormal, TxtCharacterCasingUpper, TxtCharacterCasingLower
 Private TxtIconNone, TxtIconInfo, TxtIconWarning, TxtIconError
@@ -73,12 +89,6 @@ TxtNetAddressTypeAnyAddressNoScope = 17
 TxtNetAddressTypeAnyService = 18
 TxtNetAddressTypeAnyServiceNoScope = 19
 End Enum
-Private Type RECT
-Left As Long
-Top As Long
-Right As Long
-Bottom As Long
-End Type
 Private Type SIZEAPI
 CX As Long
 CY As Long
@@ -87,10 +97,18 @@ Private Type POINTAPI
 X As Long
 Y As Long
 End Type
+Private Type TMSG
+hWnd As LongPtr
+Message As Long
+wParam As LongPtr
+lParam As LongPtr
+Time As Long
+PT As POINTAPI
+End Type
 Private Type EDITBALLOONTIP
 cbStruct As Long
-pszTitle As Long
-pszText As Long
+pszTitle As LongPtr
+pszText As LongPtr
 iIcon As Long
 End Type
 Private Type NET_ADDRESS_INFO_UNSPECIFIED
@@ -121,7 +139,7 @@ sin6_scope_idLo As Integer
 sin6_scope_idHi As Integer
 End Type
 Private Type NC_ADDRESS
-pAddrInfo As Long ' VarPtr(NET_ADDRESS_INFO_*)
+pAddrInfo As LongPtr ' VarPtr(NET_ADDRESS_INFO_*)
 PortNumber As Integer
 PrefixLength As Byte
 End Type
@@ -135,6 +153,8 @@ Public Event Change()
 Attribute Change.VB_Description = "Occurs when the contents of a control have changed."
 Public Event MaxText()
 Attribute MaxText.VB_Description = "Occurs when the current text insertion has exceeded the maximum number of characters that can be entered in a control."
+Public Event DropFiles(ByRef FileList As Variant, ByVal X As Single, ByVal Y As Single)
+Attribute DropFiles.VB_Description = "Occurs when the user drops files on the control. Only applicable when there is no OLE drop target available and the allow drop files property is set to true."
 Public Event Scroll()
 Attribute Scroll.VB_Description = "Occurs when you reposition the scroll box on a control."
 Public Event ContextMenu(ByRef Handled As Boolean, ByVal X As Single, ByVal Y As Single)
@@ -177,7 +197,50 @@ Public Event OLESetData(Data As DataObject, DataFormat As Integer)
 Attribute OLESetData.VB_Description = "Occurs at the OLE drag/drop source control when the drop target requests data that was not provided to the DataObject during the OLEDragStart event."
 Public Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
 Attribute OLEStartDrag.VB_Description = "Occurs when an OLE drag/drop operation is initiated either manually or automatically."
+#If VBA7 Then
+Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (ByRef Destination As Any, ByRef Source As Any, ByVal Length As LongPtr)
+Private Declare PtrSafe Sub DragAcceptFiles Lib "shell32" (ByVal hWnd As LongPtr, ByVal fAccept As Long)
+Private Declare PtrSafe Sub DragFinish Lib "shell32" (ByVal hDrop As LongPtr)
+Private Declare PtrSafe Function InitNetworkAddressControl Lib "shell32" () As Long
+Private Declare PtrSafe Function CreateWindowEx Lib "user32" Alias "CreateWindowExW" (ByVal dwExStyle As Long, ByVal lpClassName As LongPtr, ByVal lpWindowName As LongPtr, ByVal dwStyle As Long, ByVal X As Long, ByVal Y As Long, ByVal nWidth As Long, ByVal nHeight As Long, ByVal hWndParent As LongPtr, ByVal hMenu As LongPtr, ByVal hInstance As LongPtr, ByRef lpParam As Any) As LongPtr
+Private Declare PtrSafe Function SendMessage Lib "user32" Alias "SendMessageW" (ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByRef lParam As Any) As LongPtr
+Private Declare PtrSafe Function DestroyWindow Lib "user32" (ByVal hWnd As LongPtr) As Long
+Private Declare PtrSafe Function SetParent Lib "user32" (ByVal hWndChild As LongPtr, ByVal hWndNewParent As LongPtr) As LongPtr
+Private Declare PtrSafe Function SetFocusAPI Lib "user32" Alias "SetFocus" (ByVal hWnd As LongPtr) As LongPtr
+Private Declare PtrSafe Function GetFocus Lib "user32" () As LongPtr
+Private Declare PtrSafe Function lstrlen Lib "kernel32" Alias "lstrlenW" (ByVal lpString As LongPtr) As Long
+Private Declare PtrSafe Function DeleteObject Lib "gdi32" (ByVal hObject As LongPtr) As Long
+Private Declare PtrSafe Function ShowWindow Lib "user32" (ByVal hWnd As LongPtr, ByVal nCmdShow As Long) As Long
+Private Declare PtrSafe Function MoveWindow Lib "user32" (ByVal hWnd As LongPtr, ByVal X As Long, ByVal Y As Long, ByVal nWidth As Long, ByVal nHeight As Long, ByVal bRepaint As Long) As Long
+Private Declare PtrSafe Function SetWindowLong Lib "user32" Alias "SetWindowLongW" (ByVal hWnd As LongPtr, ByVal nIndex As Long, ByVal dwNewLong As Long) As Long
+Private Declare PtrSafe Function GetWindowLong Lib "user32" Alias "GetWindowLongW" (ByVal hWnd As LongPtr, ByVal nIndex As Long) As Long
+Private Declare PtrSafe Function LockWindowUpdate Lib "user32" (ByVal hWndLock As LongPtr) As Long
+Private Declare PtrSafe Function EnableWindow Lib "user32" (ByVal hWnd As LongPtr, ByVal fEnable As Long) As Long
+Private Declare PtrSafe Function RedrawWindow Lib "user32" (ByVal hWnd As LongPtr, ByVal lprcUpdate As LongPtr, ByVal hrgnUpdate As LongPtr, ByVal fuRedraw As Long) As Long
+Private Declare PtrSafe Function MapWindowPoints Lib "user32" (ByVal hWndFrom As LongPtr, ByVal hWndTo As LongPtr, ByRef lppt As Any, ByVal cPoints As Long) As Long
+Private Declare PtrSafe Function LoadCursor Lib "user32" Alias "LoadCursorW" (ByVal hInstance As LongPtr, ByVal lpCursorName As Any) As LongPtr
+Private Declare PtrSafe Function SetCursor Lib "user32" (ByVal hCursor As LongPtr) As LongPtr
+Private Declare PtrSafe Function GetMessagePos Lib "user32" () As Long
+Private Declare PtrSafe Function ScreenToClient Lib "user32" (ByVal hWnd As LongPtr, ByRef lpPoint As POINTAPI) As Long
+Private Declare PtrSafe Function ClientToScreen Lib "user32" (ByVal hWnd As LongPtr, ByRef lpPoint As POINTAPI) As Long
+Private Declare PtrSafe Function GetScrollPos Lib "user32" (ByVal hWnd As LongPtr, ByVal nBar As Long) As Long
+Private Declare PtrSafe Function GetTextExtentPoint32 Lib "gdi32" Alias "GetTextExtentPoint32W" (ByVal hDC As LongPtr, ByVal lpsz As LongPtr, ByVal cbString As Long, ByRef lpSize As SIZEAPI) As Long
+Private Declare PtrSafe Function GetDC Lib "user32" (ByVal hWnd As LongPtr) As LongPtr
+Private Declare PtrSafe Function SelectObject Lib "gdi32" (ByVal hDC As LongPtr, ByVal hObject As LongPtr) As LongPtr
+Private Declare PtrSafe Function ReleaseDC Lib "user32" (ByVal hWnd As LongPtr, ByVal hDC As LongPtr) As Long
+Private Declare PtrSafe Function CreateCaret Lib "user32" (ByVal hWnd As LongPtr, ByVal hBitmap As LongPtr, ByVal nWidth As Long, ByVal nHeight As Long) As Long
+Private Declare PtrSafe Function SetCaretPos Lib "user32" (ByVal X As Long, ByVal Y As Long) As Long
+Private Declare PtrSafe Function ShowCaret Lib "user32" (ByVal hWnd As LongPtr) As Long
+Private Declare PtrSafe Function DestroyCaret Lib "user32" () As Long
+Private Declare PtrSafe Function DragDetect Lib "user32" (ByVal hWnd As LongPtr, ByVal XY As Currency) As Long
+Private Declare PtrSafe Function ReleaseCapture Lib "user32" () As Long
+Private Declare PtrSafe Function GetSystemMetrics Lib "user32" (ByVal nIndex As Long) As Long
+Private Declare PtrSafe Function DragQueryFile Lib "shell32" Alias "DragQueryFileW" (ByVal hDrop As LongPtr, ByVal iFile As Long, ByVal lpszFile As LongPtr, ByVal cch As Long) As Long
+Private Declare PtrSafe Function DragQueryPoint Lib "shell32" (ByVal hDrop As LongPtr, ByRef lpPoint As POINTAPI) As Long
+#Else
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (ByRef Destination As Any, ByRef Source As Any, ByVal Length As Long)
+Private Declare Sub DragAcceptFiles Lib "shell32" (ByVal hWnd As Long, ByVal fAccept As Long)
+Private Declare Sub DragFinish Lib "shell32" (ByVal hDrop As Long)
 Private Declare Function InitNetworkAddressControl Lib "shell32" () As Long
 Private Declare Function CreateWindowEx Lib "user32" Alias "CreateWindowExW" (ByVal dwExStyle As Long, ByVal lpClassName As Long, ByVal lpWindowName As Long, ByVal dwStyle As Long, ByVal X As Long, ByVal Y As Long, ByVal nWidth As Long, ByVal nHeight As Long, ByVal hWndParent As Long, ByVal hMenu As Long, ByVal hInstance As Long, ByRef lpParam As Any) As Long
 Private Declare Function SendMessage Lib "user32" Alias "SendMessageW" (ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByRef lParam As Any) As Long
@@ -194,10 +257,10 @@ Private Declare Function GetWindowLong Lib "user32" Alias "GetWindowLongW" (ByVa
 Private Declare Function LockWindowUpdate Lib "user32" (ByVal hWndLock As Long) As Long
 Private Declare Function EnableWindow Lib "user32" (ByVal hWnd As Long, ByVal fEnable As Long) As Long
 Private Declare Function RedrawWindow Lib "user32" (ByVal hWnd As Long, ByVal lprcUpdate As Long, ByVal hrgnUpdate As Long, ByVal fuRedraw As Long) As Long
-Private Declare Function GetWindowRect Lib "user32" (ByVal hWnd As Long, ByRef lpRect As RECT) As Long
+Private Declare Function MapWindowPoints Lib "user32" (ByVal hWndFrom As Long, ByVal hWndTo As Long, ByRef lppt As Any, ByVal cPoints As Long) As Long
 Private Declare Function LoadCursor Lib "user32" Alias "LoadCursorW" (ByVal hInstance As Long, ByVal lpCursorName As Any) As Long
 Private Declare Function SetCursor Lib "user32" (ByVal hCursor As Long) As Long
-Private Declare Function GetCursorPos Lib "user32" (ByRef lpPoint As POINTAPI) As Long
+Private Declare Function GetMessagePos Lib "user32" () As Long
 Private Declare Function ScreenToClient Lib "user32" (ByVal hWnd As Long, ByRef lpPoint As POINTAPI) As Long
 Private Declare Function ClientToScreen Lib "user32" (ByVal hWnd As Long, ByRef lpPoint As POINTAPI) As Long
 Private Declare Function GetScrollPos Lib "user32" (ByVal hWnd As Long, ByVal nBar As Long) As Long
@@ -209,21 +272,29 @@ Private Declare Function CreateCaret Lib "user32" (ByVal hWnd As Long, ByVal hBi
 Private Declare Function SetCaretPos Lib "user32" (ByVal X As Long, ByVal Y As Long) As Long
 Private Declare Function ShowCaret Lib "user32" (ByVal hWnd As Long) As Long
 Private Declare Function DestroyCaret Lib "user32" () As Long
-Private Declare Function DragDetect Lib "user32" (ByVal hWnd As Long, ByVal PX As Integer, ByVal PY As Integer) As Long
+Private Declare Function DragDetect Lib "user32" (ByVal hWnd As Long, ByVal XY As Currency) As Long
+Private Declare Function ReleaseCapture Lib "user32" () As Long
+Private Declare Function GetSystemMetrics Lib "user32" (ByVal nIndex As Long) As Long
+Private Declare Function DragQueryFile Lib "shell32" Alias "DragQueryFileW" (ByVal hDrop As Long, ByVal iFile As Long, ByVal lpszFile As Long, ByVal cch As Long) As Long
+Private Declare Function DragQueryPoint Lib "shell32" (ByVal hDrop As Long, ByRef lpPoint As POINTAPI) As Long
+#End If
 Private Const ICC_STANDARD_CLASSES As Long = &H4000
 Private Const RDW_UPDATENOW As Long = &H100, RDW_INVALIDATE As Long = &H1, RDW_ERASE As Long = &H4, RDW_ALLCHILDREN As Long = &H80
 Private Const GWL_STYLE As Long = (-16)
+Private Const GWL_EXSTYLE As Long = (-20)
 Private Const CF_UNICODETEXT As Long = 13
 Private Const WS_VISIBLE As Long = &H10000000
 Private Const WS_CHILD As Long = &H40000000
+Private Const WS_EX_ACCEPTFILES As Long = &H10
 Private Const WS_EX_RTLREADING As Long = &H2000, WS_EX_LEFTSCROLLBAR As Long = &H4000
 Private Const WS_HSCROLL As Long = &H100000
 Private Const WS_VSCROLL As Long = &H200000
 Private Const SB_LINELEFT As Long = 0, SB_LINERIGHT As Long = 1
 Private Const SB_LINEUP As Long = 0, SB_LINEDOWN As Long = 1
-Private Const SB_THUMBPOSITION = 4, SB_THUMBTRACK As Long = 5
+Private Const SB_THUMBPOSITION As Long = 4, SB_THUMBTRACK As Long = 5
 Private Const SB_HORZ As Long = 0, SB_VERT As Long = 1
-Private Const WM_MOUSEACTIVATE As Long = &H21, MA_NOACTIVATE As Long = &H3, MA_NOACTIVATEANDEAT As Long = &H4, HTBORDER As Long = 18
+Private Const SM_CXVSCROLL As Long = 2
+Private Const SM_CYHSCROLL As Long = 3
 Private Const SW_HIDE As Long = &H0
 Private Const WM_SETFOCUS As Long = &H7
 Private Const WM_KILLFOCUS As Long = &H8
@@ -231,6 +302,8 @@ Private Const WM_COMMAND As Long = &H111
 Private Const WM_KEYDOWN As Long = &H100
 Private Const WM_KEYUP As Long = &H101
 Private Const WM_CHAR As Long = &H102
+Private Const WM_SYSKEYDOWN As Long = &H104
+Private Const WM_SYSKEYUP As Long = &H105
 Private Const WM_UNICHAR As Long = &H109, UNICODE_NOCHAR As Long = &HFFFF&
 Private Const WM_INPUTLANGCHANGE As Long = &H51
 Private Const WM_IME_SETCONTEXT As Long = &H281
@@ -246,6 +319,7 @@ Private Const WM_MBUTTONDBLCLK As Long = &H209
 Private Const WM_RBUTTONDBLCLK As Long = &H206
 Private Const WM_MOUSEMOVE As Long = &H200
 Private Const WM_MOUSELEAVE As Long = &H2A3
+Private Const WM_DROPFILES As Long = &H233
 Private Const WM_HSCROLL As Long = &H114
 Private Const WM_VSCROLL As Long = &H115
 Private Const WM_CONTEXTMENU As Long = &H7B
@@ -285,7 +359,6 @@ Private Const NET_STRING_ANY_SERVICE_NO_SCOPE As Long = (NET_STRING_NAMED_SERVIC
 Private Const EM_SETREADONLY As Long = &HCF, ES_READONLY As Long = &H800
 Private Const EM_GETSEL As Long = &HB0
 Private Const EM_SETSEL As Long = &HB1
-Private Const EM_SCROLL As Long = &HB5
 Private Const EM_LINESCROLL As Long = &HB6
 Private Const EM_SCROLLCARET As Long = &HB7
 Private Const EM_REPLACESEL As Long = &HC2
@@ -297,7 +370,6 @@ Private Const EM_SETLIMITTEXT As Long = EM_LIMITTEXT
 Private Const EM_GETMODIFY As Long = &HB8
 Private Const EM_SETMODIFY As Long = &HB9
 Private Const EM_LINEINDEX As Long = &HBB
-Private Const EM_GETTHUMB As Long = &HBE
 Private Const EM_LINELENGTH As Long = &HC1
 Private Const EM_GETLINE As Long = &HC4
 Private Const EM_UNDO As Long = &HC7
@@ -315,8 +387,8 @@ Private Const EM_SETCUEBANNER As Long = (ECM_FIRST + 1)
 Private Const EM_GETCUEBANNER As Long = (ECM_FIRST + 2)
 Private Const EM_SHOWBALLOONTIP As Long = (ECM_FIRST + 3)
 Private Const EM_HIDEBALLOONTIP As Long = (ECM_FIRST + 4)
-Private Const EN_UPDATE As Long = &H400
 Private Const EN_CHANGE As Long = &H300
+Private Const EN_UPDATE As Long = &H400
 Private Const EN_MAXTEXT As Long = &H501
 Private Const EN_HSCROLL As Long = &H601
 Private Const EN_VSCROLL As Long = &H602
@@ -331,7 +403,6 @@ Private Const ES_MULTILINE As Long = &H4
 Private Const ES_UPPERCASE As Long = &H8
 Private Const ES_LOWERCASE As Long = &H10
 Private Const ES_PASSWORD As Long = &H20
-Private Const ES_WANTRETURN As Long = &H1000
 Private Const EC_LEFTMARGIN As Long = &H1
 Private Const EC_RIGHTMARGIN As Long = &H2
 Private Const EC_USEFONTINFO As Long = &HFFFF&
@@ -339,23 +410,33 @@ Implements ISubclass
 Implements OLEGuids.IObjectSafety
 Implements OLEGuids.IOleInPlaceActiveObjectVB
 Implements OLEGuids.IOleControlVB
-Implements OLEGuids.IPerPropertyBrowsingVB
-Private TextBoxHandle As Long
-Private TextBoxFontHandle As Long
-Private TextBoxIMCHandle As Long
+Private TextBoxHandle As LongPtr
+Private TextBoxFontHandle As LongPtr
+Private TextBoxIMCHandle As LongPtr
 Private TextBoxCharCodeCache As Long
 Private TextBoxAutoDragInSel As Boolean, TextBoxAutoDragIsActive As Boolean
 Private TextBoxIsClick As Boolean
 Private TextBoxMouseOver As Boolean
+Private TextBoxDesignMode As Boolean
 Private TextBoxChangeFrozen As Boolean
 Private TextBoxNetAddressFormat As TxtNetAddressFormatConstants
 Private TextBoxNetAddressString As String
 Private TextBoxNetAddressPortNumber As Integer
 Private TextBoxNetAddressPrefixLength As Byte
-Private DispIDMousePointer As Long
+Private UCNoSetFocusFwd As Boolean
+
+#If ImplementPreTranslateMsg = True Then
+
+Private Const UM_PRETRANSLATEMSG As Long = (WM_USER + 1100)
+Private UsePreTranslateMsg As Boolean
+
+#End If
+
 Private WithEvents PropFont As StdFont
 Attribute PropFont.VB_VarHelpID = -1
+Private PropFontQuality As CCFontQualityConstants
 Private PropVisualStyles As Boolean
+Private PropAllowDropFiles As Boolean
 Private PropOLEDragMode As VBRUN.OLEDragConstants
 Private PropOLEDragDropScroll As Boolean
 Private PropOLEDropMode As VBRUN.OLEDropConstants
@@ -375,6 +456,7 @@ Private PropMultiLine As Boolean
 Private PropMaxLength As Long
 Private PropScrollBars As VBRUN.ScrollBarConstants
 Private PropCueBanner As String
+Private PropCueBannerAlways As Boolean
 Private PropCharacterCasing As TxtCharacterCasingConstants
 Private PropWantReturn As Boolean
 Private PropIMEMode As CCIMEModeConstants
@@ -392,10 +474,14 @@ End Sub
 Private Sub IObjectSafety_SetInterfaceSafetyOptions(ByRef riid As OLEGuids.OLECLSID, ByVal dwOptionsSetMask As Long, ByVal dwEnabledOptions As Long)
 End Sub
 
-Private Sub IOleInPlaceActiveObjectVB_TranslateAccelerator(ByRef Handled As Boolean, ByRef RetVal As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal Shift As Long)
+#If VBA7 Then
+Private Sub IOleInPlaceActiveObjectVB_TranslateAccelerator(ByRef Handled As Boolean, ByRef RetVal As Long, ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, ByVal Shift As Long)
+#Else
+Private Sub IOleInPlaceActiveObjectVB_TranslateAccelerator(ByRef Handled As Boolean, ByRef RetVal As Long, ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal Shift As Long)
+#End If
 If wMsg = WM_KEYDOWN Or wMsg = WM_KEYUP Then
     Dim KeyCode As Integer, IsInputKey As Boolean
-    KeyCode = wParam And &HFF&
+    KeyCode = CLng(wParam) And &HFF&
     If wMsg = WM_KEYDOWN Then
         RaiseEvent PreviewKeyDown(KeyCode, IsInputKey)
     ElseIf wMsg = WM_KEYUP Then
@@ -403,67 +489,63 @@ If wMsg = WM_KEYDOWN Or wMsg = WM_KEYUP Then
     End If
     Select Case KeyCode
         Case vbKeyUp, vbKeyDown, vbKeyLeft, vbKeyRight, vbKeyPageDown, vbKeyPageUp, vbKeyHome, vbKeyEnd
-            If TextBoxHandle <> 0 Then
-                SendMessage TextBoxHandle, wMsg, wParam, ByVal lParam
-                Handled = True
-            End If
+            SendMessage hWnd, wMsg, wParam, ByVal lParam
+            Handled = True
         Case vbKeyTab, vbKeyReturn, vbKeyEscape
             If IsInputKey = True Then
-                If TextBoxHandle <> 0 Then
-                    SendMessage TextBoxHandle, wMsg, wParam, ByVal lParam
-                    Handled = True
-                End If
+                SendMessage hWnd, wMsg, wParam, ByVal lParam
+                Handled = True
             End If
     End Select
 End If
 End Sub
 
+#If VBA7 Then
+Private Sub IOleControlVB_GetControlInfo(ByRef Handled As Boolean, ByRef AccelCount As Integer, ByRef AccelTable As LongPtr, ByRef Flags As Long)
+#Else
 Private Sub IOleControlVB_GetControlInfo(ByRef Handled As Boolean, ByRef AccelCount As Integer, ByRef AccelTable As Long, ByRef Flags As Long)
+#End If
 If PropWantReturn = True And PropMultiLine = True Then
     Flags = CTRLINFO_EATS_RETURN
     Handled = True
 End If
 End Sub
 
-Private Sub IOleControlVB_OnMnemonic(ByRef Handled As Boolean, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal Shift As Long)
-End Sub
-
-Private Sub IPerPropertyBrowsingVB_GetDisplayString(ByRef Handled As Boolean, ByVal DispID As Long, ByRef DisplayName As String)
-If DispID = DispIDMousePointer Then
-    Call ComCtlsIPPBSetDisplayStringMousePointer(PropMousePointer, DisplayName)
-    Handled = True
-End If
-End Sub
-
-Private Sub IPerPropertyBrowsingVB_GetPredefinedStrings(ByRef Handled As Boolean, ByVal DispID As Long, ByRef StringsOut() As String, ByRef CookiesOut() As Long)
-If DispID = DispIDMousePointer Then
-    Call ComCtlsIPPBSetPredefinedStringsMousePointer(StringsOut(), CookiesOut())
-    Handled = True
-End If
-End Sub
-
-Private Sub IPerPropertyBrowsingVB_GetPredefinedValue(ByRef Handled As Boolean, ByVal DispID As Long, ByVal Cookie As Long, ByRef Value As Variant)
-If DispID = DispIDMousePointer Then
-    Value = Cookie
-    Handled = True
-End If
+#If VBA7 Then
+Private Sub IOleControlVB_OnMnemonic(ByRef Handled As Boolean, ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, ByVal Shift As Long)
+#Else
+Private Sub IOleControlVB_OnMnemonic(ByRef Handled As Boolean, ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal Shift As Long)
+#End If
 End Sub
 
 Private Sub UserControl_Initialize()
 Call ComCtlsLoadShellMod
 Call ComCtlsInitCC(ICC_STANDARD_CLASSES)
-Call SetVTableSubclass(Me, VTableInterfaceInPlaceActiveObject)
-Call SetVTableSubclass(Me, VTableInterfaceControl)
-Call SetVTableSubclass(Me, VTableInterfacePerPropertyBrowsing)
+
+#If ImplementPreTranslateMsg = True Then
+
+If SetVTableHandling(Me, VTableInterfaceInPlaceActiveObject) = False Then UsePreTranslateMsg = True
+
+#Else
+
+Call SetVTableHandling(Me, VTableInterfaceInPlaceActiveObject)
+
+#End If
+
+Call SetVTableHandling(Me, VTableInterfaceControl)
 End Sub
 
 Private Sub UserControl_InitProperties()
-If DispIDMousePointer = 0 Then DispIDMousePointer = GetDispID(Me, "MousePointer")
+On Error Resume Next
+TextBoxDesignMode = Not Ambient.UserMode
+On Error GoTo 0
 Set PropFont = Ambient.Font
+PropFontQuality = CCFontQualityDefault
 PropVisualStyles = True
+PropAllowDropFiles = False
 PropOLEDragMode = vbOLEDragManual
 PropOLEDragDropScroll = True
-PropOLEDropMode = vbOLEDropNone
+Me.OLEDropMode = vbOLEDropNone
 PropMousePointer = 0: Set PropMouseIcon = Nothing
 PropMouseTrack = False
 PropRightToLeft = Ambient.RightToLeft
@@ -481,6 +563,7 @@ PropMultiLine = False
 PropMaxLength = 0
 PropScrollBars = vbSBNone
 PropCueBanner = vbNullString
+PropCueBannerAlways = False
 PropCharacterCasing = TxtCharacterCasingNormal
 PropWantReturn = False
 PropIMEMode = CCIMEModeNoControl
@@ -492,13 +575,17 @@ Call CreateTextBox
 End Sub
 
 Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
-If DispIDMousePointer = 0 Then DispIDMousePointer = GetDispID(Me, "MousePointer")
+On Error Resume Next
+TextBoxDesignMode = Not Ambient.UserMode
+On Error GoTo 0
 With PropBag
 Set PropFont = .ReadProperty("Font", Nothing)
+PropFontQuality = .ReadProperty("FontQuality", CCFontQualityDefault)
 PropVisualStyles = .ReadProperty("VisualStyles", True)
 Me.BackColor = .ReadProperty("BackColor", vbWindowBackground)
 Me.ForeColor = .ReadProperty("ForeColor", vbWindowText)
 Me.Enabled = .ReadProperty("Enabled", True)
+PropAllowDropFiles = .ReadProperty("AllowDropFiles", False)
 PropOLEDragMode = .ReadProperty("OLEDragMode", vbOLEDragManual)
 PropOLEDragDropScroll = .ReadProperty("OLEDragDropScroll", True)
 Me.OLEDropMode = .ReadProperty("OLEDropMode", vbOLEDropNone)
@@ -514,12 +601,19 @@ PropAlignment = .ReadProperty("Alignment", vbLeftJustify)
 PropAllowOnlyNumbers = .ReadProperty("AllowOnlyNumbers", False)
 PropLocked = .ReadProperty("Locked", False)
 PropHideSelection = .ReadProperty("HideSelection", True)
-PropPasswordChar = .ReadProperty("PasswordChar", 0)
+Dim VarValue As Variant
+VarValue = .ReadProperty("PasswordChar", 0)
+If VarType(VarValue) = vbString Then ' Compatibility
+    If Len(VarValue) > 0 Then PropPasswordChar = AscW(VarValue) Else PropPasswordChar = 0
+Else
+    PropPasswordChar = VarValue
+End If
 PropUseSystemPasswordChar = .ReadProperty("UseSystemPasswordChar", False)
 PropMultiLine = .ReadProperty("MultiLine", False)
 PropMaxLength = .ReadProperty("MaxLength", 0)
 PropScrollBars = .ReadProperty("ScrollBars", vbSBNone)
-PropCueBanner = VarToStr(.ReadProperty("CueBanner", vbNullString))
+PropCueBanner = .ReadProperty("CueBanner", vbNullString) ' Unicode not necessary
+PropCueBannerAlways = .ReadProperty("CueBannerAlways", False)
 PropCharacterCasing = .ReadProperty("CharacterCasing", TxtCharacterCasingNormal)
 PropWantReturn = .ReadProperty("WantReturn", False)
 PropIMEMode = .ReadProperty("IMEMode", CCIMEModeNoControl)
@@ -534,13 +628,15 @@ End Sub
 Private Sub UserControl_WriteProperties(PropBag As PropertyBag)
 With PropBag
 .WriteProperty "Font", IIf(OLEFontIsEqual(PropFont, Ambient.Font) = False, PropFont, Nothing), Nothing
+.WriteProperty "FontQuality", PropFontQuality, CCFontQualityDefault
 .WriteProperty "VisualStyles", PropVisualStyles, True
 .WriteProperty "BackColor", Me.BackColor, vbWindowBackground
 .WriteProperty "ForeColor", Me.ForeColor, vbWindowText
 .WriteProperty "Enabled", Me.Enabled, True
+.WriteProperty "AllowDropFiles", PropAllowDropFiles, False
 .WriteProperty "OLEDragMode", PropOLEDragMode, vbOLEDragManual
 .WriteProperty "OLEDragDropScroll", PropOLEDragDropScroll, True
-.WriteProperty "OLEDropMode", PropOLEDropMode, vbOLEDropNone
+.WriteProperty "OLEDropMode", Me.OLEDropMode, vbOLEDropNone
 .WriteProperty "MousePointer", PropMousePointer, 0
 .WriteProperty "MouseIcon", PropMouseIcon, Nothing
 .WriteProperty "MouseTrack", PropMouseTrack, False
@@ -557,7 +653,8 @@ With PropBag
 .WriteProperty "MultiLine", PropMultiLine, False
 .WriteProperty "MaxLength", PropMaxLength, 0
 .WriteProperty "ScrollBars", PropScrollBars, vbSBNone
-.WriteProperty "CueBanner", StrToVar(PropCueBanner), vbNullString
+.WriteProperty "CueBanner", PropCueBanner, vbNullString ' Unicode not necessary
+.WriteProperty "CueBannerAlways", PropCueBannerAlways, False
 .WriteProperty "CharacterCasing", PropCharacterCasing, TxtCharacterCasingNormal
 .WriteProperty "WantReturn", PropWantReturn, False
 .WriteProperty "IMEMode", PropIMEMode, CCIMEModeNoControl
@@ -570,27 +667,37 @@ End Sub
 
 Private Sub UserControl_OLECompleteDrag(Effect As Long)
 If PropOLEDragMode = vbOLEDragAutomatic And TextBoxAutoDragIsActive = True And Effect = vbDropEffectMove Then
-    If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, WM_CLEAR, 0, ByVal 0&
+    If TextBoxHandle <> NULL_PTR Then SendMessage TextBoxHandle, WM_CLEAR, 0, ByVal 0&
 End If
 RaiseEvent OLECompleteDrag(Effect)
 TextBoxAutoDragIsActive = False
 End Sub
 
 Private Sub UserControl_OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
-RaiseEvent OLEDragDrop(Data, Effect, Button, Shift, UserControl.ScaleX(X, vbPixels, vbContainerPosition), UserControl.ScaleY(Y, vbPixels, vbContainerPosition))
-If PropOLEDropMode = vbOLEDropAutomatic And TextBoxHandle <> 0 Then
-    If Not Effect = vbDropEffectNone Then
+Dim Text As String
+If PropOLEDropMode = vbOLEDropAutomatic Then
+    If Data.GetFormat(CF_UNICODETEXT) = True Then
+        Text = Data.GetData(CF_UNICODETEXT) & vbNullChar
+        Text = Left$(Text, InStr(Text, vbNullChar) - 1)
+        Effect = vbDropEffectMove
+    ElseIf Data.GetFormat(vbCFText) = True Then
+        Text = Data.GetData(vbCFText)
+        Effect = vbDropEffectMove
+    Else
+        Effect = vbDropEffectNone
+    End If
+End If
+Dim P As POINTAPI
+P.X = X
+P.Y = Y
+If TextBoxHandle <> NULL_PTR Then MapWindowPoints UserControl.hWnd, TextBoxHandle, P, 1
+RaiseEvent OLEDragDrop(Data, Effect, Button, Shift, UserControl.ScaleX(P.X, vbPixels, vbContainerPosition), UserControl.ScaleY(P.Y, vbPixels, vbContainerPosition))
+If PropOLEDropMode = vbOLEDropAutomatic Then
+    If Not Effect = vbDropEffectNone And Not Text = vbNullString Then
         Me.Refresh
-        Dim Text As String
-        If Data.GetFormat(CF_UNICODETEXT) = True Then
-            Text = Data.GetData(CF_UNICODETEXT)
-            Text = Left$(Text, InStr(Text, vbNullChar) - 1)
-        ElseIf Data.GetFormat(vbCFText) = True Then
-            Text = Data.GetData(vbCFText)
-        End If
-        If Not Text = vbNullString Then
+        If TextBoxHandle <> NULL_PTR Then
             Dim CharPos As Long
-            CharPos = CIntToUInt(LoWord(SendMessage(TextBoxHandle, EM_CHARFROMPOS, 0, ByVal MakeDWord(X, Y))))
+            CharPos = CIntToUInt(LoWord(CLng(SendMessage(TextBoxHandle, EM_CHARFROMPOS, 0, ByVal MakeDWord(P.X, P.Y)))))
             If TextBoxAutoDragIsActive = True Then
                 TextBoxAutoDragIsActive = False
                 Dim SelStart As Long, SelEnd As Long
@@ -605,7 +712,7 @@ If PropOLEDropMode = vbOLEDropAutomatic And TextBoxHandle <> 0 Then
                 If GetFocus() <> TextBoxHandle Then SetFocusAPI UserControl.hWnd
             End If
             SendMessage TextBoxHandle, EM_SETSEL, CharPos, ByVal CharPos
-            SendMessage TextBoxHandle, EM_REPLACESEL, 0, ByVal StrPtr(Text)
+            SendMessage TextBoxHandle, EM_REPLACESEL, 1, ByVal StrPtr(Text)
             SendMessage TextBoxHandle, EM_SETSEL, CharPos, ByVal (CharPos + Len(Text))
         End If
     End If
@@ -613,25 +720,41 @@ End If
 End Sub
 
 Private Sub UserControl_OLEDragOver(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
-RaiseEvent OLEDragOver(Data, Effect, Button, Shift, UserControl.ScaleX(X, vbPixels, vbContainerPosition), UserControl.ScaleY(Y, vbPixels, vbContainerPosition), State)
-If TextBoxHandle <> 0 Then
+If PropOLEDropMode = vbOLEDropAutomatic Then
+    If Data.GetFormat(CF_UNICODETEXT) = True Or Data.GetFormat(vbCFText) = True Then Effect = vbDropEffectMove Else Effect = vbDropEffectNone
+End If
+Dim P As POINTAPI
+P.X = X
+P.Y = Y
+If TextBoxHandle <> NULL_PTR Then MapWindowPoints UserControl.hWnd, TextBoxHandle, P, 1
+RaiseEvent OLEDragOver(Data, Effect, Button, Shift, UserControl.ScaleX(P.X, vbPixels, vbContainerPosition), UserControl.ScaleY(P.Y, vbPixels, vbContainerPosition), State)
+If TextBoxHandle <> NULL_PTR Then
     If State = vbOver And Not Effect = vbDropEffectNone Then
-        If PropOLEDragDropScroll = True Then
-            Dim RC As RECT
-            GetWindowRect TextBoxHandle, RC
-            Dim dwStyle As Long
+        If PropOLEDragDropScroll = True And (X >= 0 And X <= UserControl.ScaleWidth) And (Y >= 0 And Y <= UserControl.ScaleHeight) Then
+            Dim dwStyle As Long, dwExStyle As Long
             dwStyle = GetWindowLong(TextBoxHandle, GWL_STYLE)
+            dwExStyle = GetWindowLong(TextBoxHandle, GWL_EXSTYLE)
             If (dwStyle And WS_HSCROLL) = WS_HSCROLL Then
-                If Abs(X) < (16 * PixelsPerDIP_X()) Then
+                Dim CX1 As Long, CX2 As Long
+                If (dwStyle And WS_VSCROLL) = WS_VSCROLL Then
+                    If (dwExStyle And WS_EX_LEFTSCROLLBAR) = WS_EX_LEFTSCROLLBAR Then
+                        CX1 = GetSystemMetrics(SM_CXVSCROLL)
+                    Else
+                        CX2 = GetSystemMetrics(SM_CXVSCROLL)
+                    End If
+                End If
+                If X < ((16 * PixelsPerDIP_X()) + CX1) Then
                     SendMessage TextBoxHandle, WM_HSCROLL, SB_LINELEFT, ByVal 0&
-                ElseIf Abs(X - (RC.Right - RC.Left)) < (16 * PixelsPerDIP_X()) Then
+                ElseIf (UserControl.ScaleWidth - X) < ((16 * PixelsPerDIP_X()) + CX2) Then
                     SendMessage TextBoxHandle, WM_HSCROLL, SB_LINERIGHT, ByVal 0&
                 End If
             End If
             If (dwStyle And WS_VSCROLL) = WS_VSCROLL Then
-                If Abs(Y) < (16 * PixelsPerDIP_Y()) Then
+                Dim CY1 As Long, CY2 As Long
+                If (dwStyle And WS_HSCROLL) = WS_HSCROLL Then CY2 = GetSystemMetrics(SM_CYHSCROLL)
+                If Y < ((16 * PixelsPerDIP_Y()) + CY1) Then
                     SendMessage TextBoxHandle, WM_VSCROLL, SB_LINEUP, ByVal 0&
-                ElseIf Abs(Y - (RC.Bottom - RC.Top)) < (16 * PixelsPerDIP_Y()) Then
+                ElseIf (UserControl.ScaleHeight - Y) < ((16 * PixelsPerDIP_Y()) + CY2) Then
                     SendMessage TextBoxHandle, WM_VSCROLL, SB_LINEDOWN, ByVal 0&
                 End If
             End If
@@ -640,15 +763,15 @@ If TextBoxHandle <> 0 Then
     If PropOLEDropMode = vbOLEDropAutomatic Then
         If State = vbOver And Not Effect = vbDropEffectNone Then
             Dim CharPos As Long, CaretPos As Long
-            CharPos = CIntToUInt(LoWord(SendMessage(TextBoxHandle, EM_CHARFROMPOS, 0, ByVal MakeDWord(X, Y))))
-            CaretPos = SendMessage(TextBoxHandle, EM_POSFROMCHAR, CharPos, ByVal 0&)
+            CharPos = CIntToUInt(LoWord(CLng(SendMessage(TextBoxHandle, EM_CHARFROMPOS, 0, ByVal MakeDWord(P.X, P.Y)))))
+            CaretPos = CLng(SendMessage(TextBoxHandle, EM_POSFROMCHAR, CharPos, ByVal 0&))
             If CaretPos > -1 Then
-                Dim hDC As Long, Size As SIZEAPI
+                Dim hDC As LongPtr, Size As SIZEAPI
                 hDC = GetDC(TextBoxHandle)
                 SelectObject hDC, TextBoxFontHandle
                 GetTextExtentPoint32 hDC, StrPtr("|"), 1, Size
                 ReleaseDC TextBoxHandle, hDC
-                CreateCaret TextBoxHandle, 0, 0, Size.CY
+                CreateCaret TextBoxHandle, NULL_PTR, 0, Size.CY
                 SetCaretPos LoWord(CaretPos), HiWord(CaretPos)
                 ShowCaret TextBoxHandle
             Else
@@ -682,8 +805,8 @@ If PropOLEDragMode = vbOLEDragAutomatic Then
     Dim Text As String
     Text = Me.SelText
     Data.SetData StrToVar(Text & vbNullChar), CF_UNICODETEXT
-    Data.SetData StrToVar(Text), vbCFText
-    AllowedEffects = vbDropEffectMove
+    Data.SetData Text, vbCFText
+    AllowedEffects = vbDropEffectCopy Or vbDropEffectMove
     TextBoxAutoDragIsActive = True
 End If
 RaiseEvent OLEStartDrag(Data, AllowedEffects)
@@ -700,19 +823,25 @@ Static InProc As Boolean
 If InProc = True Then Exit Sub
 InProc = True
 With UserControl
-If DPICorrectionFactor() <> 1 Then
-    .Extender.Move .Extender.Left + .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top + .ScaleY(1, vbPixels, vbContainerPosition)
-    .Extender.Move .Extender.Left - .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top - .ScaleY(1, vbPixels, vbContainerPosition)
-End If
-If TextBoxHandle <> 0 Then MoveWindow TextBoxHandle, 0, 0, .ScaleWidth, .ScaleHeight, 1
+If DPICorrectionFactor() <> 1 Then Call SyncObjectRectsToContainer(Me)
+If TextBoxHandle <> NULL_PTR Then MoveWindow TextBoxHandle, 0, 0, .ScaleWidth, .ScaleHeight, 1
 End With
 InProc = False
 End Sub
 
 Private Sub UserControl_Terminate()
-Call RemoveVTableSubclass(Me, VTableInterfaceInPlaceActiveObject)
-Call RemoveVTableSubclass(Me, VTableInterfaceControl)
-Call RemoveVTableSubclass(Me, VTableInterfacePerPropertyBrowsing)
+
+#If ImplementPreTranslateMsg = True Then
+
+If UsePreTranslateMsg = False Then Call RemoveVTableHandling(Me, VTableInterfaceInPlaceActiveObject)
+
+#Else
+
+Call RemoveVTableHandling(Me, VTableInterfaceInPlaceActiveObject)
+
+#End If
+
+Call RemoveVTableHandling(Me, VTableInterfaceControl)
 Call DestroyTextBox
 Call ComCtlsReleaseShellMod
 End Sub
@@ -858,14 +987,25 @@ Attribute ZOrder.VB_Description = "Places a specified object at the front or bac
 If IsMissing(Position) Then Extender.ZOrder Else Extender.ZOrder Position
 End Sub
 
+#If VBA7 Then
+Public Property Get hWnd() As LongPtr
+Attribute hWnd.VB_Description = "Returns a handle to a control."
+Attribute hWnd.VB_UserMemId = -515
+#Else
 Public Property Get hWnd() As Long
 Attribute hWnd.VB_Description = "Returns a handle to a control."
 Attribute hWnd.VB_UserMemId = -515
+#End If
 hWnd = TextBoxHandle
 End Property
 
+#If VBA7 Then
+Public Property Get hWndUserControl() As LongPtr
+Attribute hWndUserControl.VB_Description = "Returns a handle to a control."
+#Else
 Public Property Get hWndUserControl() As Long
 Attribute hWndUserControl.VB_Description = "Returns a handle to a control."
+#End If
 hWndUserControl = UserControl.hWnd
 End Property
 
@@ -881,23 +1021,39 @@ End Property
 
 Public Property Set Font(ByVal NewFont As StdFont)
 If NewFont Is Nothing Then Set NewFont = Ambient.Font
-Dim OldFontHandle As Long
+Dim OldFontHandle As LongPtr
 Set PropFont = NewFont
 OldFontHandle = TextBoxFontHandle
-TextBoxFontHandle = CreateGDIFontFromOLEFont(PropFont)
-If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, WM_SETFONT, TextBoxFontHandle, ByVal 1&
-If OldFontHandle <> 0 Then DeleteObject OldFontHandle
+TextBoxFontHandle = CreateGDIFontFromOLEFont(PropFont, PropFontQuality)
+If TextBoxHandle <> NULL_PTR Then SendMessage TextBoxHandle, WM_SETFONT, TextBoxFontHandle, ByVal 1&
+If OldFontHandle <> NULL_PTR Then DeleteObject OldFontHandle
 UserControl.PropertyChanged "Font"
 End Property
 
 Private Sub PropFont_FontChanged(ByVal PropertyName As String)
-Dim OldFontHandle As Long
+Dim OldFontHandle As LongPtr
 OldFontHandle = TextBoxFontHandle
-TextBoxFontHandle = CreateGDIFontFromOLEFont(PropFont)
-If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, WM_SETFONT, TextBoxFontHandle, ByVal 1&
-If OldFontHandle <> 0 Then DeleteObject OldFontHandle
+TextBoxFontHandle = CreateGDIFontFromOLEFont(PropFont, PropFontQuality)
+If TextBoxHandle <> NULL_PTR Then SendMessage TextBoxHandle, WM_SETFONT, TextBoxFontHandle, ByVal 1&
+If OldFontHandle <> NULL_PTR Then DeleteObject OldFontHandle
 UserControl.PropertyChanged "Font"
 End Sub
+
+Public Property Get FontQuality() As CCFontQualityConstants
+Attribute FontQuality.VB_Description = "Returns/sets the font quality."
+FontQuality = PropFontQuality
+End Property
+
+Public Property Let FontQuality(ByVal Value As CCFontQualityConstants)
+Select Case Value
+    Case CCFontQualityDefault, CCFontQualityDraft, CCFontQualityProof, CCFontQualityNonAntiAliased, CCFontQualityAntiAliased, CCFontQualityClearType, CCFontQualityClearTypeNatural
+        PropFontQuality = Value
+    Case Else
+        Err.Raise 380
+End Select
+Set Me.Font = PropFont
+UserControl.PropertyChanged "FontQuality"
+End Property
 
 Public Property Get VisualStyles() As Boolean
 Attribute VisualStyles.VB_Description = "Returns/sets a value that determines whether the visual styles are enabled or not. Requires comctl32.dll version 6.0 or higher."
@@ -906,7 +1062,7 @@ End Property
 
 Public Property Let VisualStyles(ByVal Value As Boolean)
 PropVisualStyles = Value
-If TextBoxHandle <> 0 And EnabledVisualStyles() = True Then
+If TextBoxHandle <> NULL_PTR And EnabledVisualStyles() = True Then
     If PropVisualStyles = True Then
         ActivateVisualStyles TextBoxHandle
     Else
@@ -949,8 +1105,23 @@ End Property
 
 Public Property Let Enabled(ByVal Value As Boolean)
 UserControl.Enabled = Value
-If TextBoxHandle <> 0 Then EnableWindow TextBoxHandle, IIf(Value = True, 1, 0)
+If TextBoxHandle <> NULL_PTR Then EnableWindow TextBoxHandle, IIf(Value = True, 1, 0)
 UserControl.PropertyChanged "Enabled"
+End Property
+
+Public Property Get AllowDropFiles() As Boolean
+Attribute AllowDropFiles.VB_Description = "Returns/sets a value that determines whether drag-drop files are allowed or not. Only applicable when there is no OLE drop target available."
+If TextBoxHandle <> NULL_PTR Then
+    AllowDropFiles = CBool((GetWindowLong(TextBoxHandle, GWL_EXSTYLE) And WS_EX_ACCEPTFILES) <> 0)
+Else
+    AllowDropFiles = PropAllowDropFiles
+End If
+End Property
+
+Public Property Let AllowDropFiles(ByVal Value As Boolean)
+PropAllowDropFiles = Value
+If TextBoxHandle <> NULL_PTR Then DragAcceptFiles TextBoxHandle, IIf(PropAllowDropFiles = True, 1, 0)
+UserControl.PropertyChanged "AllowDropFiles"
 End Property
 
 Public Property Get OLEDragMode() As VBRUN.OLEDragConstants
@@ -994,18 +1165,19 @@ End Select
 UserControl.PropertyChanged "OLEDropMode"
 End Property
 
-Public Property Get MousePointer() As Integer
+Public Property Get MousePointer() As CCMousePointerConstants
 Attribute MousePointer.VB_Description = "Returns/sets the type of mouse pointer displayed when over part of an object."
 MousePointer = PropMousePointer
 End Property
 
-Public Property Let MousePointer(ByVal Value As Integer)
+Public Property Let MousePointer(ByVal Value As CCMousePointerConstants)
 Select Case Value
-    Case 0 To 16, 99
+    Case 0 To 30, 99
         PropMousePointer = Value
     Case Else
         Err.Raise 380
 End Select
+If TextBoxDesignMode = False Then Call RefreshMousePointer
 UserControl.PropertyChanged "MousePointer"
 End Property
 
@@ -1022,10 +1194,10 @@ Public Property Set MouseIcon(ByVal Value As IPictureDisp)
 If Value Is Nothing Then
     Set PropMouseIcon = Nothing
 Else
-    If Value.Type = vbPicTypeIcon Or Value.Handle = 0 Then
+    If Value.Type = vbPicTypeIcon Or Value.Handle = NULL_PTR Then
         Set PropMouseIcon = Value
     Else
-        If Ambient.UserMode = False Then
+        If TextBoxDesignMode = True Then
             MsgBox "Invalid property value", vbCritical + vbOKOnly
             Exit Property
         Else
@@ -1033,6 +1205,7 @@ Else
         End If
     End If
 End If
+If TextBoxDesignMode = False Then Call RefreshMousePointer
 UserControl.PropertyChanged "MouseIcon"
 End Property
 
@@ -1058,7 +1231,14 @@ UserControl.RightToLeft = PropRightToLeft
 Call ComCtlsCheckRightToLeft(PropRightToLeft, UserControl.RightToLeft, PropRightToLeftMode)
 Dim dwMask As Long
 If PropRightToLeft = True Then dwMask = WS_EX_RTLREADING Or WS_EX_LEFTSCROLLBAR
-If TextBoxHandle <> 0 Then Call ComCtlsSetRightToLeft(TextBoxHandle, dwMask)
+If TextBoxHandle <> NULL_PTR Then
+    Call ComCtlsSetRightToLeft(TextBoxHandle, dwMask)
+    If PropRightToLeft = False Then
+        If PropAlignment = vbRightJustify Then Me.Alignment = vbLeftJustify
+    Else
+        If PropAlignment = vbLeftJustify Then Me.Alignment = vbRightJustify
+    End If
+End If
 UserControl.PropertyChanged "RightToLeft"
 End Property
 
@@ -1091,7 +1271,7 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
-If TextBoxHandle <> 0 Then Call ComCtlsChangeBorderStyle(TextBoxHandle, PropBorderStyle)
+If TextBoxHandle <> NULL_PTR Then Call ComCtlsChangeBorderStyle(TextBoxHandle, PropBorderStyle)
 UserControl.PropertyChanged "BorderStyle"
 End Property
 
@@ -1100,8 +1280,8 @@ Attribute Text.VB_Description = "Returns/sets the text contained in an object."
 Attribute Text.VB_ProcData.VB_Invoke_Property = "PPTextBoxWText"
 Attribute Text.VB_UserMemId = -517
 Attribute Text.VB_MemberFlags = "123c"
-If TextBoxHandle <> 0 Then
-    Text = String(SendMessage(TextBoxHandle, WM_GETTEXTLENGTH, 0, ByVal 0&), vbNullChar)
+If TextBoxHandle <> NULL_PTR Then
+    Text = String$(CLng(SendMessage(TextBoxHandle, WM_GETTEXTLENGTH, 0, ByVal 0&)), vbNullChar)
     SendMessage TextBoxHandle, WM_GETTEXT, Len(Text) + 1, ByVal StrPtr(Text)
 Else
     Text = PropText
@@ -1113,7 +1293,7 @@ If PropMaxLength > 0 Then Value = Left$(Value, PropMaxLength)
 Dim Changed As Boolean
 Changed = CBool(Me.Text <> Value)
 PropText = Value
-If TextBoxHandle <> 0 Then
+If TextBoxHandle <> NULL_PTR Then
     TextBoxChangeFrozen = True
     SendMessage TextBoxHandle, WM_SETTEXT, 0, ByVal StrPtr(PropText)
     TextBoxChangeFrozen = False
@@ -1149,7 +1329,7 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
-If TextBoxHandle <> 0 Then
+If TextBoxHandle <> NULL_PTR Then
     Dim dwStyle As Long
     dwStyle = GetWindowLong(TextBoxHandle, GWL_STYLE)
     If (dwStyle And ES_LEFT) = ES_LEFT Then dwStyle = dwStyle And Not ES_LEFT
@@ -1176,7 +1356,7 @@ End Property
 
 Public Property Let AllowOnlyNumbers(ByVal Value As Boolean)
 PropAllowOnlyNumbers = Value
-If TextBoxHandle <> 0 Then
+If TextBoxHandle <> NULL_PTR Then
     Dim dwStyle As Long
     dwStyle = GetWindowLong(TextBoxHandle, GWL_STYLE)
     If PropAllowOnlyNumbers = True Then
@@ -1191,7 +1371,7 @@ End Property
 
 Public Property Get Locked() As Boolean
 Attribute Locked.VB_Description = "Returns/sets a value indicating whether the contents can be edited."
-If TextBoxHandle <> 0 Then
+If TextBoxHandle <> NULL_PTR Then
     Locked = CBool((GetWindowLong(TextBoxHandle, GWL_STYLE) And ES_READONLY) <> 0)
 Else
     Locked = PropLocked
@@ -1200,7 +1380,7 @@ End Property
 
 Public Property Let Locked(ByVal Value As Boolean)
 PropLocked = Value
-If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, EM_SETREADONLY, IIf(PropLocked = True, 1, 0), ByVal 0&
+If TextBoxHandle <> NULL_PTR Then SendMessage TextBoxHandle, EM_SETREADONLY, IIf(PropLocked = True, 1, 0), ByVal 0&
 UserControl.PropertyChanged "Locked"
 End Property
 
@@ -1211,14 +1391,14 @@ End Property
 
 Public Property Let HideSelection(ByVal Value As Boolean)
 PropHideSelection = Value
-If TextBoxHandle <> 0 Then Call ReCreateTextBox
+If TextBoxHandle <> NULL_PTR Then Call ReCreateTextBox
 UserControl.PropertyChanged "HideSelection"
 End Property
 
 Public Property Get PasswordChar() As String
 Attribute PasswordChar.VB_Description = "Returns/sets a value that determines whether characters typed by a user or placeholder characters are displayed in a control."
-If TextBoxHandle <> 0 Then
-    PasswordChar = ChrW(SendMessage(TextBoxHandle, EM_GETPASSWORDCHAR, 0, ByVal 0&))
+If TextBoxHandle <> NULL_PTR Then
+    PasswordChar = ChrW(CLng(SendMessage(TextBoxHandle, EM_GETPASSWORDCHAR, 0, ByVal 0&)))
 Else
     PasswordChar = ChrW(PropPasswordChar)
 End If
@@ -1231,14 +1411,14 @@ If Value = vbNullString Or Len(Value) = 0 Then
 ElseIf Len(Value) = 1 Then
     PropPasswordChar = AscW(Value)
 Else
-    If Ambient.UserMode = False Then
+    If TextBoxDesignMode = True Then
         MsgBox "Invalid property value", vbCritical + vbOKOnly
         Exit Property
     Else
         Err.Raise 380
     End If
 End If
-If TextBoxHandle <> 0 Then
+If TextBoxHandle <> NULL_PTR Then
     SendMessage TextBoxHandle, EM_SETPASSWORDCHAR, PropPasswordChar, ByVal 0&
     Me.Refresh
 End If
@@ -1252,7 +1432,7 @@ End Property
 
 Public Property Let UseSystemPasswordChar(ByVal Value As Boolean)
 PropUseSystemPasswordChar = Value
-If TextBoxHandle <> 0 Then Call ReCreateTextBox
+If TextBoxHandle <> NULL_PTR Then Call ReCreateTextBox
 UserControl.PropertyChanged "UseSystemPasswordChar"
 End Property
 
@@ -1263,7 +1443,7 @@ End Property
 
 Public Property Let MultiLine(ByVal Value As Boolean)
 PropMultiLine = Value
-If TextBoxHandle <> 0 Then Call ReCreateTextBox
+If TextBoxHandle <> NULL_PTR Then Call ReCreateTextBox
 UserControl.PropertyChanged "MultiLine"
 End Property
 
@@ -1274,7 +1454,7 @@ End Property
 
 Public Property Let MaxLength(ByVal Value As Long)
 If Value < 0 Then
-    If Ambient.UserMode = False Then
+    If TextBoxDesignMode = True Then
         MsgBox "Invalid property value", vbCritical + vbOKOnly
         Exit Property
     Else
@@ -1282,7 +1462,7 @@ If Value < 0 Then
     End If
 End If
 PropMaxLength = Value
-If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, EM_SETLIMITTEXT, PropMaxLength, ByVal 0&
+If TextBoxHandle <> NULL_PTR Then SendMessage TextBoxHandle, EM_SETLIMITTEXT, PropMaxLength, ByVal 0&
 UserControl.PropertyChanged "MaxLength"
 End Property
 
@@ -1295,7 +1475,7 @@ Public Property Let ScrollBars(ByVal Value As VBRUN.ScrollBarConstants)
 Select Case Value
     Case vbSBNone, vbHorizontal, vbVertical, vbBoth
         PropScrollBars = Value
-        If TextBoxHandle <> 0 Then Call ReCreateTextBox
+        If TextBoxHandle <> NULL_PTR Then Call ReCreateTextBox
     Case Else
         Err.Raise 380
 End Select
@@ -1309,8 +1489,19 @@ End Property
 
 Public Property Let CueBanner(ByVal Value As String)
 PropCueBanner = Value
-If TextBoxHandle <> 0 And PropMultiLine = False And ComCtlsSupportLevel() >= 1 Then SendMessage TextBoxHandle, EM_SETCUEBANNER, 0, ByVal StrPtr(PropCueBanner)
+If TextBoxHandle <> NULL_PTR And PropMultiLine = False And ComCtlsSupportLevel() >= 1 Then SendMessage TextBoxHandle, EM_SETCUEBANNER, IIf(PropCueBannerAlways = True, 1, 0), ByVal StrPtr(PropCueBanner)
 UserControl.PropertyChanged "CueBanner"
+End Property
+
+Public Property Get CueBannerAlways() As Boolean
+Attribute CueBannerAlways.VB_Description = "Returns/sets a value indicating if the cue banner is displayed even when the text box has focus. Only applicable if the multi line property is set to false. Requires comctl32.dll version 6.0 or higher."
+CueBannerAlways = PropCueBannerAlways
+End Property
+
+Public Property Let CueBannerAlways(ByVal Value As Boolean)
+PropCueBannerAlways = Value
+If TextBoxHandle <> NULL_PTR And PropMultiLine = False And ComCtlsSupportLevel() >= 1 Then SendMessage TextBoxHandle, EM_SETCUEBANNER, IIf(PropCueBannerAlways = True, 1, 0), ByVal StrPtr(PropCueBanner)
+UserControl.PropertyChanged "CueBannerAlways"
 End Property
 
 Public Property Get CharacterCasing() As TxtCharacterCasingConstants
@@ -1325,7 +1516,7 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
-If TextBoxHandle <> 0 Then
+If TextBoxHandle <> NULL_PTR Then
     Dim dwStyle As Long
     dwStyle = GetWindowLong(TextBoxHandle, GWL_STYLE)
     If (dwStyle And ES_UPPERCASE) = ES_UPPERCASE Then dwStyle = dwStyle And Not ES_UPPERCASE
@@ -1337,7 +1528,7 @@ If TextBoxHandle <> 0 Then
             dwStyle = dwStyle Or ES_LOWERCASE
     End Select
     SetWindowLong TextBoxHandle, GWL_STYLE, dwStyle
-    If Ambient.UserMode = False Then
+    If TextBoxDesignMode = True Then
         SendMessage TextBoxHandle, WM_SETTEXT, 0, ByVal 0&
         SendMessage TextBoxHandle, WM_SETTEXT, 0, ByVal StrPtr(PropText)
     End If
@@ -1353,7 +1544,7 @@ End Property
 Public Property Let WantReturn(ByVal Value As Boolean)
 If PropWantReturn = Value Then Exit Property
 PropWantReturn = Value
-If TextBoxHandle <> 0 And Ambient.UserMode = True Then
+If TextBoxHandle <> NULL_PTR And TextBoxDesignMode = False Then
     ' It is not possible (in VB6) to achieve this when specifying ES_WANTRETURN.
     Call OnControlInfoChanged(Me, CBool(GetFocus() = TextBoxHandle))
 End If
@@ -1372,7 +1563,7 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
-If TextBoxHandle <> 0 And Ambient.UserMode = True Then
+If TextBoxHandle <> NULL_PTR And TextBoxDesignMode = False Then
     If GetFocus() = TextBoxHandle Then Call ComCtlsSetIMEMode(TextBoxHandle, TextBoxIMCHandle, PropIMEMode)
 End If
 UserControl.PropertyChanged "IMEMode"
@@ -1385,7 +1576,7 @@ End Property
 
 Public Property Let NetAddressValidator(ByVal Value As Boolean)
 PropNetAddressValidator = Value
-If TextBoxHandle <> 0 And ComCtlsSupportLevel() >= 2 Then
+If TextBoxHandle <> NULL_PTR And ComCtlsSupportLevel() >= 2 Then
     TextBoxNetAddressFormat = TxtNetAddressFormatNone
     TextBoxNetAddressString = vbNullString
     TextBoxNetAddressPortNumber = 0
@@ -1407,7 +1598,7 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
-If TextBoxHandle <> 0 And PropNetAddressValidator = True And ComCtlsSupportLevel() >= 2 Then
+If TextBoxHandle <> NULL_PTR And PropNetAddressValidator = True And ComCtlsSupportLevel() >= 2 Then
     Dim AddrMask As Long
     Select Case PropNetAddressType
         Case TxtNetAddressTypeNone
@@ -1479,13 +1670,21 @@ UserControl.PropertyChanged "OverTypeMode"
 End Property
 
 Private Sub CreateTextBox()
-If TextBoxHandle <> 0 Then Exit Sub
+If TextBoxHandle <> NULL_PTR Then Exit Sub
 Dim dwStyle As Long, dwExStyle As Long
 dwStyle = WS_CHILD Or WS_VISIBLE
+If PropAllowDropFiles = True Then dwExStyle = dwExStyle Or WS_EX_ACCEPTFILES
 If PropRightToLeft = True Then dwExStyle = WS_EX_RTLREADING Or WS_EX_LEFTSCROLLBAR
 Call ComCtlsInitBorderStyle(dwStyle, dwExStyle, PropBorderStyle)
+Select Case PropAlignment
+    Case vbLeftJustify
+        dwStyle = dwStyle Or ES_LEFT
+    Case vbCenter
+        dwStyle = dwStyle Or ES_CENTER
+    Case vbRightJustify
+        dwStyle = dwStyle Or ES_RIGHT
+End Select
 If PropAllowOnlyNumbers = True Then dwStyle = dwStyle Or ES_NUMBER
-If PropRightToLeft = False Then dwStyle = dwStyle Or ES_LEFT Else dwStyle = dwStyle Or ES_RIGHT
 If PropLocked = True Then dwStyle = dwStyle Or ES_READONLY
 If PropHideSelection = False Then dwStyle = dwStyle Or ES_NOHIDESEL
 If PropUseSystemPasswordChar = True Then dwStyle = dwStyle Or ES_PASSWORD
@@ -1511,10 +1710,10 @@ Select Case PropCharacterCasing
         dwStyle = dwStyle Or ES_LOWERCASE
 End Select
 If PropNetAddressValidator = True And ComCtlsSupportLevel() >= 2 Then
-    If InitNetworkAddressControl() <> 0 Then TextBoxHandle = CreateWindowEx(dwExStyle, StrPtr("msctls_netaddress"), 0, dwStyle, 0, 0, UserControl.ScaleWidth, UserControl.ScaleHeight, UserControl.hWnd, 0, App.hInstance, ByVal 0&)
+    If InitNetworkAddressControl() <> 0 Then TextBoxHandle = CreateWindowEx(dwExStyle, StrPtr("msctls_netaddress"), NULL_PTR, dwStyle, 0, 0, UserControl.ScaleWidth, UserControl.ScaleHeight, UserControl.hWnd, NULL_PTR, App.hInstance, ByVal NULL_PTR)
 End If
-If TextBoxHandle = 0 Then TextBoxHandle = CreateWindowEx(dwExStyle, StrPtr("Edit"), 0, dwStyle, 0, 0, UserControl.ScaleWidth, UserControl.ScaleHeight, UserControl.hWnd, 0, App.hInstance, ByVal 0&)
-If TextBoxHandle <> 0 Then
+If TextBoxHandle = NULL_PTR Then TextBoxHandle = CreateWindowEx(dwExStyle, StrPtr("Edit"), NULL_PTR, dwStyle, 0, 0, UserControl.ScaleWidth, UserControl.ScaleHeight, UserControl.hWnd, NULL_PTR, App.hInstance, ByVal NULL_PTR)
+If TextBoxHandle <> NULL_PTR Then
     If PropPasswordChar <> 0 And PropUseSystemPasswordChar = False Then SendMessage TextBoxHandle, EM_SETPASSWORDCHAR, PropPasswordChar, ByVal 0&
     SendMessage TextBoxHandle, EM_SETLIMITTEXT, PropMaxLength, ByVal 0&
     SendMessage TextBoxHandle, WM_SETTEXT, 0, ByVal StrPtr(PropText)
@@ -1522,23 +1721,29 @@ End If
 Set Me.Font = PropFont
 Me.VisualStyles = PropVisualStyles
 Me.Enabled = UserControl.Enabled
-Me.Alignment = PropAlignment
 If Not PropCueBanner = vbNullString Then Me.CueBanner = PropCueBanner
 If PropNetAddressValidator = True Then Me.NetAddressType = PropNetAddressType
-If Ambient.UserMode = True Then
-    If TextBoxHandle <> 0 Then Call ComCtlsSetSubclass(TextBoxHandle, Me, 1)
+If TextBoxDesignMode = False Then
+    If TextBoxHandle <> NULL_PTR Then Call ComCtlsSetSubclass(TextBoxHandle, Me, 1)
     Call ComCtlsSetSubclass(UserControl.hWnd, Me, 2)
-    If TextBoxHandle <> 0 Then Call ComCtlsCreateIMC(TextBoxHandle, TextBoxIMCHandle)
+    If TextBoxHandle <> NULL_PTR Then Call ComCtlsCreateIMC(TextBoxHandle, TextBoxIMCHandle)
+    
+    #If ImplementPreTranslateMsg = True Then
+    
+    If UsePreTranslateMsg = True Then Call ComCtlsPreTranslateMsgAddHook
+    
+    #End If
+    
 End If
 End Sub
 
 Private Sub ReCreateTextBox()
-If Ambient.UserMode = True Then
+If TextBoxDesignMode = False Then
     Dim Locked As Boolean
     Locked = CBool(LockWindowUpdate(UserControl.hWnd) <> 0)
     Dim SelStart As Long, SelEnd As Long
     Dim ScrollPosHorz As Integer, ScrollPosVert As Integer
-    If TextBoxHandle <> 0 Then
+    If TextBoxHandle <> NULL_PTR Then
         SendMessage TextBoxHandle, EM_GETSEL, VarPtr(SelStart), ByVal VarPtr(SelEnd)
         If PropMultiLine = True And PropScrollBars <> vbSBNone Then
             If PropScrollBars = vbHorizontal Or PropScrollBars = vbBoth Then
@@ -1549,19 +1754,19 @@ If Ambient.UserMode = True Then
             End If
         End If
         Dim Buffer As String
-        Buffer = String(SendMessage(TextBoxHandle, WM_GETTEXTLENGTH, 0, ByVal 0&), vbNullChar)
+        Buffer = String$(CLng(SendMessage(TextBoxHandle, WM_GETTEXTLENGTH, 0, ByVal 0&)), vbNullChar)
         SendMessage TextBoxHandle, WM_GETTEXT, Len(Buffer) + 1, ByVal StrPtr(Buffer)
         PropText = Buffer
     End If
     Call DestroyTextBox
     Call CreateTextBox
     Call UserControl_Resize
-    If TextBoxHandle <> 0 Then
+    If TextBoxHandle <> NULL_PTR Then
         SendMessage TextBoxHandle, EM_SETSEL, SelStart, ByVal SelEnd
         If ScrollPosHorz > 0 Then SendMessage TextBoxHandle, WM_HSCROLL, MakeDWord(SB_THUMBPOSITION, ScrollPosHorz), ByVal 0&
         If ScrollPosVert > 0 Then SendMessage TextBoxHandle, WM_VSCROLL, MakeDWord(SB_THUMBPOSITION, ScrollPosVert), ByVal 0&
     End If
-    If Locked = True Then LockWindowUpdate 0
+    If Locked = True Then LockWindowUpdate NULL_PTR
     Me.Refresh
 Else
     Call DestroyTextBox
@@ -1571,17 +1776,26 @@ End If
 End Sub
 
 Private Sub DestroyTextBox()
-If TextBoxHandle = 0 Then Exit Sub
+If TextBoxHandle = NULL_PTR Then Exit Sub
 Call ComCtlsRemoveSubclass(TextBoxHandle)
 Call ComCtlsRemoveSubclass(UserControl.hWnd)
+If TextBoxDesignMode = False Then
+    
+    #If ImplementPreTranslateMsg = True Then
+    
+    If UsePreTranslateMsg = True Then Call ComCtlsPreTranslateMsgReleaseHook
+    
+    #End If
+    
+End If
 Call ComCtlsDestroyIMC(TextBoxHandle, TextBoxIMCHandle)
 ShowWindow TextBoxHandle, SW_HIDE
-SetParent TextBoxHandle, 0
+SetParent TextBoxHandle, NULL_PTR
 DestroyWindow TextBoxHandle
-TextBoxHandle = 0
-If TextBoxFontHandle <> 0 Then
+TextBoxHandle = NULL_PTR
+If TextBoxFontHandle <> NULL_PTR Then
     DeleteObject TextBoxFontHandle
-    TextBoxFontHandle = 0
+    TextBoxFontHandle = NULL_PTR
 End If
 End Sub
 
@@ -1589,64 +1803,75 @@ Public Sub Refresh()
 Attribute Refresh.VB_Description = "Forces a complete repaint of a object."
 Attribute Refresh.VB_UserMemId = -550
 UserControl.Refresh
-RedrawWindow UserControl.hWnd, 0, 0, RDW_UPDATENOW Or RDW_INVALIDATE Or RDW_ERASE Or RDW_ALLCHILDREN
+RedrawWindow UserControl.hWnd, NULL_PTR, NULL_PTR, RDW_UPDATENOW Or RDW_INVALIDATE Or RDW_ERASE Or RDW_ALLCHILDREN
 End Sub
 
 Public Sub Copy()
 Attribute Copy.VB_Description = "Method to copy the current selection to the clipboard."
-If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, WM_COPY, 0, ByVal 0&
+If TextBoxHandle <> NULL_PTR Then SendMessage TextBoxHandle, WM_COPY, 0, ByVal 0&
 End Sub
 
 Public Sub Cut()
 Attribute Cut.VB_Description = "Method to delete (cut) the current selection and copy the deleted text to the clipboard."
-If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, WM_CUT, 0, ByVal 0&
+If TextBoxHandle <> NULL_PTR Then SendMessage TextBoxHandle, WM_CUT, 0, ByVal 0&
 End Sub
 
 Public Sub Paste()
 Attribute Paste.VB_Description = "Method to copy the current content of the clipboard at the current caret position."
-If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, WM_PASTE, 0, ByVal 0&
+If TextBoxHandle <> NULL_PTR Then SendMessage TextBoxHandle, WM_PASTE, 0, ByVal 0&
 End Sub
 
 Public Sub Clear()
 Attribute Clear.VB_Description = "Method to delete (clear) the current selection."
-If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, WM_CLEAR, 0, ByVal 0&
+If TextBoxHandle <> NULL_PTR Then SendMessage TextBoxHandle, WM_CLEAR, 0, ByVal 0&
 End Sub
 
 Public Sub Undo()
 Attribute Undo.VB_Description = "Undoes the last operation, if any."
-If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, EM_UNDO, 0, ByVal 0&
+If TextBoxHandle <> NULL_PTR Then SendMessage TextBoxHandle, EM_UNDO, 0, ByVal 0&
 End Sub
 
 Public Function CanUndo() As Boolean
 Attribute CanUndo.VB_Description = "Determines whether there are any actions in the undo queue."
-If TextBoxHandle <> 0 Then CanUndo = CBool(SendMessage(TextBoxHandle, EM_CANUNDO, 0, ByVal 0&) <> 0)
+If TextBoxHandle <> NULL_PTR Then CanUndo = CBool(SendMessage(TextBoxHandle, EM_CANUNDO, 0, ByVal 0&) <> 0)
 End Function
 
-Public Sub ResetUndoFlag()
-Attribute ResetUndoFlag.VB_Description = "Resets the undo flag."
-If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, EM_EMPTYUNDOBUFFER, 0, ByVal 0&
+Public Sub ResetUndoQueue()
+Attribute ResetUndoQueue.VB_Description = "Resets the undo queue."
+If TextBoxHandle <> NULL_PTR Then SendMessage TextBoxHandle, EM_EMPTYUNDOBUFFER, 0, ByVal 0&
 End Sub
 
 Public Property Get Modified() As Boolean
 Attribute Modified.VB_Description = "Setting the text property will reset this property to false. Any typing in the control will set the property to true."
 Attribute Modified.VB_MemberFlags = "400"
-If TextBoxHandle <> 0 Then Modified = CBool(SendMessage(TextBoxHandle, EM_GETMODIFY, 0, ByVal 0&) <> 0)
+If TextBoxHandle <> NULL_PTR Then Modified = CBool(SendMessage(TextBoxHandle, EM_GETMODIFY, 0, ByVal 0&) <> 0)
 End Property
 
 Public Property Let Modified(ByVal Value As Boolean)
-If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, EM_SETMODIFY, IIf(Value = True, 1, 0), ByVal 0&
+If TextBoxHandle <> NULL_PTR Then SendMessage TextBoxHandle, EM_SETMODIFY, IIf(Value = True, 1, 0), ByVal 0&
+End Property
+
+Public Property Get TextLength() As Long
+Attribute TextLength.VB_Description = "Returns the length of the text."
+Attribute TextLength.VB_MemberFlags = "400"
+If TextBoxHandle <> NULL_PTR Then
+    TextLength = CLng(SendMessage(TextBoxHandle, WM_GETTEXTLENGTH, 0, ByVal 0&))
+Else
+    TextLength = Len(PropText)
+End If
 End Property
 
 Public Property Get SelStart() As Long
 Attribute SelStart.VB_Description = "Returns/sets the starting point of text selected; indicates the position of the insertion point if no text is selected."
 Attribute SelStart.VB_MemberFlags = "400"
-If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, EM_GETSEL, VarPtr(SelStart), ByVal 0&
+If TextBoxHandle <> NULL_PTR Then SendMessage TextBoxHandle, EM_GETSEL, VarPtr(SelStart), ByVal 0&
 End Property
 
 Public Property Let SelStart(ByVal Value As Long)
-If TextBoxHandle <> 0 Then
+If TextBoxHandle <> NULL_PTR Then
     If Value >= 0 Then
         SendMessage TextBoxHandle, EM_SETSEL, Value, ByVal Value
+        SendMessage TextBoxHandle, EM_SCROLLCARET, 0, ByVal 0&
     Else
         Err.Raise 380
     End If
@@ -1656,7 +1881,7 @@ End Property
 Public Property Get SelLength() As Long
 Attribute SelLength.VB_Description = "Returns/sets the number of characters selected."
 Attribute SelLength.VB_MemberFlags = "400"
-If TextBoxHandle <> 0 Then
+If TextBoxHandle <> NULL_PTR Then
     Dim SelStart As Long, SelEnd As Long
     SendMessage TextBoxHandle, EM_GETSEL, VarPtr(SelStart), ByVal VarPtr(SelEnd)
     SelLength = SelEnd - SelStart
@@ -1664,11 +1889,12 @@ End If
 End Property
 
 Public Property Let SelLength(ByVal Value As Long)
-If TextBoxHandle <> 0 Then
+If TextBoxHandle <> NULL_PTR Then
     If Value >= 0 Then
         Dim SelStart As Long
         SendMessage TextBoxHandle, EM_GETSEL, VarPtr(SelStart), ByVal 0&
         SendMessage TextBoxHandle, EM_SETSEL, SelStart, ByVal SelStart + Value
+        SendMessage TextBoxHandle, EM_SCROLLCARET, 0, ByVal 0&
     Else
         Err.Raise 380
     End If
@@ -1678,7 +1904,7 @@ End Property
 Public Property Get SelText() As String
 Attribute SelText.VB_Description = "Returns/sets the string containing the currently selected text."
 Attribute SelText.VB_MemberFlags = "400"
-If TextBoxHandle <> 0 Then
+If TextBoxHandle <> NULL_PTR Then
     Dim SelStart As Long, SelEnd As Long
     SendMessage TextBoxHandle, EM_GETSEL, VarPtr(SelStart), ByVal VarPtr(SelEnd)
     On Error Resume Next
@@ -1688,20 +1914,23 @@ End If
 End Property
 
 Public Property Let SelText(ByVal Value As String)
-If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, EM_REPLACESEL, 0, ByVal StrPtr(Value)
+If TextBoxHandle <> NULL_PTR Then
+    If StrPtr(Value) = NULL_PTR Then Value = ""
+    SendMessage TextBoxHandle, EM_REPLACESEL, 1, ByVal StrPtr(Value)
+End If
 End Property
 
 Public Function GetLine(ByVal LineNumber As Long) As String
 Attribute GetLine.VB_Description = "Retrieves the text of the specified line. A value of 0 indicates that the text of the current line number (the line that contains the caret) will be retrieved."
 If LineNumber < 0 Then Err.Raise 380
-If TextBoxHandle <> 0 Then
+If TextBoxHandle <> NULL_PTR Then
     Dim FirstCharPos As Long, Length As Long
-    FirstCharPos = SendMessage(TextBoxHandle, EM_LINEINDEX, LineNumber - 1, ByVal 0&)
+    FirstCharPos = CLng(SendMessage(TextBoxHandle, EM_LINEINDEX, LineNumber - 1, ByVal 0&))
     If FirstCharPos > -1 Then
-        Length = SendMessage(TextBoxHandle, EM_LINELENGTH, FirstCharPos, ByVal 0&)
+        Length = CLng(SendMessage(TextBoxHandle, EM_LINELENGTH, FirstCharPos, ByVal 0&))
         If Length > 0 Then
             Dim Buffer As String
-            Buffer = ChrW(Length) & String(Length - 1, vbNullChar)
+            Buffer = ChrW(Length) & String$(Length - 1, vbNullChar)
             If LineNumber > 0 Then
                 If SendMessage(TextBoxHandle, EM_GETLINE, LineNumber - 1, ByVal StrPtr(Buffer)) > 0 Then GetLine = Buffer
             Else
@@ -1716,16 +1945,16 @@ End Function
 
 Public Function GetLineCount() As Long
 Attribute GetLineCount.VB_Description = "Gets the number of lines."
-If TextBoxHandle <> 0 Then GetLineCount = SendMessage(TextBoxHandle, EM_GETLINECOUNT, 0, ByVal 0&)
+If TextBoxHandle <> NULL_PTR Then GetLineCount = CLng(SendMessage(TextBoxHandle, EM_GETLINECOUNT, 0, ByVal 0&))
 End Function
 
 Public Sub ScrollToLine(ByVal LineNumber As Long)
 Attribute ScrollToLine.VB_Description = "Scrolls to ensure the specified line is visible."
 If LineNumber < 0 Then Err.Raise 380
-If TextBoxHandle <> 0 Then
+If TextBoxHandle <> NULL_PTR Then
     If SendMessage(TextBoxHandle, EM_LINEINDEX, LineNumber - 1, ByVal 0&) > -1 Then
         Dim LineIndex As Long
-        LineIndex = SendMessage(TextBoxHandle, EM_GETFIRSTVISIBLELINE, 0, ByVal 0&)
+        LineIndex = CLng(SendMessage(TextBoxHandle, EM_GETFIRSTVISIBLELINE, 0, ByVal 0&))
         SendMessage TextBoxHandle, EM_LINESCROLL, 0, ByVal CLng((LineNumber - 1) - LineIndex)
     Else
         Err.Raise 380
@@ -1735,7 +1964,7 @@ End Sub
 
 Public Sub ScrollToCaret()
 Attribute ScrollToCaret.VB_Description = "Scrolls the caret into view."
-If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, EM_SCROLLCARET, 0, ByVal 0&
+If TextBoxHandle <> NULL_PTR Then SendMessage TextBoxHandle, EM_SCROLLCARET, 0, ByVal 0&
 End Sub
 
 Public Function CharFromPos(ByVal X As Single, ByVal Y As Single) As Long
@@ -1743,18 +1972,18 @@ Attribute CharFromPos.VB_Description = "Returns the character index closest to a
 Dim P As POINTAPI
 P.X = UserControl.ScaleX(X, vbContainerPosition, vbPixels)
 P.Y = UserControl.ScaleY(Y, vbContainerPosition, vbPixels)
-If TextBoxHandle <> 0 Then CharFromPos = CIntToUInt(LoWord(SendMessage(TextBoxHandle, EM_CHARFROMPOS, 0, ByVal MakeDWord(P.X, P.Y))))
+If TextBoxHandle <> NULL_PTR Then CharFromPos = CIntToUInt(LoWord(CLng(SendMessage(TextBoxHandle, EM_CHARFROMPOS, 0, ByVal MakeDWord(P.X, P.Y)))))
 End Function
 
 Public Function GetLineFromChar(ByVal CharIndex As Long) As Long
 Attribute GetLineFromChar.VB_Description = "Gets the line number that contains the specified character index. A character index of -1 retrieves either the current line or the beginning of the current selection."
 If CharIndex < -1 Then Err.Raise 380
-If TextBoxHandle <> 0 Then GetLineFromChar = SendMessage(TextBoxHandle, EM_LINEFROMCHAR, CharIndex, ByVal 0&) + 1
+If TextBoxHandle <> NULL_PTR Then GetLineFromChar = CLng(SendMessage(TextBoxHandle, EM_LINEFROMCHAR, CharIndex, ByVal 0&) + 1)
 End Function
 
 Public Function ShowBalloonTip(ByVal Text As String, Optional ByVal Title As String, Optional ByVal Icon As TxtIconConstants) As Boolean
 Attribute ShowBalloonTip.VB_Description = "Displays a balloon tip. Requires comctl32.dll version 6.0 or higher."
-If TextBoxHandle <> 0 And ComCtlsSupportLevel() >= 1 Then
+If TextBoxHandle <> NULL_PTR And ComCtlsSupportLevel() >= 1 Then
     Dim EDITBT As EDITBALLOONTIP
     With EDITBT
     .cbStruct = LenB(EDITBT)
@@ -1774,40 +2003,40 @@ End Function
 
 Public Function HideBalloonTip() As Boolean
 Attribute HideBalloonTip.VB_Description = "Hides any associated balloon tip. Requires comctl32.dll version 6.0 or higher."
-If TextBoxHandle <> 0 And ComCtlsSupportLevel() >= 1 Then HideBalloonTip = CBool(SendMessage(TextBoxHandle, EM_HIDEBALLOONTIP, 0, ByVal 0&) <> 0)
+If TextBoxHandle <> NULL_PTR And ComCtlsSupportLevel() >= 1 Then HideBalloonTip = CBool(SendMessage(TextBoxHandle, EM_HIDEBALLOONTIP, 0, ByVal 0&) <> 0)
 End Function
 
 Public Property Get LeftMargin() As Single
 Attribute LeftMargin.VB_Description = "Returns/sets the widths of the left margin."
 Attribute LeftMargin.VB_MemberFlags = "400"
-If TextBoxHandle <> 0 Then LeftMargin = UserControl.ScaleX(LoWord(SendMessage(TextBoxHandle, EM_GETMARGINS, 0, ByVal 0&)), vbPixels, vbContainerSize)
+If TextBoxHandle <> NULL_PTR Then LeftMargin = UserControl.ScaleX(LoWord(CLng(SendMessage(TextBoxHandle, EM_GETMARGINS, 0, ByVal 0&))), vbPixels, vbContainerSize)
 End Property
 
 Public Property Let LeftMargin(ByVal Value As Single)
 If Value = EC_USEFONTINFO Or Value = -1 Then
-    If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, EM_SETMARGINS, EC_LEFTMARGIN, ByVal EC_USEFONTINFO
+    If TextBoxHandle <> NULL_PTR Then SendMessage TextBoxHandle, EM_SETMARGINS, EC_LEFTMARGIN, ByVal EC_USEFONTINFO
 Else
     If Value < 0 Then Err.Raise 380
     Dim IntValue As Integer
     IntValue = CInt(UserControl.ScaleX(Value, vbContainerSize, vbPixels))
-    If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, EM_SETMARGINS, EC_LEFTMARGIN, ByVal MakeDWord(IntValue, 0)
+    If TextBoxHandle <> NULL_PTR Then SendMessage TextBoxHandle, EM_SETMARGINS, EC_LEFTMARGIN, ByVal MakeDWord(IntValue, 0)
 End If
 End Property
 
 Public Property Get RightMargin() As Single
 Attribute RightMargin.VB_Description = "Returns/sets the widths of the right margin."
 Attribute RightMargin.VB_MemberFlags = "400"
-If TextBoxHandle <> 0 Then RightMargin = UserControl.ScaleX(HiWord(SendMessage(TextBoxHandle, EM_GETMARGINS, 0, ByVal 0&)), vbPixels, vbContainerSize)
+If TextBoxHandle <> NULL_PTR Then RightMargin = UserControl.ScaleX(HiWord(CLng(SendMessage(TextBoxHandle, EM_GETMARGINS, 0, ByVal 0&))), vbPixels, vbContainerSize)
 End Property
 
 Public Property Let RightMargin(ByVal Value As Single)
 If Value = EC_USEFONTINFO Or Value = -1 Then
-    If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, EM_SETMARGINS, EC_RIGHTMARGIN, ByVal EC_USEFONTINFO
+    If TextBoxHandle <> NULL_PTR Then SendMessage TextBoxHandle, EM_SETMARGINS, EC_RIGHTMARGIN, ByVal EC_USEFONTINFO
 Else
     If Value < 0 Then Err.Raise 380
     Dim IntValue As Integer
     IntValue = CInt(UserControl.ScaleX(Value, vbContainerSize, vbPixels))
-    If TextBoxHandle <> 0 Then SendMessage TextBoxHandle, EM_SETMARGINS, EC_RIGHTMARGIN, ByVal MakeDWord(0, IntValue)
+    If TextBoxHandle <> NULL_PTR Then SendMessage TextBoxHandle, EM_SETMARGINS, EC_RIGHTMARGIN, ByVal MakeDWord(0, IntValue)
 End If
 End Property
 
@@ -1817,11 +2046,11 @@ TextBoxNetAddressFormat = TxtNetAddressFormatNone
 TextBoxNetAddressString = vbNullString
 TextBoxNetAddressPortNumber = 0
 TextBoxNetAddressPrefixLength = 0
-If TextBoxHandle <> 0 And PropNetAddressValidator = True Then
+If TextBoxHandle <> NULL_PTR And PropNetAddressValidator = True Then
     If ComCtlsSupportLevel() >= 2 Then
         Dim NCADDR As NC_ADDRESS, NETADDRINFO_UNSPECIFIED As NET_ADDRESS_INFO_UNSPECIFIED, ErrVal As Long
         NCADDR.pAddrInfo = VarPtr(NETADDRINFO_UNSPECIFIED)
-        ErrVal = SendMessage(TextBoxHandle, NCM_GETADDRESS, 0, ByVal VarPtr(NCADDR))
+        ErrVal = CLng(SendMessage(TextBoxHandle, NCM_GETADDRESS, 0, ByVal VarPtr(NCADDR)))
         Const ERROR_SUCCESS As Long = &H0, S_FALSE As Long = &H1, ERROR_INSUFFICIENT_BUFFER As Long = &H7A, ERROR_INVALID_PARAMETER As Long = &H57, E_INVALIDARG As Long = &H80070057
         Select Case ErrVal
             Case ERROR_SUCCESS
@@ -1879,7 +2108,7 @@ End Sub
 
 Public Sub ShowNetAddressErrorTip()
 Attribute ShowNetAddressErrorTip.VB_Description = "Display an error ballon tip when an network address string is invalid. Requires comctl32.dll version 6.1 or higher."
-If TextBoxHandle <> 0 And PropNetAddressValidator = True And ComCtlsSupportLevel() >= 2 Then
+If TextBoxHandle <> NULL_PTR And PropNetAddressValidator = True And ComCtlsSupportLevel() >= 2 Then
     If GetFocus() <> TextBoxHandle Then SetFocusAPI UserControl.hWnd
     SendMessage TextBoxHandle, NCM_DISPLAYERRORTIP, 0, ByVal 0&
 End If
@@ -1909,7 +2138,34 @@ Attribute NetAddressPrefixLength.VB_MemberFlags = "400"
 NetAddressPrefixLength = TextBoxNetAddressPrefixLength
 End Property
 
+#If ImplementPreTranslateMsg = True Then
+
+Private Function PreTranslateMsg(ByVal lParam As LongPtr) As LongPtr
+PreTranslateMsg = 0
+If lParam <> NULL_PTR Then
+    Dim Msg As TMSG, Handled As Boolean, RetVal As Long
+    CopyMemory Msg, ByVal lParam, LenB(Msg)
+    IOleInPlaceActiveObjectVB_TranslateAccelerator Handled, RetVal, Msg.hWnd, Msg.Message, Msg.wParam, Msg.lParam, GetShiftStateFromMsg()
+    If Handled = True Then
+        PreTranslateMsg = 1
+    ElseIf PropWantReturn = True Then
+        If Msg.Message = WM_KEYDOWN Or Msg.Message = WM_KEYUP Then
+            If (CLng(Msg.wParam) And &HFF&) = vbKeyReturn Then
+                SendMessage Msg.hWnd, Msg.Message, Msg.wParam, ByVal Msg.lParam
+                PreTranslateMsg = 1
+            End If
+        End If
+    End If
+End If
+End Function
+
+#End If
+
+#If VBA7 Then
+Private Function ISubclass_Message(ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, ByVal dwRefData As LongPtr) As LongPtr
+#Else
 Private Function ISubclass_Message(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal dwRefData As Long) As Long
+#End If
 Select Case dwRefData
     Case 1
         ISubclass_Message = WindowProcControl(hWnd, wMsg, wParam, lParam)
@@ -1918,27 +2174,49 @@ Select Case dwRefData
 End Select
 End Function
 
-Private Function WindowProcControl(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Function WindowProcControl(ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
 Select Case wMsg
     Case WM_SETFOCUS
         If wParam <> UserControl.hWnd Then SetFocusAPI UserControl.hWnd: Exit Function
+        
+        #If ImplementPreTranslateMsg = True Then
+        
+        If UsePreTranslateMsg = False Then Call ActivateIPAO(Me) Else Call ComCtlsPreTranslateMsgActivate(hWnd)
+        
+        #Else
+        
         Call ActivateIPAO(Me)
+        
+        #End If
+        
     Case WM_KILLFOCUS
+        
+        #If ImplementPreTranslateMsg = True Then
+        
+        If UsePreTranslateMsg = False Then Call DeActivateIPAO Else Call ComCtlsPreTranslateMsgDeActivate
+        
+        #Else
+        
         Call DeActivateIPAO
+        
+        #End If
+        
     Case WM_SETCURSOR
-        If LoWord(lParam) = HTCLIENT Then
+        If LoWord(CLng(lParam)) = HTCLIENT Then
             If PropOLEDragMode = vbOLEDragAutomatic Then
-                Dim P3 As POINTAPI
+                Dim Pos As Long, P1 As POINTAPI
                 Dim CharPos As Long, CaretPos As Long
                 Dim SelStart As Long, SelEnd As Long
-                GetCursorPos P3
-                ScreenToClient TextBoxHandle, P3
-                CharPos = CIntToUInt(LoWord(SendMessage(TextBoxHandle, EM_CHARFROMPOS, 0, ByVal MakeDWord(P3.X, P3.Y))))
-                CaretPos = SendMessage(TextBoxHandle, EM_POSFROMCHAR, CharPos, ByVal 0&)
+                Pos = GetMessagePos()
+                P1.X = Get_X_lParam(Pos)
+                P1.Y = Get_Y_lParam(Pos)
+                ScreenToClient TextBoxHandle, P1
+                CharPos = CIntToUInt(LoWord(CLng(SendMessage(TextBoxHandle, EM_CHARFROMPOS, 0, ByVal MakeDWord(P1.X, P1.Y)))))
+                CaretPos = CLng(SendMessage(TextBoxHandle, EM_POSFROMCHAR, CharPos, ByVal 0&))
                 SendMessage TextBoxHandle, EM_GETSEL, VarPtr(SelStart), ByVal VarPtr(SelEnd)
                 TextBoxAutoDragInSel = CBool(CharPos >= SelStart And CharPos <= SelEnd And CaretPos > -1 And (SelEnd - SelStart) > 0)
                 If TextBoxAutoDragInSel = True Then
-                    SetCursor LoadCursor(0, MousePointerID(vbArrow))
+                    SetCursor LoadCursor(NULL_PTR, MousePointerID(vbArrow))
                     WindowProcControl = 1
                     Exit Function
                 End If
@@ -1946,7 +2224,7 @@ Select Case wMsg
                 TextBoxAutoDragInSel = False
             End If
             If MousePointerID(PropMousePointer) <> 0 Then
-                SetCursor LoadCursor(0, MousePointerID(PropMousePointer))
+                SetCursor LoadCursor(NULL_PTR, MousePointerID(PropMousePointer))
                 WindowProcControl = 1
                 Exit Function
             ElseIf PropMousePointer = 99 Then
@@ -1957,45 +2235,48 @@ Select Case wMsg
                 End If
             End If
         End If
-    Case WM_MOUSEACTIVATE
-        Static InProc As Boolean
-        If ComCtlsRootIsEditor(hWnd) = False And GetFocus() <> TextBoxHandle Then
-            If InProc = True Or LoWord(lParam) = HTBORDER Then WindowProcControl = MA_NOACTIVATEANDEAT: Exit Function
-            Select Case HiWord(lParam)
-                Case WM_LBUTTONDOWN
-                    On Error Resume Next
-                    With UserControl
-                    If .Extender.CausesValidation = True Then
-                        InProc = True
-                        Call ComCtlsTopParentValidateControls(Me)
-                        InProc = False
-                        If Err.Number = 380 Then
-                            WindowProcControl = MA_NOACTIVATEANDEAT
-                        Else
-                            SetFocusAPI .hWnd
-                            WindowProcControl = MA_NOACTIVATE
-                        End If
-                    Else
-                        SetFocusAPI .hWnd
-                        WindowProcControl = MA_NOACTIVATE
-                    End If
-                    End With
-                    On Error GoTo 0
-                    Exit Function
-            End Select
+    Case WM_LBUTTONDOWN
+        If PropOLEDragMode = vbOLEDragAutomatic And TextBoxAutoDragInSel = True Then
+            If GetFocus() <> hWnd Then SetFocusAPI UserControl.hWnd ' UCNoSetFocusFwd not applicable
+            Dim P2 As POINTAPI, P3 As POINTAPI, XY As Currency
+            P2.X = Get_X_lParam(lParam)
+            P2.Y = Get_Y_lParam(lParam)
+            P3.X = P2.X
+            P3.Y = P2.Y
+            ClientToScreen TextBoxHandle, P3
+            CopyMemory ByVal VarPtr(XY), ByVal VarPtr(P3), 8
+            RaiseEvent MouseDown(vbLeftButton, GetShiftStateFromParam(wParam), UserControl.ScaleX(P2.X, vbPixels, vbTwips), UserControl.ScaleY(P2.Y, vbPixels, vbTwips))
+            If DragDetect(TextBoxHandle, XY) <> 0 Then
+                TextBoxIsClick = False
+                Me.OLEDrag
+                WindowProcControl = 0
+            Else
+                WindowProcControl = ComCtlsDefaultProc(hWnd, wMsg, wParam, lParam)
+                ReleaseCapture
+                RaiseEvent MouseUp(vbLeftButton, GetShiftStateFromParam(wParam), UserControl.ScaleX(P2.X, vbPixels, vbTwips), UserControl.ScaleY(P2.Y, vbPixels, vbTwips))
+            End If
+            Exit Function
+        Else
+            If GetFocus() <> hWnd Then UCNoSetFocusFwd = True: SetFocusAPI UserControl.hWnd: UCNoSetFocusFwd = False
         End If
-    Case WM_KEYDOWN, WM_KEYUP
+    Case WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP
         Dim KeyCode As Integer
-        KeyCode = wParam And &HFF&
-        If wMsg = WM_KEYDOWN Then
+        KeyCode = CLng(wParam) And &HFF&
+        If wMsg = WM_KEYDOWN Or wMsg = WM_KEYUP Then
+            If wMsg = WM_KEYDOWN Then
+                RaiseEvent KeyDown(KeyCode, GetShiftStateFromMsg())
+            ElseIf wMsg = WM_KEYUP Then
+                RaiseEvent KeyUp(KeyCode, GetShiftStateFromMsg())
+            End If
+            If KeyCode = vbKeyInsert And PropAllowOverType = True Then
+                If wMsg = WM_KEYDOWN Then PropOverTypeMode = Not PropOverTypeMode
+            End If
+            TextBoxCharCodeCache = ComCtlsPeekCharCode(hWnd)
+        ElseIf wMsg = WM_SYSKEYDOWN Then
             RaiseEvent KeyDown(KeyCode, GetShiftStateFromMsg())
-        ElseIf wMsg = WM_KEYUP Then
+        ElseIf wMsg = WM_SYSKEYUP Then
             RaiseEvent KeyUp(KeyCode, GetShiftStateFromMsg())
         End If
-        If KeyCode = vbKeyInsert And PropAllowOverType = True Then
-            If wMsg = WM_KEYDOWN Then PropOverTypeMode = Not PropOverTypeMode
-        End If
-        TextBoxCharCodeCache = ComCtlsPeekCharCode(hWnd)
         wParam = KeyCode
     Case WM_CHAR
         Dim KeyChar As Integer
@@ -2003,7 +2284,7 @@ Select Case wMsg
             KeyChar = CUIntToInt(TextBoxCharCodeCache And &HFFFF&)
             TextBoxCharCodeCache = 0
         Else
-            KeyChar = CUIntToInt(wParam And &HFFFF&)
+            KeyChar = CUIntToInt(CLng(wParam) And &HFFFF&)
         End If
         RaiseEvent KeyPress(KeyChar)
         If (wParam And &HFFFF&) <> 0 And KeyChar = 0 Then
@@ -2015,9 +2296,9 @@ Select Case wMsg
             If wParam >= 32 Then ' 0 to 31 are non-printable
                 If Me.SelLength = 0 Then
                     Dim FirstCharPos As Long, Length As Long
-                    FirstCharPos = SendMessage(TextBoxHandle, EM_LINEINDEX, -1, ByVal 0&)
+                    FirstCharPos = CLng(SendMessage(TextBoxHandle, EM_LINEINDEX, -1, ByVal 0&))
                     If FirstCharPos > -1 Then
-                        Length = SendMessage(TextBoxHandle, EM_LINELENGTH, FirstCharPos, ByVal 0&)
+                        Length = CLng(SendMessage(TextBoxHandle, EM_LINELENGTH, FirstCharPos, ByVal 0&))
                         If Length > 0 Then
                             If Me.SelStart < (FirstCharPos + Length) Then
                                 Me.SelLength = 1
@@ -2029,7 +2310,19 @@ Select Case wMsg
             End If
         End If
     Case WM_UNICHAR
-        If wParam = UNICODE_NOCHAR Then WindowProcControl = 1 Else SendMessage hWnd, WM_CHAR, wParam, ByVal lParam
+        If wParam = UNICODE_NOCHAR Then
+            WindowProcControl = 1
+        Else
+            Dim UTF16 As String
+            UTF16 = UTF32CodePoint_To_UTF16(CLng(wParam))
+            If Len(UTF16) = 1 Then
+                SendMessage hWnd, WM_CHAR, CIntToUInt(AscW(UTF16)), ByVal lParam
+            ElseIf Len(UTF16) = 2 Then
+                SendMessage hWnd, WM_CHAR, CIntToUInt(AscW(Left$(UTF16, 1))), ByVal lParam
+                SendMessage hWnd, WM_CHAR, CIntToUInt(AscW(Right$(UTF16, 1))), ByVal lParam
+            End If
+            WindowProcControl = 0
+        End If
         Exit Function
     Case WM_INPUTLANGCHANGE
         Call ComCtlsSetIMEMode(hWnd, TextBoxIMCHandle, PropIMEMode)
@@ -2038,32 +2331,39 @@ Select Case wMsg
     Case WM_IME_CHAR
         SendMessage hWnd, WM_CHAR, wParam, ByVal lParam
         Exit Function
-    Case WM_LBUTTONDOWN
-        If PropOLEDragMode = vbOLEDragAutomatic And TextBoxAutoDragInSel = True Then
-            Dim P1 As POINTAPI
-            P1.X = Get_X_lParam(lParam)
-            P1.Y = Get_Y_lParam(lParam)
-            ClientToScreen TextBoxHandle, P1
-            If DragDetect(TextBoxHandle, CUIntToInt(P1.X And &HFFFF&), CUIntToInt(P1.Y And &HFFFF&)) <> 0 Then
-                TextBoxIsClick = False
-                Me.OLEDrag
+    Case WM_DROPFILES
+        If wParam <> NULL_PTR Then
+            Dim FileCount As Long
+            FileCount = DragQueryFile(wParam, -1, NULL_PTR, 0)
+            If FileCount > 0 Then
+                Dim FileList() As String, iFile As Long, FileBuffer As String, P4 As POINTAPI
+                ReDim FileList(0 To (FileCount - 1)) As String
+                For iFile = 0 To (FileCount - 1)
+                    FileBuffer = String(DragQueryFile(wParam, iFile, NULL_PTR, 0), vbNullChar)
+                    DragQueryFile wParam, iFile, StrPtr(FileBuffer), Len(FileBuffer) + 1
+                    FileList(iFile) = FileBuffer
+                Next iFile
+                DragQueryPoint wParam, P4
+                RaiseEvent DropFiles(FileList(), UserControl.ScaleX(P4.X, vbPixels, vbContainerPosition), UserControl.ScaleY(P4.Y, vbPixels, vbContainerPosition))
             End If
-            Exit Function
+            DragFinish wParam
         End If
+        WindowProcControl = 0
+        Exit Function
     Case WM_VSCROLL, WM_HSCROLL
         ' The notification codes EN_HSCROLL and EN_VSCROLL are not sent when clicking the scroll bar thumb itself.
-        If LoWord(wParam) = SB_THUMBTRACK Then RaiseEvent Scroll
+        If LoWord(CLng(wParam)) = SB_THUMBTRACK Then RaiseEvent Scroll
     Case WM_CONTEXTMENU
         If wParam = TextBoxHandle Then
-            Dim P2 As POINTAPI, Handled As Boolean
-            P2.X = Get_X_lParam(lParam)
-            P2.Y = Get_Y_lParam(lParam)
-            If P2.X > 0 And P2.Y > 0 Then
-                ScreenToClient TextBoxHandle, P2
-                RaiseEvent ContextMenu(Handled, UserControl.ScaleX(P2.X, vbPixels, vbContainerPosition), UserControl.ScaleY(P2.Y, vbPixels, vbContainerPosition))
-            ElseIf P2.X = -1 And P2.Y = -1 Then
+            Dim P5 As POINTAPI, Handled As Boolean
+            P5.X = Get_X_lParam(lParam)
+            P5.Y = Get_Y_lParam(lParam)
+            If P5.X = -1 And P5.Y = -1 Then
                 ' If the user types SHIFT + F10 then the X and Y coordinates are -1.
                 RaiseEvent ContextMenu(Handled, -1, -1)
+            Else
+                ScreenToClient TextBoxHandle, P5
+                RaiseEvent ContextMenu(Handled, UserControl.ScaleX(P5.X, vbPixels, vbContainerPosition), UserControl.ScaleY(P5.Y, vbPixels, vbContainerPosition))
             End If
             If Handled = True Then Exit Function
         End If
@@ -2072,10 +2372,10 @@ Select Case wMsg
             ' According to MSDN:
             ' The EN_CHANGE notification code is not sent when the ES_MULTILINE style is used and the text is sent through WM_SETTEXT.
             Dim Buffer(0 To 1) As String
-            Buffer(0) = String(SendMessage(hWnd, WM_GETTEXTLENGTH, 0, ByVal 0&), vbNullChar)
+            Buffer(0) = String$(CLng(SendMessage(hWnd, WM_GETTEXTLENGTH, 0, ByVal 0&)), vbNullChar)
             SendMessage hWnd, WM_GETTEXT, Len(Buffer(0)) + 1, ByVal StrPtr(Buffer(0))
             If lParam <> 0 Then
-                Buffer(1) = String(lstrlen(lParam), vbNullChar)
+                Buffer(1) = String$(lstrlen(lParam), vbNullChar)
                 CopyMemory ByVal StrPtr(Buffer(1)), ByVal lParam, LenB(Buffer(1))
             End If
             If Buffer(0) <> Buffer(1) Then
@@ -2108,6 +2408,15 @@ Select Case wMsg
                 End If
             End If
         End If
+    
+    #If ImplementPreTranslateMsg = True Then
+    
+    Case UM_PRETRANSLATEMSG
+        WindowProcControl = PreTranslateMsg(lParam)
+        Exit Function
+    
+    #End If
+    
 End Select
 WindowProcControl = ComCtlsDefaultProc(hWnd, wMsg, wParam, lParam)
 Select Case wMsg
@@ -2157,10 +2466,10 @@ Select Case wMsg
 End Select
 End Function
 
-Private Function WindowProcUserControl(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Function WindowProcUserControl(ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
 Select Case wMsg
     Case WM_COMMAND
-        Select Case HiWord(wParam)
+        Select Case HiWord(CLng(wParam))
             Case EN_CHANGE
                 If TextBoxChangeFrozen = False Then
                     UserControl.PropertyChanged "Text"
@@ -2177,5 +2486,5 @@ Select Case wMsg
         End Select
 End Select
 WindowProcUserControl = ComCtlsDefaultProc(hWnd, wMsg, wParam, lParam)
-If wMsg = WM_SETFOCUS Then SetFocusAPI TextBoxHandle
+If wMsg = WM_SETFOCUS And UCNoSetFocusFwd = False Then SetFocusAPI TextBoxHandle
 End Function

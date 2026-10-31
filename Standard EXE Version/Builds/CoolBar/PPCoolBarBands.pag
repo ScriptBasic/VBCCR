@@ -345,11 +345,11 @@ Begin VB.PropertyPage PPCoolBarBands
    End
    Begin VB.TextBox TextIndex 
       BackColor       =   &H8000000F&
+      Enabled         =   0   'False
       Height          =   315
       Left            =   1200
       Locked          =   -1  'True
       TabIndex        =   1
-      Text            =   "0 of 0"
       Top             =   120
       Width           =   870
    End
@@ -482,6 +482,18 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
 Private Type ShadowBandStruct
 Caption As String
 Key As String
@@ -507,9 +519,16 @@ UseChevron As Boolean
 HideCaption As Boolean
 FixedBackground As Boolean
 End Type
-Private Declare Function OleCreatePropertyFrame Lib "olepro32" (ByVal hWndOwner As Long, ByVal X As Long, ByVal Y As Long, ByVal lpszCaption As Long, ByVal cObjects As Long, ByRef pUnk As IUnknown, ByVal cPages As Long, ByRef pPageCLSID As Any, ByVal LCID As Long, ByVal dwReserved As Long, ByVal pvReserved As Long) As Long
+#If VBA7 Then
+Private Declare PtrSafe Function OleCreatePropertyFrame Lib "oleaut32" (ByVal hWndOwner As LongPtr, ByVal X As Long, ByVal Y As Long, ByVal lpszCaption As LongPtr, ByVal cObjects As Long, ByRef pUnk As IUnknown, ByVal cPages As Long, ByRef pPageCLSID As Any, ByVal LCID As Long, ByVal dwReserved As Long, ByVal pvReserved As LongPtr) As Long
+Private Declare PtrSafe Function CLSIDFromString Lib "ole32" (ByVal lpszProgID As LongPtr, ByRef pCLSID As Any) As Long
+#Else
+Private Declare Function OleCreatePropertyFrame Lib "oleaut32" (ByVal hWndOwner As Long, ByVal X As Long, ByVal Y As Long, ByVal lpszCaption As Long, ByVal cObjects As Long, ByRef pUnk As IUnknown, ByVal cPages As Long, ByRef pPageCLSID As Any, ByVal LCID As Long, ByVal dwReserved As Long, ByVal pvReserved As Long) As Long
 Private Declare Function CLSIDFromString Lib "ole32" (ByVal lpszProgID As Long, ByRef pCLSID As Any) As Long
+#End If
 Private Const CLSID_StandardColorPage As String = "{7EBDAAE1-8120-11CF-899F-00AA00688B10}"
+Private Const DISPID_HWND As Long = -515
+Private SelectedControl As Object
 Private CurrIndex As Long, CurrPicture As IPictureDisp
 Private PropShadowBands() As ShadowBandStruct
 Private ChildEnumerated As Boolean
@@ -547,7 +566,6 @@ On Error GoTo 0
 If CurrIndex > 0 Then
     With PropShadowBands(CurrIndex)
     .Caption = TextCaption.Text
-    .Key = TextKey.Text
     .Tag = TextTag.Text
     .ChildName = IIf(ComboChild.ListIndex > 0, ComboChild.List(ComboChild.ListIndex), vbNullString)
     Dim i As Long
@@ -556,7 +574,7 @@ If CurrIndex > 0 Then
             If PropShadowBands(i).ChildName = PropShadowBands(CurrIndex).ChildName Then PropShadowBands(i).ChildName = vbNullString
         End If
     Next i
-    .Style = ComboStyle.ItemData(ComboStyle.ListIndex)
+    .Style = CLng(ComboStyle.ItemData(ComboStyle.ListIndex))
     If IsNumeric(TextImage.Text) Then
         .Image = CLng(TextImage.Text)
     Else
@@ -566,7 +584,7 @@ If CurrIndex > 0 Then
     .MinWidth = CSng(TextMinWidth.Text)
     .MinHeight = CSng(TextMinHeight.Text)
     .IdealWidth = CSng(TextIdealWidth.Text)
-    .Gripper = ComboGripper.ItemData(ComboGripper.ListIndex)
+    .Gripper = CLng(ComboGripper.ItemData(ComboGripper.ListIndex))
     .ToolTipText = TextToolTipText.Text
     .UseCoolBarPicture = CBool(CheckUseCoolBarPicture.Value = vbChecked)
     Set .Picture = CurrPicture
@@ -581,15 +599,13 @@ If CurrIndex > 0 Then
     .FixedBackground = CBool(CheckFixedBackground.Value = vbChecked)
     End With
     With PropertyPage.SelectedControls(0)
-    If .Bands.Count > 0 Then
-        For i = 1 To .Bands.Count
-            Set .Bands(i).Child = Nothing
-        Next i
-    End If
+    For i = 1 To .Bands.Count
+        Set .Bands(i).Child = Nothing
+    Next i
     .Bands.Clear
     For i = 0 To UBound(PropShadowBands())
         If i > 0 Then
-            With .Bands.Add(i, PropShadowBands(i).Key, PropShadowBands(i).Caption, PropShadowBands(i).Image, PropShadowBands(i).NewRow, PropShadowBands(i).ChildName, PropShadowBands(i).Visible)
+            With .Bands.Add(i, IIf(i <> CurrIndex, PropShadowBands(i).Key, vbNullString), PropShadowBands(i).Caption, PropShadowBands(i).Image, PropShadowBands(i).NewRow, PropShadowBands(i).ChildName, PropShadowBands(i).Visible)
             .Tag = PropShadowBands(i).Tag
             .Style = PropShadowBands(i).Style
             If PropShadowBands(i).Style <> CbrBandStyleFixedSize Then .Width = PropShadowBands(i).Width
@@ -617,12 +633,27 @@ If CurrIndex > 0 Then
     TextIdealWidth.Text = CStr(.IdealWidth)
     CheckNewRow.Value = IIf(.NewRow = True, vbChecked, vbUnchecked)
     End With
+    If Not TextKey.Text = vbNullString Then
+        If .Bands.Exists(TextKey.Text) = True Then
+            .Bands(CurrIndex).Key = PropShadowBands(CurrIndex).Key
+            MsgBox "This key is already associated with an element of this collection.", vbCritical + vbOKOnly
+            FreezeChanged = True
+            TextKey.Text = PropShadowBands(CurrIndex).Key
+            FreezeChanged = False
+        Else
+            PropShadowBands(CurrIndex).Key = TextKey.Text
+            .Bands(CurrIndex).Key = PropShadowBands(CurrIndex).Key
+        End If
+    Else
+        PropShadowBands(CurrIndex).Key = vbNullString
+    End If
     End With
 End If
 Call PropertyPage_SelectionChanged
 End Sub
 
 Private Sub PropertyPage_SelectionChanged()
+If Not SelectedControl Is PropertyPage.SelectedControls(0) Then Set SelectedControl = PropertyPage.SelectedControls(0): CurrIndex = 0
 With PropertyPage.SelectedControls(0)
 If .Bands.Count > 0 And CurrIndex = 0 Then
     Call FillShadowBands
@@ -640,13 +671,24 @@ If .Bands.Count > 0 And CurrIndex = 0 Then
         ErrValue = Err.Number
         On Error GoTo 0
         If ErrValue = 0 Then
-            Dim ControlEnum As Object, Handle As Long
+            Dim ControlEnum As Object, Handle As LongPtr
             For Each ControlEnum In ContainedControls
                 On Error Resume Next
-                Handle = ControlEnum.hWndUserControl
-                If Err.Number <> 0 Then Handle = ControlEnum.hWnd
+                Handle = GetWindowFromObject(ControlEnum.Object)
                 On Error GoTo 0
-                If ControlIsValid(ControlEnum) = True And Handle <> 0 Then ComboChild.AddItem ProperControlName(ControlEnum)
+                If Handle = NULL_PTR Then
+                    On Error Resume Next
+                    Handle = ControlEnum.hWndUserControl
+                    If Err.Number <> 0 Then Handle = ControlEnum.hWnd
+                    On Error GoTo 0
+                    If Handle = NULL_PTR Then
+                        On Error Resume Next
+                        Handle = CallByDispId(ControlEnum.Object, DISPID_HWND, VbGet Or VbMethod)
+                        On Error GoTo 0
+                    End If
+                End If
+                If ControlIsValid(ControlEnum) = True And Handle <> NULL_PTR Then ComboChild.AddItem ProperControlName(ControlEnum)
+                Handle = NULL_PTR
             Next ControlEnum
         End If
         ChildEnumerated = True
@@ -690,6 +732,8 @@ If .Bands.Count > 0 And CurrIndex = 0 Then
     CheckFixedBackground.Value = IIf(.FixedBackground = True, vbChecked, vbUnchecked)
     FreezeChanged = False
     End With
+ElseIf CurrIndex = 0 Then
+    TextIndex.Text = "0 of 0"
 End If
 Call ApplyControlStates
 End With
@@ -1204,7 +1248,7 @@ If CheckUseCoolBarPicture.Value = vbUnchecked Then
     PictureCommandPictureBrowse.Enabled = True
     CommandPictureBrowse.Enabled = True
     If Not CurrPicture Is Nothing Then
-        If CurrPicture.Handle <> 0 Then
+        If CurrPicture.Handle <> NULL_PTR Then
             PictureCommandPictureNo.Enabled = True
             CommandPictureNo.Enabled = True
         Else
@@ -1239,7 +1283,7 @@ If CurrIndex > 0 Then
     If .ShowOpen = True Then
         Set CurrPicture = PictureFromPath(.FileName)
         If Not CurrPicture Is Nothing Then
-            If CurrPicture.Handle <> 0 Then
+            If CurrPicture.Handle <> NULL_PTR Then
                 If CurrPicture.Type = vbPicTypeBitmap Then
                     PictureCommandPictureNo.Enabled = True
                     CommandPictureNo.Enabled = True
@@ -1304,7 +1348,7 @@ PrevColors(0) = CommandBackColor.BackColor
 PrevColors(1) = CommandForeColor.BackColor
 Dim BandProperties As New CbrBandProperties
 BandProperties.FInit CommandBackColor, CommandForeColor, CommandBackColor.BackColor, CommandForeColor.BackColor
-OleCreatePropertyFrame PropertyPage.hWnd, 0, 0, StrPtr("Band"), 1, BandProperties, 1, CLSID, 0, 0, 0
+OleCreatePropertyFrame PropertyPage.hWnd, 0, 0, StrPtr("Band"), 1, BandProperties, 1, CLSID, 0, 0, NULL_PTR
 If PrevColors(0) <> CommandBackColor.BackColor Or PrevColors(1) <> CommandForeColor.BackColor Then PropertyPage.Changed = True
 End Sub
 
@@ -1342,6 +1386,7 @@ Private Sub ApplyControlStates()
 With PropertyPage.SelectedControls(0)
 FreezeChanged = True
 If .Bands.Count > 0 Then
+    TextIndex.Enabled = True
     If CurrIndex > 1 Then
         CommandBack.Enabled = True
     Else
@@ -1389,7 +1434,7 @@ If .Bands.Count > 0 Then
         PictureCommandPictureBrowse.Enabled = True
         CommandPictureBrowse.Enabled = True
         If Not CurrPicture Is Nothing Then
-            If CurrPicture.Handle <> 0 Then
+            If CurrPicture.Handle <> NULL_PTR Then
                 PictureCommandPictureNo.Enabled = True
                 CommandPictureNo.Enabled = True
                 LabelPictureType.Caption = "(Bitmap)"
@@ -1407,7 +1452,7 @@ If .Bands.Count > 0 Then
         LabelPicture.Enabled = False
         LabelPictureType.Enabled = False
         If Not CurrPicture Is Nothing Then
-            If CurrPicture.Handle <> 0 Then
+            If CurrPicture.Handle <> NULL_PTR Then
                 LabelPictureType.Caption = "(Bitmap)"
             Else
                 LabelPictureType.Caption = "(None)"
@@ -1443,6 +1488,7 @@ If .Bands.Count > 0 Then
     CheckHideCaption.Enabled = True
     CheckFixedBackground.Enabled = True
 Else
+    TextIndex.Enabled = False
     CommandBack.Enabled = False
     CommandNext.Enabled = False
     CommandRemove.Enabled = False

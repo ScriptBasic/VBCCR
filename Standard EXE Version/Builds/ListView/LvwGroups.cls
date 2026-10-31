@@ -12,7 +12,19 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
-Private ShadowObjectPointer As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+Private ShadowObjectPointer As LongPtr
 Private PropGroup As Collection
 Private PropSorted As Boolean
 Private PropSortOrder As LvwSortOrderConstants
@@ -20,7 +32,7 @@ Private PropSortType As LvwSortTypeConstants
 Implements ISubclass
 
 Private Function ShadowListView() As ListView
-ComCtlsPtrToShadowObj ShadowListView, ShadowObjectPointer
+ComCtlsObjSetAddRef ShadowListView, ShadowObjectPointer
 End Function
 
 Private Sub Class_Initialize()
@@ -41,11 +53,24 @@ Friend Sub FInit(ByVal Object As ListView)
 ShadowObjectPointer = ObjPtr(Object)
 End Sub
 
+Friend Sub FChangeKey(ByVal Index As Long, ByRef OldKey As String, ByVal NewKey As String)
+Dim Item As Variant
+Set Item = PropGroup(Index)
+If NewKey = vbNullString Then
+    PropGroup.Add Item, , Index
+    OldKey = vbNullString
+Else
+    PropGroup.Add Item, NewKey, Index
+    OldKey = NewKey
+End If
+PropGroup.Remove Index + 1
+End Sub
+
 Public Function Add(Optional ByVal Index As Long, Optional ByVal Key As String, Optional ByVal Header As String, Optional ByVal HeaderAlignment As LvwGroupHeaderAlignmentConstants, Optional ByVal Footer As String, Optional ByVal FooterAlignment As LvwGroupFooterAlignmentConstants) As LvwGroup
 Attribute Add.VB_Description = "Adds a group to the groups collection."
 If Index > (PropGroup.Count + 1) Or Index < 0 Then Err.Raise Number:=35600, Description:="Index out of bounds"
 Dim NewGroup As New LvwGroup, This As ISubclass
-NewGroup.FInit ShadowListView, Key
+NewGroup.FInit ShadowObjectPointer, Key
 If PropSorted = True Then Set This = Me
 ShadowListView.FGroupsAdd Index, NewGroup, This, Header, HeaderAlignment, Footer, FooterAlignment
 If Key = vbNullString Then
@@ -139,7 +164,7 @@ End Property
 
 Public Property Let SortType(ByVal Value As LvwSortTypeConstants)
 Select Case Value
-    Case LvwSortTypeBinary, LvwSortTypeText, LvwSortTypeNumeric, LvwSortTypeCurrency, LvwSortTypeDate
+    Case LvwSortTypeBinary, LvwSortTypeText, LvwSortTypeNumeric, LvwSortTypeCurrency, LvwSortTypeDate, LvwSortTypeLogical
         PropSortType = Value
     Case Else
         Err.Raise 380
@@ -147,7 +172,11 @@ End Select
 If PropSorted = True Then ShadowListView.FGroupsSort Me
 End Property
 
+#If VBA7 Then
+Private Function ISubclass_Message(ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, ByVal dwRefData As LongPtr) As LongPtr
+#Else
 Private Function ISubclass_Message(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal dwRefData As Long) As Long
+#End If
 Select Case PropSortType
     Case LvwSortTypeBinary
         dwRefData = 20
@@ -159,6 +188,8 @@ Select Case PropSortType
         dwRefData = 23
     Case LvwSortTypeDate
         dwRefData = 24
+    Case LvwSortTypeLogical
+        dwRefData = 25
 End Select
 On Error Resume Next
 Dim This As ISubclass

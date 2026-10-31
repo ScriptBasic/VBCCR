@@ -5,6 +5,7 @@ Begin VB.UserControl CommandButtonW
    ClientTop       =   0
    ClientWidth     =   2400
    DefaultCancel   =   -1  'True
+   DrawStyle       =   5  'Transparent
    HasDC           =   0   'False
    PropertyPages   =   "CommandButtonW.ctx":0000
    ScaleHeight     =   120
@@ -24,6 +25,22 @@ Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+
+#Const ImplementThemedGraphical = True
+#Const ImplementPreTranslateMsg = (VBCCR_OCX <> 0)
+
 #If False Then
 Private CmdImageListAlignmentLeft, CmdImageListAlignmentRight, CmdImageListAlignmentTop, CmdImageListAlignmentBottom, CmdImageListAlignmentCenter
 Private CmdDrawModeNormal, CmdDrawModeOwnerDraw
@@ -59,24 +76,32 @@ Private Type POINTAPI
 X As Long
 Y As Long
 End Type
+Private Type TMSG
+hWnd As LongPtr
+Message As Long
+wParam As LongPtr
+lParam As LongPtr
+Time As Long
+PT As POINTAPI
+End Type
 Private Type SIZEAPI
 CX As Long
 CY As Long
 End Type
 Private Type BUTTON_SPLITINFO
 Mask As Long
-hImageListGlyph As Long
+hImageListGlyph As LongPtr
 uSplitStyle As Long
 Size As SIZEAPI
 End Type
 Private Type BUTTON_IMAGELIST
-hImageList As Long
+hImageList As LongPtr
 RCMargin As RECT
 uAlign As Long
 End Type
 Private Type NMHDR
-hWndFrom As Long
-IDFrom As Long
+hWndFrom As LongPtr
+IDFrom As LongPtr
 Code As Long
 End Type
 Private Type NMBCHOTITEM
@@ -89,10 +114,10 @@ CtlID As Long
 ItemID As Long
 ItemAction As Long
 ItemState As Long
-hWndItem As Long
-hDC As Long
+hWndItem As LongPtr
+hDC As LongPtr
 RCItem As RECT
-ItemData As Long
+ItemData As LongPtr
 End Type
 Public Event Click()
 Attribute Click.VB_Description = "Occurs when the user presses and then releases a mouse button over an object."
@@ -141,16 +166,69 @@ Public Event OLESetData(Data As DataObject, DataFormat As Integer)
 Attribute OLESetData.VB_Description = "Occurs at the OLE drag/drop source control when the drop target requests data that was not provided to the DataObject during the OLEDragStart event."
 Public Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
 Attribute OLEStartDrag.VB_Description = "Occurs when an OLE drag/drop operation is initiated either manually or automatically."
+#If VBA7 Then
+Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (ByRef Destination As Any, ByRef Source As Any, ByVal Length As LongPtr)
+Private Declare PtrSafe Function CreateAcceleratorTable Lib "user32" Alias "CreateAcceleratorTableW" (ByVal lpAccel As LongPtr, ByVal cEntries As Long) As LongPtr
+Private Declare PtrSafe Function DestroyAcceleratorTable Lib "user32" (ByVal hAccel As LongPtr) As Long
+Private Declare PtrSafe Function VkKeyScan Lib "user32" Alias "VkKeyScanW" (ByVal cChar As Integer) As Integer
+Private Declare PtrSafe Function CreateWindowEx Lib "user32" Alias "CreateWindowExW" (ByVal dwExStyle As Long, ByVal lpClassName As LongPtr, ByVal lpWindowName As LongPtr, ByVal dwStyle As Long, ByVal X As Long, ByVal Y As Long, ByVal nWidth As Long, ByVal nHeight As Long, ByVal hWndParent As LongPtr, ByVal hMenu As LongPtr, ByVal hInstance As LongPtr, ByRef lpParam As Any) As LongPtr
+Private Declare PtrSafe Function SendMessage Lib "user32" Alias "SendMessageW" (ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByRef lParam As Any) As LongPtr
+Private Declare PtrSafe Function PeekMessage Lib "user32" Alias "PeekMessageW" (ByRef lpMsg As TMSG, ByVal hWnd As LongPtr, ByVal wMsgFilterMin As Long, ByVal wMsgFilterMax As Long, ByVal wRemoveMsg As Long) As Long
+Private Declare PtrSafe Function DestroyWindow Lib "user32" (ByVal hWnd As LongPtr) As Long
+Private Declare PtrSafe Function SetWindowLong Lib "user32" Alias "SetWindowLongW" (ByVal hWnd As LongPtr, ByVal nIndex As Long, ByVal dwNewLong As Long) As Long
+Private Declare PtrSafe Function GetWindowLong Lib "user32" Alias "GetWindowLongW" (ByVal hWnd As LongPtr, ByVal nIndex As Long) As Long
+Private Declare PtrSafe Function SetParent Lib "user32" (ByVal hWndChild As LongPtr, ByVal hWndNewParent As LongPtr) As LongPtr
+Private Declare PtrSafe Function GetParent Lib "user32" (ByVal hWnd As LongPtr) As LongPtr
+Private Declare PtrSafe Function SetFocusAPI Lib "user32" Alias "SetFocus" (ByVal hWnd As LongPtr) As LongPtr
+Private Declare PtrSafe Function GetFocus Lib "user32" () As LongPtr
+Private Declare PtrSafe Function ShowWindow Lib "user32" (ByVal hWnd As LongPtr, ByVal nCmdShow As Long) As Long
+Private Declare PtrSafe Function MoveWindow Lib "user32" (ByVal hWnd As LongPtr, ByVal X As Long, ByVal Y As Long, ByVal nWidth As Long, ByVal nHeight As Long, ByVal bRepaint As Long) As Long
+Private Declare PtrSafe Function LockWindowUpdate Lib "user32" (ByVal hWndLock As LongPtr) As Long
+Private Declare PtrSafe Function EnableWindow Lib "user32" (ByVal hWnd As LongPtr, ByVal fEnable As Long) As Long
+Private Declare PtrSafe Function RedrawWindow Lib "user32" (ByVal hWnd As LongPtr, ByVal lprcUpdate As LongPtr, ByVal hrgnUpdate As LongPtr, ByVal fuRedraw As Long) As Long
+Private Declare PtrSafe Function InvalidateRect Lib "user32" (ByVal hWnd As LongPtr, ByRef lpRect As Any, ByVal bErase As Long) As Long
+Private Declare PtrSafe Function DeleteObject Lib "gdi32" (ByVal hObject As LongPtr) As Long
+Private Declare PtrSafe Function SetBkMode Lib "gdi32" (ByVal hDC As LongPtr, ByVal nBkMode As Long) As Long
+Private Declare PtrSafe Function SetLayout Lib "gdi32" (ByVal hDC As LongPtr, ByVal dwLayout As Long) As Long
+Private Declare PtrSafe Function ExtSelectClipRgn Lib "gdi32" (ByVal hDC As LongPtr, ByVal hRgn As LongPtr, ByVal fnMode As Long) As Long
+Private Declare PtrSafe Function CreateCompatibleDC Lib "gdi32" (ByVal hDC As LongPtr) As LongPtr
+Private Declare PtrSafe Function CreateCompatibleBitmap Lib "gdi32" (ByVal hDC As LongPtr, ByVal nWidth As Long, ByVal nHeight As Long) As LongPtr
+Private Declare PtrSafe Function SelectObject Lib "gdi32" (ByVal hDC As LongPtr, ByVal hObject As LongPtr) As LongPtr
+Private Declare PtrSafe Function DeleteDC Lib "gdi32" (ByVal hDC As LongPtr) As Long
+Private Declare PtrSafe Function CreatePatternBrush Lib "gdi32" (ByVal hBitmap As LongPtr) As LongPtr
+Private Declare PtrSafe Function ImageList_Create Lib "comctl32" (ByVal MinCX As Long, ByVal MinCY As Long, ByVal Flags As Long, ByVal cInitial As Long, ByVal cGrow As Long) As LongPtr
+Private Declare PtrSafe Function ImageList_Add Lib "comctl32" (ByVal hImageList As LongPtr, ByVal hBmpImage As LongPtr, ByVal hBMMask As LongPtr) As Long
+Private Declare PtrSafe Function ImageList_AddIcon Lib "comctl32" (ByVal hImageList As LongPtr, ByVal hIcon As LongPtr) As Long
+Private Declare PtrSafe Function ImageList_Destroy Lib "comctl32" (ByVal hImageList As LongPtr) As Long
+Private Declare PtrSafe Function GetWindowRect Lib "user32" (ByVal hWnd As LongPtr, ByRef lpRect As RECT) As Long
+Private Declare PtrSafe Function MapWindowPoints Lib "user32" (ByVal hWndFrom As LongPtr, ByVal hWndTo As LongPtr, ByRef lppt As Any, ByVal cPoints As Long) As Long
+Private Declare PtrSafe Function SetViewportOrgEx Lib "gdi32" (ByVal hDC As LongPtr, ByVal X As Long, ByVal Y As Long, ByRef lpPoint As POINTAPI) As Long
+Private Declare PtrSafe Function SetActiveWindow Lib "user32" (ByVal hWnd As LongPtr) As LongPtr
+Private Declare PtrSafe Function GetAncestor Lib "user32" (ByVal hWnd As LongPtr, ByVal gaFlags As Long) As LongPtr
+Private Declare PtrSafe Function LoadCursor Lib "user32" Alias "LoadCursorW" (ByVal hInstance As LongPtr, ByVal lpCursorName As Any) As LongPtr
+Private Declare PtrSafe Function SetCursor Lib "user32" (ByVal hCursor As LongPtr) As LongPtr
+Private Declare PtrSafe Function SetTextColor Lib "gdi32" (ByVal hDC As LongPtr, ByVal crColor As Long) As Long
+Private Declare PtrSafe Function CreateSolidBrush Lib "gdi32" (ByVal crColor As Long) As LongPtr
+Private Declare PtrSafe Function FillRect Lib "user32" (ByVal hDC As LongPtr, ByRef lpRect As RECT, ByVal hBrush As LongPtr) As Long
+Private Declare PtrSafe Function TransparentBlt Lib "msimg32" (ByVal hDestDC As LongPtr, ByVal X As Long, ByVal Y As Long, ByVal nWidth As Long, ByVal nHeight As Long, ByVal hSrcDC As LongPtr, ByVal XSrc As Long, ByVal YSrc As Long, ByVal nWidthSrc As Long, ByVal nHeightSrc As Long, ByVal crTransparent As Long) As Long
+Private Declare PtrSafe Function DrawState Lib "user32" Alias "DrawStateW" (ByVal hDC As LongPtr, ByVal hBrush As LongPtr, ByVal lpDrawStateProc As LongPtr, ByVal lData As LongPtr, ByVal wData As LongPtr, ByVal X As Long, ByVal Y As Long, ByVal CX As Long, ByVal CY As Long, ByVal fFlags As Long) As Long
+Private Declare PtrSafe Function DrawFocusRect Lib "user32" (ByVal hDC As LongPtr, ByRef lpRect As RECT) As Long
+Private Declare PtrSafe Function DrawFrameControl Lib "user32" (ByVal hDC As LongPtr, ByRef lpRect As RECT, ByVal nCtlType As Long, ByVal nFlags As Long) As Long
+Private Declare PtrSafe Function DrawEdge Lib "user32" (ByVal hDC As LongPtr, ByRef qRC As RECT, ByVal Edge As Long, ByVal grfFlags As Long) As Long
+Private Declare PtrSafe Function DrawText Lib "user32" Alias "DrawTextW" (ByVal hDC As LongPtr, ByVal lpchText As LongPtr, ByVal nCount As Long, ByRef lpRect As RECT, ByVal uFormat As Long) As Long
+#Else
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (ByRef Destination As Any, ByRef Source As Any, ByVal Length As Long)
 Private Declare Function CreateAcceleratorTable Lib "user32" Alias "CreateAcceleratorTableW" (ByVal lpAccel As Long, ByVal cEntries As Long) As Long
 Private Declare Function DestroyAcceleratorTable Lib "user32" (ByVal hAccel As Long) As Long
 Private Declare Function VkKeyScan Lib "user32" Alias "VkKeyScanW" (ByVal cChar As Integer) As Integer
 Private Declare Function CreateWindowEx Lib "user32" Alias "CreateWindowExW" (ByVal dwExStyle As Long, ByVal lpClassName As Long, ByVal lpWindowName As Long, ByVal dwStyle As Long, ByVal X As Long, ByVal Y As Long, ByVal nWidth As Long, ByVal nHeight As Long, ByVal hWndParent As Long, ByVal hMenu As Long, ByVal hInstance As Long, ByRef lpParam As Any) As Long
 Private Declare Function SendMessage Lib "user32" Alias "SendMessageW" (ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByRef lParam As Any) As Long
+Private Declare Function PeekMessage Lib "user32" Alias "PeekMessageW" (ByRef lpMsg As TMSG, ByVal hWnd As Long, ByVal wMsgFilterMin As Long, ByVal wMsgFilterMax As Long, ByVal wRemoveMsg As Long) As Long
 Private Declare Function DestroyWindow Lib "user32" (ByVal hWnd As Long) As Long
 Private Declare Function SetWindowLong Lib "user32" Alias "SetWindowLongW" (ByVal hWnd As Long, ByVal nIndex As Long, ByVal dwNewLong As Long) As Long
 Private Declare Function GetWindowLong Lib "user32" Alias "GetWindowLongW" (ByVal hWnd As Long, ByVal nIndex As Long) As Long
 Private Declare Function SetParent Lib "user32" (ByVal hWndChild As Long, ByVal hWndNewParent As Long) As Long
+Private Declare Function GetParent Lib "user32" (ByVal hWnd As Long) As Long
 Private Declare Function SetFocusAPI Lib "user32" Alias "SetFocus" (ByVal hWnd As Long) As Long
 Private Declare Function GetFocus Lib "user32" () As Long
 Private Declare Function ShowWindow Lib "user32" (ByVal hWnd As Long, ByVal nCmdShow As Long) As Long
@@ -158,15 +236,18 @@ Private Declare Function MoveWindow Lib "user32" (ByVal hWnd As Long, ByVal X As
 Private Declare Function LockWindowUpdate Lib "user32" (ByVal hWndLock As Long) As Long
 Private Declare Function EnableWindow Lib "user32" (ByVal hWnd As Long, ByVal fEnable As Long) As Long
 Private Declare Function RedrawWindow Lib "user32" (ByVal hWnd As Long, ByVal lprcUpdate As Long, ByVal hrgnUpdate As Long, ByVal fuRedraw As Long) As Long
+Private Declare Function InvalidateRect Lib "user32" (ByVal hWnd As Long, ByRef lpRect As Any, ByVal bErase As Long) As Long
 Private Declare Function DeleteObject Lib "gdi32" (ByVal hObject As Long) As Long
 Private Declare Function SetBkMode Lib "gdi32" (ByVal hDC As Long, ByVal nBkMode As Long) As Long
+Private Declare Function SetLayout Lib "gdi32" (ByVal hDC As Long, ByVal dwLayout As Long) As Long
+Private Declare Function ExtSelectClipRgn Lib "gdi32" (ByVal hDC As Long, ByVal hRgn As Long, ByVal fnMode As Long) As Long
 Private Declare Function CreateCompatibleDC Lib "gdi32" (ByVal hDC As Long) As Long
 Private Declare Function CreateCompatibleBitmap Lib "gdi32" (ByVal hDC As Long, ByVal nWidth As Long, ByVal nHeight As Long) As Long
 Private Declare Function SelectObject Lib "gdi32" (ByVal hDC As Long, ByVal hObject As Long) As Long
 Private Declare Function DeleteDC Lib "gdi32" (ByVal hDC As Long) As Long
 Private Declare Function CreatePatternBrush Lib "gdi32" (ByVal hBitmap As Long) As Long
 Private Declare Function ImageList_Create Lib "comctl32" (ByVal MinCX As Long, ByVal MinCY As Long, ByVal Flags As Long, ByVal cInitial As Long, ByVal cGrow As Long) As Long
-Private Declare Function ImageList_Add Lib "comctl32" (ByVal hImageList As Long, ByVal hBmpImage As Long, ByRef hBMMask As Long) As Long
+Private Declare Function ImageList_Add Lib "comctl32" (ByVal hImageList As Long, ByVal hBmpImage As Long, ByVal hBMMask As Long) As Long
 Private Declare Function ImageList_AddIcon Lib "comctl32" (ByVal hImageList As Long, ByVal hIcon As Long) As Long
 Private Declare Function ImageList_Destroy Lib "comctl32" (ByVal hImageList As Long) As Long
 Private Declare Function GetWindowRect Lib "user32" (ByVal hWnd As Long, ByRef lpRect As RECT) As Long
@@ -185,23 +266,90 @@ Private Declare Function DrawFocusRect Lib "user32" (ByVal hDC As Long, ByRef lp
 Private Declare Function DrawFrameControl Lib "user32" (ByVal hDC As Long, ByRef lpRect As RECT, ByVal nCtlType As Long, ByVal nFlags As Long) As Long
 Private Declare Function DrawEdge Lib "user32" (ByVal hDC As Long, ByRef qRC As RECT, ByVal Edge As Long, ByVal grfFlags As Long) As Long
 Private Declare Function DrawText Lib "user32" Alias "DrawTextW" (ByVal hDC As Long, ByVal lpchText As Long, ByVal nCount As Long, ByRef lpRect As RECT, ByVal uFormat As Long) As Long
+#End If
+
+#If ImplementThemedGraphical = True Then
+
+Private Enum UxThemeButtonParts
+BP_PUSHBUTTON = 1
+BP_RADIOBUTTON = 2
+BP_CHECKBOX = 3
+BP_GROUPBOX = 4
+BP_USERBUTTON = 5
+End Enum
+Private Enum UxThemeButtonStates
+PBS_NORMAL = 1
+PBS_HOT = 2
+PBS_PRESSED = 3
+PBS_DISABLED = 4
+PBS_DEFAULTED = 5
+End Enum
+Private Const DTT_TEXTCOLOR As Long = 1
+Private Type DTTOPTS
+dwSize As Long
+dwFlags As Long
+crText As Long
+crBorder As Long
+crShadow As Long
+eTextShadowType As Long
+PTShadowOffset As POINTAPI
+iBorderSize As Long
+iFontPropId As Long
+iColorPropId As Long
+iStateId As Long
+fApplyOverlay As Long
+iGlowSize As Long
+End Type
+#If VBA7 Then
+Private Declare PtrSafe Function IsThemeBackgroundPartiallyTransparent Lib "uxtheme" (ByVal Theme As LongPtr, ByVal iPartId As Long, ByVal iStateId As Long) As Long
+Private Declare PtrSafe Function DrawThemeParentBackground Lib "uxtheme" (ByVal hWnd As LongPtr, ByVal hDC As LongPtr, ByRef pRect As RECT) As Long
+Private Declare PtrSafe Function DrawThemeBackground Lib "uxtheme" (ByVal Theme As LongPtr, ByVal hDC As LongPtr, ByVal iPartId As Long, ByVal iStateId As Long, ByRef pRect As RECT, ByRef pClipRect As RECT) As Long
+Private Declare PtrSafe Function DrawThemeText Lib "uxtheme" (ByVal Theme As LongPtr, ByVal hDC As LongPtr, ByVal iPartId As Long, ByVal iStateId As Long, ByVal pszText As LongPtr, ByVal iCharCount As Long, ByVal dwTextFlags As Long, ByVal dwTextFlags2 As Long, ByRef pRect As RECT) As Long
+Private Declare PtrSafe Function DrawThemeTextEx Lib "uxtheme" (ByVal Theme As LongPtr, ByVal hDC As LongPtr, ByVal iPartId As Long, ByVal iStateId As Long, ByVal pszText As LongPtr, ByVal iCharCount As Long, ByVal dwTextFlags As Long, ByRef lpRect As RECT, ByRef lpOptions As DTTOPTS) As Long
+Private Declare PtrSafe Function GetThemeBackgroundRegion Lib "uxtheme" (ByVal Theme As LongPtr, ByVal hDC As LongPtr, ByVal iPartId As Long, ByVal iStateId As Long, ByRef pRect As RECT, ByRef hRgn As LongPtr) As Long
+Private Declare PtrSafe Function GetThemeBackgroundContentRect Lib "uxtheme" (ByVal Theme As LongPtr, ByVal hDC As LongPtr, ByVal iPartId As Long, ByVal iStateId As Long, ByRef pBoundingRect As RECT, ByRef pContentRect As RECT) As Long
+Private Declare PtrSafe Function OpenThemeData Lib "uxtheme" (ByVal hWnd As LongPtr, ByVal lpszClassList As LongPtr) As LongPtr
+Private Declare PtrSafe Function CloseThemeData Lib "uxtheme" (ByVal Theme As LongPtr) As Long
+#Else
+Private Declare Function IsThemeBackgroundPartiallyTransparent Lib "uxtheme" (ByVal Theme As Long, ByVal iPartId As Long, ByVal iStateId As Long) As Long
+Private Declare Function DrawThemeParentBackground Lib "uxtheme" (ByVal hWnd As Long, ByVal hDC As Long, ByRef pRect As RECT) As Long
+Private Declare Function DrawThemeBackground Lib "uxtheme" (ByVal Theme As Long, ByVal hDC As Long, ByVal iPartId As Long, ByVal iStateId As Long, ByRef pRect As RECT, ByRef pClipRect As RECT) As Long
+Private Declare Function DrawThemeText Lib "uxtheme" (ByVal Theme As Long, ByVal hDC As Long, ByVal iPartId As Long, ByVal iStateId As Long, ByVal pszText As Long, ByVal iCharCount As Long, ByVal dwTextFlags As Long, ByVal dwTextFlags2 As Long, ByRef pRect As RECT) As Long
+Private Declare Function DrawThemeTextEx Lib "uxtheme" (ByVal Theme As Long, ByVal hDC As Long, ByVal iPartId As Long, ByVal iStateId As Long, ByVal pszText As Long, ByVal iCharCount As Long, ByVal dwTextFlags As Long, ByRef lpRect As RECT, ByRef lpOptions As DTTOPTS) As Long
+Private Declare Function GetThemeBackgroundRegion Lib "uxtheme" (ByVal Theme As Long, ByVal hDC As Long, ByVal iPartId As Long, ByVal iStateId As Long, ByRef pRect As RECT, ByRef hRgn As Long) As Long
+Private Declare Function GetThemeBackgroundContentRect Lib "uxtheme" (ByVal Theme As Long, ByVal hDC As Long, ByVal iPartId As Long, ByVal iStateId As Long, ByRef pBoundingRect As RECT, ByRef pContentRect As RECT) As Long
+Private Declare Function OpenThemeData Lib "uxtheme" (ByVal hWnd As Long, ByVal lpszClassList As Long) As Long
+Private Declare Function CloseThemeData Lib "uxtheme" (ByVal Theme As Long) As Long
+#End If
+
+#End If
+
 Private Const ICC_STANDARD_CLASSES As Long = &H4000
 Private Const RDW_UPDATENOW As Long = &H100, RDW_INVALIDATE As Long = &H1, RDW_ERASE As Long = &H4, RDW_ALLCHILDREN As Long = &H80
+#If VBA7 Then
+Private Const HWND_DESKTOP As LongPtr = &H0
+#Else
 Private Const HWND_DESKTOP As Long = &H0
-Private Const FALT As Long = &H10
+#End If
 Private Const FVIRTKEY As Long = &H1
+Private Const FSHIFT As Long = &H4
+Private Const FALT As Long = &H10
 Private Const GWL_STYLE As Long = (-16)
+Private Const GWL_EXSTYLE As Long = (-20)
+Private Const LAYOUT_RTL As Long = &H1
 Private Const WS_VISIBLE As Long = &H10000000
 Private Const WS_CHILD As Long = &H40000000
-Private Const WS_EX_RTLREADING As Long = &H2000
+Private Const WS_EX_LAYOUTRTL As Long = &H400000, WS_EX_RTLREADING As Long = &H2000
 Private Const SW_HIDE As Long = &H0
 Private Const GA_ROOT As Long = 2
 Private Const WM_NOTIFY As Long = &H4E
-Private Const WM_MOUSEACTIVATE As Long = &H21, MA_NOACTIVATE As Long = &H3, MA_NOACTIVATEANDEAT As Long = &H4
 Private Const WM_SETFOCUS As Long = &H7
+Private Const WM_KILLFOCUS As Long = &H8
 Private Const WM_KEYDOWN As Long = &H100
 Private Const WM_KEYUP As Long = &H101
 Private Const WM_CHAR As Long = &H102
+Private Const WM_SYSKEYDOWN As Long = &H104
+Private Const WM_SYSKEYUP As Long = &H105
 Private Const WM_UNICHAR As Long = &H109, UNICODE_NOCHAR As Long = &HFFFF&
 Private Const WM_IME_CHAR As Long = &H286
 Private Const WM_LBUTTONDOWN As Long = &H201
@@ -214,10 +362,10 @@ Private Const WM_LBUTTONDBLCLK As Long = &H203
 Private Const WM_MOUSEMOVE As Long = &H200
 Private Const WM_MOUSELEAVE As Long = &H2A3
 Private Const WM_COMMAND As Long = &H111
-Private Const WM_DRAWITEM As Long = &H2B, ODT_BUTTON As Long = &H4, ODS_SELECTED As Long = &H1, ODS_DISABLED As Long = &H4, ODS_FOCUS As Long = &H10, ODS_NOACCEL As Long = &H100, ODS_NOFOCUSRECT As Long = &H200
+Private Const WM_DRAWITEM As Long = &H2B, ODT_BUTTON As Long = &H4, ODS_SELECTED As Long = &H1, ODS_DISABLED As Long = &H4, ODS_FOCUS As Long = &H10, ODS_HOTLIGHT As Long = &H40, ODS_NOACCEL As Long = &H100, ODS_NOFOCUSRECT As Long = &H200
 Private Const WM_DESTROY As Long = &H2
 Private Const WM_NCDESTROY As Long = &H82
-Private Const WM_STYLECHANGED As Long = &H7D
+Private Const WM_THEMECHANGED As Long = &H31A
 Private Const WM_SETFONT As Long = &H30
 Private Const WM_SETCURSOR As Long = &H20, HTCLIENT As Long = 1
 Private Const WM_CTLCOLORSTATIC As Long = &H138
@@ -226,7 +374,8 @@ Private Const WM_PAINT As Long = &HF
 Private Const WM_GETTEXTLENGTH As Long = &HE
 Private Const WM_GETTEXT As Long = &HD
 Private Const WM_SETTEXT As Long = &HC
-Private Const DFC_BUTTON As Long = &H4, DFCS_BUTTONPUSH As Long = &H10, DFCS_INACTIVE As Long = &H100, DFCS_PUSHED As Long = &H200, DFCS_ADJUSTRECT As Long = &H2000, DFCS_FLAT As Long = &H4000, DFCS_MONO As Long = &H8000&
+Private Const WM_USER As Long = &H400
+Private Const DFC_BUTTON As Long = &H4, DFCS_BUTTONPUSH As Long = &H10, DFCS_INACTIVE As Long = &H100, DFCS_PUSHED As Long = &H200, DFCS_ADJUSTRECT As Long = &H2000, DFCS_FLAT As Long = &H4000
 Private Const BS_TEXT As Long = &H0
 Private Const BS_PUSHBUTTON As Long = &H0
 Private Const BS_DEFPUSHBUTTON As Long = &H1
@@ -245,7 +394,6 @@ Private Const BS_NOTIFY As Long = &H4000
 Private Const BS_FLAT As Long = &H8000&
 Private Const BM_GETSTATE As Long = &HF2
 Private Const BM_SETSTATE As Long = &HF3
-Private Const BM_SETSTYLE As Long = &HF4 ' Malfunction
 Private Const BM_GETIMAGE As Long = &HF6
 Private Const BM_SETIMAGE As Long = &HF7
 Private Const BM_CLICK As Long = &HF5
@@ -260,7 +408,11 @@ Private Const BCM_SETSHIELD As Long = (BCM_FIRST + 12)
 Private Const BST_PUSHED As Long = &H4
 Private Const BST_HOT As Long = &H200
 Private Const BST_DROPDOWNPUSHED As Long = &H400
-Private Const BCCL_NOGLYPH As Long = (-1) ' Contrary to MSDN it even works on Windows XP
+#If VBA7 Then
+Private Const BCCL_NOGLYPH As LongPtr = (-1)
+#Else
+Private Const BCCL_NOGLYPH As Long = (-1)
+#End If
 Private Const BCSIF_GLYPH As Long = &H1
 Private Const BCSIF_IMAGE As Long = &H2
 Private Const BCSIF_STYLE As Long = &H4
@@ -283,6 +435,8 @@ Private Const DT_CENTER As Long = &H1
 Private Const DT_WORDBREAK As Long = &H10
 Private Const DT_CALCRECT As Long = &H400
 Private Const DT_HIDEPREFIX As Long = &H100000
+Private Const RGN_DIFF As Long = 4
+Private Const RGN_COPY As Long = 5
 Private Const DST_ICON As Long = &H3
 Private Const DST_BITMAP As Long = &H4
 Private Const DSS_DISABLED As Long = &H20
@@ -295,29 +449,43 @@ Private Const BF_RECT As Long = (BF_LEFT Or BF_TOP Or BF_RIGHT Or BF_BOTTOM)
 Private Const BF_ADJUST As Long = &H2000
 Private Const BF_MONO As Long = &H8000&
 Implements ISubclass
+Implements OLEGuids.IObjectSafety
 Implements OLEGuids.IOleInPlaceActiveObjectVB
 Implements OLEGuids.IOleControlVB
 Implements OLEGuids.IPerPropertyBrowsingVB
-Private CommandButtonHandle As Long
-Private CommandButtonTransparentBrush As Long
-Private CommandButtonAcceleratorHandle As Long
+Private CommandButtonHandle As LongPtr
+Private CommandButtonTransparentBrush As LongPtr
+Private CommandButtonAcceleratorHandle As LongPtr
 Private CommandButtonValue As Boolean
-Private CommandButtonFontHandle As Long
+Private CommandButtonFontHandle As LongPtr
 Private CommandButtonCharCodeCache As Long
-Private CommandButtonMouseOver As Boolean
-Private CommandButtonImageListHandle As Long
-Private CommandButtonImageListGlyphHandle As Long, CommandButtonDefaultImageListGlyphHandle As Long
-Private DispIDMousePointer As Long
-Private DispIDImageList As Long, ImageListArray() As String
-Private PropDisplayAsDefault As Boolean
+Private CommandButtonMouseOver(0 To 1) As Boolean
+Private CommandButtonDesignMode As Boolean
+Private CommandButtonDisplayAsDefault As Boolean
+Private CommandButtonImageListButtonHandle As LongPtr
+Private CommandButtonImageListGlyphHandle As LongPtr, CommandButtonDefaultImageListGlyphHandle As LongPtr
+Private CommandButtonImageListObjectPointer As LongPtr, CommandButtonImageListHandle As LongPtr
+Private CommandButtonEnabledVisualStyles As Boolean
+Private CommandButtonPictureRenderFlag As Integer
+Private UCNoSetFocusFwd As Boolean
+Private DispIdImageList As Long, ImageListArray() As String
+
+#If ImplementPreTranslateMsg = True Then
+
+Private Const UM_PRETRANSLATEMSG As Long = (WM_USER + 1100)
+Private UsePreTranslateMsg As Boolean
+
+#End If
+
 Private WithEvents PropFont As StdFont
 Attribute PropFont.VB_VarHelpID = -1
+Private PropFontQuality As CCFontQualityConstants
 Private PropVisualStyles As Boolean
 Private PropMousePointer As Integer, PropMouseIcon As IPictureDisp
 Private PropMouseTrack As Boolean
 Private PropRightToLeft As Boolean
 Private PropRightToLeftMode As CCRightToLeftModeConstants
-Private PropImageListName As String, PropImageListControl As Object, PropImageListInit As Boolean
+Private PropImageListName As String, PropImageListInit As Boolean
 Private PropImageListAlignment As CmdImageListAlignmentConstants
 Private PropImageListMargin As Long
 Private PropCaption As String
@@ -338,10 +506,23 @@ Private PropUseMaskColor As Boolean
 Private PropMaskColor As OLE_COLOR
 Private PropDrawMode As CmdDrawModeConstants
 
-Private Sub IOleInPlaceActiveObjectVB_TranslateAccelerator(ByRef Handled As Boolean, ByRef RetVal As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal Shift As Long)
+Private Sub IObjectSafety_GetInterfaceSafetyOptions(ByRef riid As OLEGuids.OLECLSID, ByRef pdwSupportedOptions As Long, ByRef pdwEnabledOptions As Long)
+Const INTERFACESAFE_FOR_UNTRUSTED_CALLER As Long = &H1, INTERFACESAFE_FOR_UNTRUSTED_DATA As Long = &H2
+pdwSupportedOptions = INTERFACESAFE_FOR_UNTRUSTED_CALLER Or INTERFACESAFE_FOR_UNTRUSTED_DATA
+pdwEnabledOptions = INTERFACESAFE_FOR_UNTRUSTED_CALLER Or INTERFACESAFE_FOR_UNTRUSTED_DATA
+End Sub
+
+Private Sub IObjectSafety_SetInterfaceSafetyOptions(ByRef riid As OLEGuids.OLECLSID, ByVal dwOptionsSetMask As Long, ByVal dwEnabledOptions As Long)
+End Sub
+
+#If VBA7 Then
+Private Sub IOleInPlaceActiveObjectVB_TranslateAccelerator(ByRef Handled As Boolean, ByRef RetVal As Long, ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, ByVal Shift As Long)
+#Else
+Private Sub IOleInPlaceActiveObjectVB_TranslateAccelerator(ByRef Handled As Boolean, ByRef RetVal As Long, ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal Shift As Long)
+#End If
 If wMsg = WM_KEYDOWN Or wMsg = WM_KEYUP Then
     Dim KeyCode As Integer, IsInputKey As Boolean
-    KeyCode = wParam And &HFF&
+    KeyCode = CLng(wParam) And &HFF&
     If wMsg = WM_KEYDOWN Then
         RaiseEvent PreviewKeyDown(KeyCode, IsInputKey)
     ElseIf wMsg = WM_KEYUP Then
@@ -350,32 +531,38 @@ If wMsg = WM_KEYDOWN Or wMsg = WM_KEYUP Then
     Select Case KeyCode
         Case vbKeyUp, vbKeyDown, vbKeyLeft, vbKeyRight, vbKeyPageDown, vbKeyPageUp, vbKeyHome, vbKeyEnd, vbKeyTab, vbKeyReturn, vbKeyEscape
             If IsInputKey = True Then
-                If CommandButtonHandle <> 0 Then
-                    SendMessage CommandButtonHandle, wMsg, wParam, ByVal lParam
-                    Handled = True
-                End If
+                SendMessage hWnd, wMsg, wParam, ByVal lParam
+                Handled = True
             End If
     End Select
 End If
 End Sub
 
+#If VBA7 Then
+Private Sub IOleControlVB_GetControlInfo(ByRef Handled As Boolean, ByRef AccelCount As Integer, ByRef AccelTable As LongPtr, ByRef Flags As Long)
+#Else
 Private Sub IOleControlVB_GetControlInfo(ByRef Handled As Boolean, ByRef AccelCount As Integer, ByRef AccelTable As Long, ByRef Flags As Long)
-Static CmdID As Integer
-If CommandButtonAcceleratorHandle <> 0 Then
+#End If
+If CommandButtonAcceleratorHandle <> NULL_PTR Then
     DestroyAcceleratorTable CommandButtonAcceleratorHandle
-    CommandButtonAcceleratorHandle = 0
+    CommandButtonAcceleratorHandle = NULL_PTR
 End If
-If CommandButtonHandle <> 0 Then
+If CommandButtonHandle <> NULL_PTR Then
     Dim Accel As Integer, AccelArray() As TACCEL, AccelRefCount As Long
     Accel = AccelCharCode(Me.Caption)
     If Accel <> 0 Then
-        ReDim Preserve AccelArray(0 To AccelRefCount)
+        ReDim Preserve AccelArray(0 To AccelRefCount) As TACCEL
         With AccelArray(AccelRefCount)
-        .FVirt = FALT Or FVIRTKEY
-        If CmdID = 0 Then CmdID = 1000 Else CmdID = CmdID + 100
-        If CmdID >= &H7FFFFFD0 Then CmdID = 0
-        .Cmd = CmdID
+        .FVirt = FVIRTKEY Or FALT
+        .Cmd = 1
         .Key = (VkKeyScan(Accel) And &HFF&)
+        End With
+        AccelRefCount = AccelRefCount + 1
+        ReDim Preserve AccelArray(0 To AccelRefCount) As TACCEL
+        With AccelArray(AccelRefCount)
+        .FVirt = FVIRTKEY Or FALT Or FSHIFT
+        .Cmd = AccelArray(AccelRefCount - 1).Cmd
+        .Key = AccelArray(AccelRefCount - 1).Key
         End With
         AccelRefCount = AccelRefCount + 1
     End If
@@ -389,34 +576,34 @@ If CommandButtonHandle <> 0 Then
 End If
 End Sub
 
-Private Sub IOleControlVB_OnMnemonic(ByRef Handled As Boolean, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal Shift As Long)
-If CommandButtonHandle <> 0 Then
-    Dim Accel As Long
+#If VBA7 Then
+Private Sub IOleControlVB_OnMnemonic(ByRef Handled As Boolean, ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, ByVal Shift As Long)
+#Else
+Private Sub IOleControlVB_OnMnemonic(ByRef Handled As Boolean, ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal Shift As Long)
+#End If
+If CommandButtonHandle <> NULL_PTR And wMsg = WM_SYSKEYDOWN Then
+    Dim Accel As Integer
     Accel = AccelCharCode(Me.Caption)
-    If (VkKeyScan(Accel) And &HFF&) = (wParam And &HFF&) Then
-        CommandButtonValue = True
-        RaiseEvent Click
-        CommandButtonValue = False
-        Handled = True
+    If Accel <> 0 Then
+        If (VkKeyScan(Accel) And &HFF&) = (wParam And &HFF&) Then
+            CommandButtonValue = True
+            RaiseEvent Click
+            CommandButtonValue = False
+            Handled = True
+        End If
     End If
 End If
 End Sub
 
-Private Sub IPerPropertyBrowsingVB_GetDisplayString(ByRef Handled As Boolean, ByVal DispID As Long, ByRef DisplayName As String)
-If DispID = DispIDMousePointer Then
-    Call ComCtlsIPPBSetDisplayStringMousePointer(PropMousePointer, DisplayName)
-    Handled = True
-ElseIf DispID = DispIDImageList Then
+Private Sub IPerPropertyBrowsingVB_GetDisplayString(ByRef Handled As Boolean, ByVal DispId As Long, ByRef DisplayName As String)
+If DispId = DispIdImageList Then
     DisplayName = PropImageListName
     Handled = True
 End If
 End Sub
 
-Private Sub IPerPropertyBrowsingVB_GetPredefinedStrings(ByRef Handled As Boolean, ByVal DispID As Long, ByRef StringsOut() As String, ByRef CookiesOut() As Long)
-If DispID = DispIDMousePointer Then
-    Call ComCtlsIPPBSetPredefinedStringsMousePointer(StringsOut(), CookiesOut())
-    Handled = True
-ElseIf DispID = DispIDImageList Then
+Private Sub IPerPropertyBrowsingVB_GetPredefinedStrings(ByRef Handled As Boolean, ByVal DispId As Long, ByRef StringsOut() As String, ByRef CookiesOut() As Long)
+If DispId = DispIdImageList Then
     On Error GoTo CATCH_EXCEPTION
     Call ComCtlsIPPBSetPredefinedStringsImageList(StringsOut(), CookiesOut(), UserControl.ParentControls, ImageListArray())
     On Error GoTo 0
@@ -427,12 +614,9 @@ CATCH_EXCEPTION:
 Handled = False
 End Sub
 
-Private Sub IPerPropertyBrowsingVB_GetPredefinedValue(ByRef Handled As Boolean, ByVal DispID As Long, ByVal Cookie As Long, ByRef Value As Variant)
-If DispID = DispIDMousePointer Then
-    Value = Cookie
-    Handled = True
-ElseIf DispID = DispIDImageList Then
-    If Cookie < UBound(ImageListArray()) Then Value = ImageListArray(Cookie)
+Private Sub IPerPropertyBrowsingVB_GetPredefinedValue(ByRef Handled As Boolean, ByVal DispId As Long, ByVal Cookie As Long, ByRef Value As Variant)
+If DispId = DispIdImageList Then
+    If Cookie <= UBound(ImageListArray()) Then Value = ImageListArray(Cookie)
     Handled = True
 End If
 End Sub
@@ -440,24 +624,38 @@ End Sub
 Private Sub UserControl_Initialize()
 Call ComCtlsLoadShellMod
 Call ComCtlsInitCC(ICC_STANDARD_CLASSES)
-Call SetVTableSubclass(Me, VTableInterfaceInPlaceActiveObject)
-Call SetVTableSubclass(Me, VTableInterfaceControl)
-Call SetVTableSubclass(Me, VTableInterfacePerPropertyBrowsing)
+
+#If ImplementPreTranslateMsg = True Then
+
+If SetVTableHandling(Me, VTableInterfaceInPlaceActiveObject) = False Then UsePreTranslateMsg = True
+
+#Else
+
+Call SetVTableHandling(Me, VTableInterfaceInPlaceActiveObject)
+
+#End If
+
+Call SetVTableHandling(Me, VTableInterfaceControl)
+Call SetVTableHandling(Me, VTableInterfacePerPropertyBrowsing)
 ReDim ImageListArray(0) As String
 End Sub
 
 Private Sub UserControl_InitProperties()
-If DispIDMousePointer = 0 Then DispIDMousePointer = GetDispID(Me, "MousePointer")
-If DispIDImageList = 0 Then DispIDImageList = GetDispID(Me, "ImageList")
-PropDisplayAsDefault = False
+If DispIdImageList = 0 Then DispIdImageList = GetDispId(Me, "ImageList")
+On Error Resume Next
+CommandButtonDesignMode = Not Ambient.UserMode
+On Error GoTo 0
+CommandButtonDisplayAsDefault = False
 Set PropFont = Ambient.Font
+PropFontQuality = CCFontQualityDefault
 PropVisualStyles = True
+Me.OLEDropMode = vbOLEDropNone
 PropMousePointer = 0: Set PropMouseIcon = Nothing
 PropMouseTrack = False
 PropRightToLeft = Ambient.RightToLeft
 PropRightToLeftMode = CCRightToLeftModeVBAME
 If PropRightToLeft = True Then Me.RightToLeft = True
-PropImageListName = "(None)": Set PropImageListControl = Nothing
+PropImageListName = "(None)"
 If PropRightToLeft = False Then PropImageListAlignment = CmdImageListAlignmentLeft Else PropImageListAlignment = CmdImageListAlignmentRight
 PropImageListMargin = 0
 PropCaption = Ambient.DisplayName
@@ -481,11 +679,14 @@ Call CreateCommandButton
 End Sub
 
 Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
-If DispIDMousePointer = 0 Then DispIDMousePointer = GetDispID(Me, "MousePointer")
-If DispIDImageList = 0 Then DispIDImageList = GetDispID(Me, "ImageList")
+If DispIdImageList = 0 Then DispIdImageList = GetDispId(Me, "ImageList")
+On Error Resume Next
+CommandButtonDesignMode = Not Ambient.UserMode
+On Error GoTo 0
+CommandButtonDisplayAsDefault = False
 With PropBag
-PropDisplayAsDefault = .ReadProperty("Default", False)
 Set PropFont = .ReadProperty("Font", Nothing)
+PropFontQuality = .ReadProperty("FontQuality", CCFontQualityDefault)
 PropVisualStyles = .ReadProperty("VisualStyles", True)
 Me.Appearance = .ReadProperty("Appearance", CCAppearance3D)
 Me.BackColor = .ReadProperty("BackColor", vbButtonFace)
@@ -501,7 +702,7 @@ If PropRightToLeft = True Then Me.RightToLeft = True
 PropImageListName = .ReadProperty("ImageList", "(None)")
 PropImageListAlignment = .ReadProperty("ImageListAlignment", CmdImageListAlignmentLeft)
 PropImageListMargin = .ReadProperty("ImageListMargin", 0)
-PropCaption = VarToStr(.ReadProperty("Caption", vbNullString))
+PropCaption = .ReadProperty("Caption", vbNullString) ' Unicode not necessary
 PropAlignment = .ReadProperty("Alignment", vbCenter)
 PropVerticalAlignment = .ReadProperty("VerticalAlignment", CCVerticalAlignmentCenter)
 Set PropPicture = .ReadProperty("Picture", Nothing)
@@ -525,8 +726,8 @@ End Sub
 
 Private Sub UserControl_WriteProperties(PropBag As PropertyBag)
 With PropBag
-.WriteProperty "Default", PropDisplayAsDefault, False
 .WriteProperty "Font", IIf(OLEFontIsEqual(PropFont, Ambient.Font) = False, PropFont, Nothing), Nothing
+.WriteProperty "FontQuality", PropFontQuality, CCFontQualityDefault
 .WriteProperty "VisualStyles", PropVisualStyles, True
 .WriteProperty "Appearance", Me.Appearance, CCAppearance3D
 .WriteProperty "BackColor", Me.BackColor, vbButtonFace
@@ -541,7 +742,7 @@ With PropBag
 .WriteProperty "ImageList", PropImageListName, "(None)"
 .WriteProperty "ImageListAlignment", PropImageListAlignment, CmdImageListAlignmentLeft
 .WriteProperty "ImageListMargin", PropImageListMargin, 0
-.WriteProperty "Caption", StrToVar(PropCaption), vbNullString
+.WriteProperty "Caption", PropCaption, vbNullString ' Unicode not necessary
 .WriteProperty "Alignment", PropAlignment, vbCenter
 .WriteProperty "VerticalAlignment", PropVerticalAlignment, CCVerticalAlignmentCenter
 .WriteProperty "Picture", PropPicture, Nothing
@@ -559,6 +760,12 @@ With PropBag
 .WriteProperty "MaskColor", PropMaskColor, &HC0C0C0
 .WriteProperty "DrawMode", PropDrawMode, CmdDrawModeNormal
 End With
+End Sub
+
+Private Sub UserControl_Paint()
+If CommandButtonHandle <> NULL_PTR Then
+    If CommandButtonDisplayAsDefault Xor Ambient.DisplayAsDefault Then Call UserControl_AmbientChanged("DisplayAsDefault")
+End If
 End Sub
 
 Private Sub UserControl_OLECompleteDrag(Effect As Long)
@@ -602,23 +809,25 @@ End Sub
 Private Sub UserControl_AmbientChanged(PropertyName As String)
 Select Case PropertyName
     Case "DisplayAsDefault"
-        PropDisplayAsDefault = Ambient.DisplayAsDefault
-        Dim dwStyle As Long
-        dwStyle = GetWindowLong(CommandButtonHandle, GWL_STYLE)
-        If Not (dwStyle And BS_OWNERDRAW) = BS_OWNERDRAW Then
-            If PropDisplayAsDefault = True Then
-                If Not (dwStyle And BS_DEFPUSHBUTTON) = BS_DEFPUSHBUTTON Then
-                    SetWindowLong CommandButtonHandle, GWL_STYLE, dwStyle Or BS_DEFPUSHBUTTON
-                    Me.Refresh
+        CommandButtonDisplayAsDefault = Ambient.DisplayAsDefault
+        If CommandButtonHandle <> NULL_PTR Then
+            Dim dwStyle As Long
+            dwStyle = GetWindowLong(CommandButtonHandle, GWL_STYLE)
+            If Not (dwStyle And BS_OWNERDRAW) = BS_OWNERDRAW Then
+                If CommandButtonDisplayAsDefault = True Then
+                    If Not (dwStyle And BS_DEFPUSHBUTTON) = BS_DEFPUSHBUTTON Then
+                        SetWindowLong CommandButtonHandle, GWL_STYLE, dwStyle Or BS_DEFPUSHBUTTON
+                        RedrawWindow CommandButtonHandle, NULL_PTR, NULL_PTR, RDW_UPDATENOW Or RDW_INVALIDATE Or RDW_ERASE
+                    End If
+                Else
+                    If (dwStyle And BS_DEFPUSHBUTTON) = BS_DEFPUSHBUTTON Then
+                        SetWindowLong CommandButtonHandle, GWL_STYLE, dwStyle And Not BS_DEFPUSHBUTTON
+                        RedrawWindow CommandButtonHandle, NULL_PTR, NULL_PTR, RDW_UPDATENOW Or RDW_INVALIDATE Or RDW_ERASE
+                    End If
                 End If
             Else
-                If (dwStyle And BS_DEFPUSHBUTTON) = BS_DEFPUSHBUTTON Then
-                    SetWindowLong CommandButtonHandle, GWL_STYLE, dwStyle And Not BS_DEFPUSHBUTTON
-                    Me.Refresh
-                End If
+                RedrawWindow CommandButtonHandle, NULL_PTR, NULL_PTR, RDW_UPDATENOW Or RDW_INVALIDATE Or RDW_ERASE
             End If
-        Else
-            Me.Refresh
         End If
 End Select
 End Sub
@@ -628,34 +837,70 @@ Static InProc As Boolean
 If InProc = True Then Exit Sub
 InProc = True
 With UserControl
-If DPICorrectionFactor() <> 1 Then
-    .Extender.Move .Extender.Left + .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top + .ScaleY(1, vbPixels, vbContainerPosition)
-    .Extender.Move .Extender.Left - .ScaleX(1, vbPixels, vbContainerPosition), .Extender.Top - .ScaleY(1, vbPixels, vbContainerPosition)
+If DPICorrectionFactor() <> 1 Then Call SyncObjectRectsToContainer(Me)
+If CommandButtonHandle <> NULL_PTR Then
+    If PropTransparent = True Then
+        MoveWindow CommandButtonHandle, 0, 0, .ScaleWidth, .ScaleHeight, 0
+        If CommandButtonTransparentBrush <> NULL_PTR Then
+            DeleteObject CommandButtonTransparentBrush
+            CommandButtonTransparentBrush = NULL_PTR
+        End If
+        RedrawWindow CommandButtonHandle, NULL_PTR, NULL_PTR, RDW_UPDATENOW Or RDW_INVALIDATE Or RDW_ERASE
+    Else
+        MoveWindow CommandButtonHandle, 0, 0, .ScaleWidth, .ScaleHeight, 1
+    End If
 End If
-If CommandButtonHandle <> 0 Then MoveWindow CommandButtonHandle, 0, 0, .ScaleWidth, .ScaleHeight, 1
 End With
 InProc = False
 End Sub
 
 Private Sub UserControl_Terminate()
-Call RemoveVTableSubclass(Me, VTableInterfaceInPlaceActiveObject)
-Call RemoveVTableSubclass(Me, VTableInterfaceControl)
-Call RemoveVTableSubclass(Me, VTableInterfacePerPropertyBrowsing)
+
+#If ImplementPreTranslateMsg = True Then
+
+If UsePreTranslateMsg = False Then Call RemoveVTableHandling(Me, VTableInterfaceInPlaceActiveObject)
+
+#Else
+
+Call RemoveVTableHandling(Me, VTableInterfaceInPlaceActiveObject)
+
+#End If
+
+Call RemoveVTableHandling(Me, VTableInterfaceControl)
+Call RemoveVTableHandling(Me, VTableInterfacePerPropertyBrowsing)
 Call DestroyCommandButton
 Call ComCtlsReleaseShellMod
 End Sub
 
 Private Sub TimerImageList_Timer()
-If PropImageListInit = False Then
-    Me.ImageList = PropImageListName
-    PropImageListInit = True
-End If
 TimerImageList.Enabled = False
+If PropImageListInit = False Then
+    PropImageListInit = True
+    If Not PropImageListName = "(None)" Then Me.ImageList = PropImageListName
+End If
 End Sub
 
 Public Property Get Name() As String
 Attribute Name.VB_Description = "Returns the name used in code to identify an object."
 Name = Ambient.DisplayName
+End Property
+
+Public Property Get Default() As Boolean
+Attribute Default.VB_Description = "Determines which CommandButton control is the default command button on a form."
+Default = Extender.Default
+End Property
+
+Public Property Let Default(ByVal Value As Boolean)
+Extender.Default = Value
+End Property
+
+Public Property Get Cancel() As Boolean
+Attribute Cancel.VB_Description = "Indicates whether a command button is the Cancel button on a form."
+Cancel = Extender.Cancel
+End Property
+
+Public Property Let Cancel(ByVal Value As Boolean)
+Extender.Cancel = Value
 End Property
 
 Public Property Get Tag() As String
@@ -794,14 +1039,25 @@ Attribute ZOrder.VB_Description = "Places a specified object at the front or bac
 If IsMissing(Position) Then Extender.ZOrder Else Extender.ZOrder Position
 End Sub
 
+#If VBA7 Then
+Public Property Get hWnd() As LongPtr
+Attribute hWnd.VB_Description = "Returns a handle to a control."
+Attribute hWnd.VB_UserMemId = -515
+#Else
 Public Property Get hWnd() As Long
 Attribute hWnd.VB_Description = "Returns a handle to a control."
 Attribute hWnd.VB_UserMemId = -515
+#End If
 hWnd = CommandButtonHandle
 End Property
 
+#If VBA7 Then
+Public Property Get hWndUserControl() As LongPtr
+Attribute hWndUserControl.VB_Description = "Returns a handle to a control."
+#Else
 Public Property Get hWndUserControl() As Long
 Attribute hWndUserControl.VB_Description = "Returns a handle to a control."
+#End If
 hWndUserControl = UserControl.hWnd
 End Property
 
@@ -817,23 +1073,39 @@ End Property
 
 Public Property Set Font(ByVal NewFont As StdFont)
 If NewFont Is Nothing Then Set NewFont = Ambient.Font
-Dim OldFontHandle As Long
+Dim OldFontHandle As LongPtr
 Set PropFont = NewFont
 OldFontHandle = CommandButtonFontHandle
-CommandButtonFontHandle = CreateGDIFontFromOLEFont(PropFont)
-If CommandButtonHandle <> 0 Then SendMessage CommandButtonHandle, WM_SETFONT, CommandButtonFontHandle, ByVal 1&
-If OldFontHandle <> 0 Then DeleteObject OldFontHandle
+CommandButtonFontHandle = CreateGDIFontFromOLEFont(PropFont, PropFontQuality)
+If CommandButtonHandle <> NULL_PTR Then SendMessage CommandButtonHandle, WM_SETFONT, CommandButtonFontHandle, ByVal 1&
+If OldFontHandle <> NULL_PTR Then DeleteObject OldFontHandle
 UserControl.PropertyChanged "Font"
 End Property
 
 Private Sub PropFont_FontChanged(ByVal PropertyName As String)
-Dim OldFontHandle As Long
+Dim OldFontHandle As LongPtr
 OldFontHandle = CommandButtonFontHandle
-CommandButtonFontHandle = CreateGDIFontFromOLEFont(PropFont)
-If CommandButtonHandle <> 0 Then SendMessage CommandButtonHandle, WM_SETFONT, CommandButtonFontHandle, ByVal 1&
-If OldFontHandle <> 0 Then DeleteObject OldFontHandle
+CommandButtonFontHandle = CreateGDIFontFromOLEFont(PropFont, PropFontQuality)
+If CommandButtonHandle <> NULL_PTR Then SendMessage CommandButtonHandle, WM_SETFONT, CommandButtonFontHandle, ByVal 1&
+If OldFontHandle <> NULL_PTR Then DeleteObject OldFontHandle
 UserControl.PropertyChanged "Font"
 End Sub
+
+Public Property Get FontQuality() As CCFontQualityConstants
+Attribute FontQuality.VB_Description = "Returns/sets the font quality."
+FontQuality = PropFontQuality
+End Property
+
+Public Property Let FontQuality(ByVal Value As CCFontQualityConstants)
+Select Case Value
+    Case CCFontQualityDefault, CCFontQualityDraft, CCFontQualityProof, CCFontQualityNonAntiAliased, CCFontQualityAntiAliased, CCFontQualityClearType, CCFontQualityClearTypeNatural
+        PropFontQuality = Value
+    Case Else
+        Err.Raise 380
+End Select
+Set Me.Font = PropFont
+UserControl.PropertyChanged "FontQuality"
+End Property
 
 Public Property Get VisualStyles() As Boolean
 Attribute VisualStyles.VB_Description = "Returns/sets a value that determines whether the visual styles are enabled or not. Requires comctl32.dll version 6.0 or higher."
@@ -842,7 +1114,8 @@ End Property
 
 Public Property Let VisualStyles(ByVal Value As Boolean)
 PropVisualStyles = Value
-If CommandButtonHandle <> 0 And EnabledVisualStyles() = True Then
+CommandButtonEnabledVisualStyles = EnabledVisualStyles()
+If CommandButtonHandle <> NULL_PTR And CommandButtonEnabledVisualStyles = True Then
     If PropVisualStyles = True Then
         ActivateVisualStyles CommandButtonHandle
     Else
@@ -866,7 +1139,7 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
-If CommandButtonHandle <> 0 Then
+If CommandButtonHandle <> NULL_PTR Then
     Dim dwStyle As Long
     dwStyle = GetWindowLong(CommandButtonHandle, GWL_STYLE)
     If Not (dwStyle And BS_OWNERDRAW) = BS_OWNERDRAW Then
@@ -914,7 +1187,7 @@ End Property
 
 Public Property Let Enabled(ByVal Value As Boolean)
 UserControl.Enabled = Value
-If CommandButtonHandle <> 0 Then EnableWindow CommandButtonHandle, IIf(Value = True, 1, 0)
+If CommandButtonHandle <> NULL_PTR Then EnableWindow CommandButtonHandle, IIf(Value = True, 1, 0)
 UserControl.PropertyChanged "Enabled"
 End Property
 
@@ -933,18 +1206,19 @@ End Select
 UserControl.PropertyChanged "OLEDropMode"
 End Property
 
-Public Property Get MousePointer() As Integer
+Public Property Get MousePointer() As CCMousePointerConstants
 Attribute MousePointer.VB_Description = "Returns/sets the type of mouse pointer displayed when over part of an object."
 MousePointer = PropMousePointer
 End Property
 
-Public Property Let MousePointer(ByVal Value As Integer)
+Public Property Let MousePointer(ByVal Value As CCMousePointerConstants)
 Select Case Value
-    Case 0 To 16, 99
+    Case 0 To 30, 99
         PropMousePointer = Value
     Case Else
         Err.Raise 380
 End Select
+If CommandButtonDesignMode = False Then Call RefreshMousePointer
 UserControl.PropertyChanged "MousePointer"
 End Property
 
@@ -961,10 +1235,10 @@ Public Property Set MouseIcon(ByVal Value As IPictureDisp)
 If Value Is Nothing Then
     Set PropMouseIcon = Nothing
 Else
-    If Value.Type = vbPicTypeIcon Or Value.Handle = 0 Then
+    If Value.Type = vbPicTypeIcon Or Value.Handle = NULL_PTR Then
         Set PropMouseIcon = Value
     Else
-        If Ambient.UserMode = False Then
+        If CommandButtonDesignMode = True Then
             MsgBox "Invalid property value", vbCritical + vbOKOnly
             Exit Property
         Else
@@ -972,6 +1246,7 @@ Else
         End If
     End If
 End If
+If CommandButtonDesignMode = False Then Call RefreshMousePointer
 UserControl.PropertyChanged "MouseIcon"
 End Property
 
@@ -997,7 +1272,7 @@ UserControl.RightToLeft = PropRightToLeft
 Call ComCtlsCheckRightToLeft(PropRightToLeft, UserControl.RightToLeft, PropRightToLeftMode)
 Dim dwMask As Long
 If PropRightToLeft = True Then dwMask = WS_EX_RTLREADING
-If CommandButtonHandle <> 0 Then
+If CommandButtonHandle <> NULL_PTR Then
     Call ComCtlsSetRightToLeft(CommandButtonHandle, dwMask)
     If PropRightToLeft = False Then
         If PropImageListAlignment = CmdImageListAlignmentRight Then Me.ImageListAlignment = CmdImageListAlignmentLeft
@@ -1030,12 +1305,16 @@ End Property
 
 Public Property Get ImageList() As Variant
 Attribute ImageList.VB_Description = "Returns/sets the image list control to be used. The image list should contain either a single image to be used for all states or individual images for each state. Requires comctl32.dll version 6.0 or higher."
-If Ambient.UserMode = True Then
-    If PropImageListInit = False And PropImageListControl Is Nothing Then
-        If Not PropImageListName = "(None)" Then Me.ImageList = PropImageListName
-        PropImageListInit = True
+If CommandButtonDesignMode = False Then
+    If CommandButtonImageListHandle = NULL_PTR Then
+        If PropImageListInit = False And CommandButtonImageListObjectPointer = NULL_PTR Then
+            If Not PropImageListName = "(None)" Then Me.ImageList = PropImageListName
+            PropImageListInit = True
+        End If
+        Set ImageList = PropImageListControl
+    Else
+        ImageList = CommandButtonImageListHandle
     End If
-    Set ImageList = PropImageListControl
 Else
     ImageList = PropImageListName
 End If
@@ -1046,7 +1325,7 @@ Me.ImageList = Value
 End Property
 
 Public Property Let ImageList(ByVal Value As Variant)
-If CommandButtonHandle <> 0 Then
+If CommandButtonHandle <> NULL_PTR Then
     ' The image list should contain either a single image to be used for all states or
     ' individual images for each state. The following states are defined as following:
     ' PBS_NORMAL = 1
@@ -1055,47 +1334,72 @@ If CommandButtonHandle <> 0 Then
     ' PBS_DISABLED = 4
     ' PBS_DEFAULTED = 5
     ' PBS_STYLUSHOT = 6
-    Dim Success As Boolean, Handle As Long
-    On Error Resume Next
+    Dim Success As Boolean, Handle As LongPtr
     If IsObject(Value) Then
-        If TypeName(Value) = "ImageList" Then
-            Handle = Value.hImageList
-            Success = CBool(Err.Number = 0 And Handle <> 0)
+        If Not Value Is Nothing Then
+            If TypeName(Value) = "ImageList" Then
+                On Error Resume Next
+                Handle = Value.hImageList
+                Success = CBool(Err.Number = 0 And Handle <> NULL_PTR)
+                On Error GoTo 0
+            Else
+                Err.Raise Number:=35610, Description:="Invalid object"
+            End If
         End If
         If Success = True Then
             Call SetImageList(Handle)
+            CommandButtonImageListObjectPointer = ObjPtr(Value)
+            CommandButtonImageListHandle = NULL_PTR
             PropImageListName = ProperControlName(Value)
-            Set PropImageListControl = Value
         End If
-    ElseIf VarType(Value) = vbString Then
-        Dim ControlEnum As Object, CompareName As String
-        For Each ControlEnum In UserControl.ParentControls
-            If TypeName(ControlEnum) = "ImageList" Then
-                CompareName = ProperControlName(ControlEnum)
-                If CompareName = Value And Not CompareName = vbNullString Then
-                    Err.Clear
-                    Handle = ControlEnum.hImageList
-                    Success = CBool(Err.Number = 0 And Handle <> 0)
-                    If Success = True Then
-                        Call SetImageList(Handle)
-                        PropImageListName = Value
-                        If Ambient.UserMode = True Then Set PropImageListControl = ControlEnum
-                        Exit For
-                    ElseIf Ambient.UserMode = False Then
-                        PropImageListName = Value
-                        Success = True
-                        Exit For
+    Else
+        Select Case VarType(Value)
+            Case vbString
+                On Error Resume Next
+                Dim ControlEnum As Object, CompareName As String
+                For Each ControlEnum In UserControl.ParentControls
+                    If TypeName(ControlEnum) = "ImageList" Then
+                        CompareName = ProperControlName(ControlEnum)
+                        If CompareName = Value And Not CompareName = vbNullString Then
+                            Err.Clear
+                            Handle = ControlEnum.hImageList
+                            Success = CBool(Err.Number = 0 And Handle <> NULL_PTR)
+                            If Success = True Then
+                                Call SetImageList(Handle)
+                                If CommandButtonDesignMode = False Then
+                                    CommandButtonImageListObjectPointer = ObjPtr(ControlEnum)
+                                    CommandButtonImageListHandle = NULL_PTR
+                                End If
+                                PropImageListName = Value
+                                Exit For
+                            ElseIf CommandButtonDesignMode = True Then
+                                PropImageListName = Value
+                                Success = True
+                                Exit For
+                            End If
+                        End If
                     End If
+                Next ControlEnum
+                On Error GoTo 0
+            Case vbLong, &H14 ' vbLongLong
+                Handle = Value
+                Success = CBool(Handle <> NULL_PTR)
+                If Success = True Then
+                    Call SetImageList(Handle)
+                    CommandButtonImageListObjectPointer = NULL_PTR
+                    CommandButtonImageListHandle = Handle
+                    PropImageListName = "(None)"
                 End If
-            End If
-        Next ControlEnum
+            Case Else
+                Err.Raise 13
+        End Select
     End If
-    On Error GoTo 0
     If Success = False Then
         Call SetImageList(BCCL_NOGLYPH)
+        CommandButtonImageListObjectPointer = NULL_PTR
+        CommandButtonImageListHandle = NULL_PTR
         PropImageListName = "(None)"
-        Set PropImageListControl = Nothing
-    ElseIf Handle = 0 Then
+    ElseIf Handle = NULL_PTR Then
         Call SetImageList(BCCL_NOGLYPH)
     End If
 End If
@@ -1114,7 +1418,7 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
-If CommandButtonHandle <> 0 And ComCtlsSupportLevel() >= 1 Then
+If CommandButtonHandle <> NULL_PTR And ComCtlsSupportLevel() >= 1 Then
     If Not PropImageListControl Is Nothing Then
         Me.ImageList = PropImageListControl
     ElseIf Not PropImageListName = "(None)" Then
@@ -1131,7 +1435,7 @@ End Property
 
 Public Property Let ImageListMargin(ByVal Value As Single)
 If Value < 0 Then
-    If Ambient.UserMode = False Then
+    If CommandButtonDesignMode = True Then
         MsgBox "Invalid property value", vbCritical + vbOKOnly
         Exit Property
     Else
@@ -1139,7 +1443,7 @@ If Value < 0 Then
     End If
 End If
 PropImageListMargin = CLng(UserControl.ScaleX(Value, vbContainerSize, vbPixels))
-If CommandButtonHandle <> 0 And ComCtlsSupportLevel() >= 1 Then
+If CommandButtonHandle <> NULL_PTR And ComCtlsSupportLevel() >= 1 Then
     If Not PropImageListControl Is Nothing Then
         Me.ImageList = PropImageListControl
     ElseIf Not PropImageListName = "(None)" Then
@@ -1153,8 +1457,8 @@ Public Property Get Caption() As String
 Attribute Caption.VB_Description = "Returns/sets the text displayed in an object's title bar or below an object's icon."
 Attribute Caption.VB_UserMemId = -518
 Attribute Caption.VB_MemberFlags = "200"
-If CommandButtonHandle <> 0 Then
-    Caption = String(SendMessage(CommandButtonHandle, WM_GETTEXTLENGTH, 0, ByVal 0&), vbNullChar)
+If CommandButtonHandle <> NULL_PTR Then
+    Caption = String(CLng(SendMessage(CommandButtonHandle, WM_GETTEXTLENGTH, 0, ByVal 0&)), vbNullChar)
     SendMessage CommandButtonHandle, WM_GETTEXT, Len(Caption) + 1, ByVal StrPtr(Caption)
 Else
     Caption = PropCaption
@@ -1163,7 +1467,7 @@ End Property
 
 Public Property Let Caption(ByVal Value As String)
 PropCaption = Value
-If CommandButtonHandle <> 0 Then
+If CommandButtonHandle <> NULL_PTR Then
     SendMessage CommandButtonHandle, WM_SETTEXT, 0, ByVal StrPtr(PropCaption)
     Call OnControlInfoChanged(Me)
 End If
@@ -1182,7 +1486,7 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
-If CommandButtonHandle <> 0 Then
+If CommandButtonHandle <> NULL_PTR Then
     Dim dwStyle As Long
     dwStyle = GetWindowLong(CommandButtonHandle, GWL_STYLE)
     If Not (dwStyle And BS_OWNERDRAW) = BS_OWNERDRAW Then
@@ -1216,7 +1520,7 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
-If CommandButtonHandle <> 0 Then
+If CommandButtonHandle <> NULL_PTR Then
     Dim dwStyle As Long
     dwStyle = GetWindowLong(CommandButtonHandle, GWL_STYLE)
     If Not (dwStyle And BS_OWNERDRAW) = BS_OWNERDRAW Then
@@ -1251,7 +1555,7 @@ Public Property Set Picture(ByVal Value As IPictureDisp)
 Dim dwStyle As Long
 If Value Is Nothing Then
     Set PropPicture = Nothing
-    If CommandButtonHandle <> 0 And CommandButtonImageListHandle = 0 Then
+    If CommandButtonHandle <> NULL_PTR And CommandButtonImageListButtonHandle = NULL_PTR Then
         dwStyle = GetWindowLong(CommandButtonHandle, GWL_STYLE)
         If Not (dwStyle And BS_OWNERDRAW) = BS_OWNERDRAW Then
             If (dwStyle And BS_ICON) = BS_ICON Then dwStyle = dwStyle And Not BS_ICON
@@ -1266,12 +1570,12 @@ Else
     Set UserControl.Picture = Value
     Set PropPicture = UserControl.Picture
     Set UserControl.Picture = Nothing
-    If CommandButtonHandle <> 0 And CommandButtonImageListHandle = 0 Then
+    If CommandButtonHandle <> NULL_PTR And CommandButtonImageListButtonHandle = NULL_PTR Then
         dwStyle = GetWindowLong(CommandButtonHandle, GWL_STYLE)
         If Not (dwStyle And BS_OWNERDRAW) = BS_OWNERDRAW Then
             If (dwStyle And BS_ICON) = BS_ICON Then dwStyle = dwStyle And Not BS_ICON
             If (dwStyle And BS_BITMAP) = BS_BITMAP Then dwStyle = dwStyle And Not BS_BITMAP
-            If PropPicture.Handle <> 0 Then
+            If PropPicture.Handle <> NULL_PTR Then
                 If PropPicture.Type = vbPicTypeIcon Then
                     If Not (PropPictureAndCaption = True And ComCtlsSupportLevel() >= 2) Then dwStyle = dwStyle Or BS_ICON
                     SetWindowLong CommandButtonHandle, GWL_STYLE, dwStyle
@@ -1293,6 +1597,7 @@ Else
     End If
 End If
 If dwStyle = 0 Then dwStyle = GetWindowLong(CommandButtonHandle, GWL_STYLE)
+CommandButtonPictureRenderFlag = 0
 If (dwStyle And BS_OWNERDRAW) = BS_OWNERDRAW Then Me.Refresh
 UserControl.PropertyChanged "Picture"
 End Property
@@ -1315,7 +1620,7 @@ End Property
 
 Public Property Let WordWrap(ByVal Value As Boolean)
 PropWordWrap = Value
-If CommandButtonHandle <> 0 Then
+If CommandButtonHandle <> NULL_PTR Then
     Dim dwStyle As Long
     dwStyle = GetWindowLong(CommandButtonHandle, GWL_STYLE)
     If Not (dwStyle And BS_OWNERDRAW) = BS_OWNERDRAW Then
@@ -1343,13 +1648,13 @@ UserControl.PropertyChanged "Transparent"
 End Property
 
 Public Property Get SplitButton() As Boolean
-Attribute SplitButton.VB_Description = "Returns/sets a value that determines whether or not the command button displays a split button. The 'DropDown' event is fired when the split button is clicked. Requires comctl32.dll version 6.1 or higher."
+Attribute SplitButton.VB_Description = "Returns/sets a value that determines whether or not the command button displays a split button. The DropDown event is fired when the split button is clicked. Requires comctl32.dll version 6.1 or higher."
 SplitButton = PropSplitButton
 End Property
 
 Public Property Let SplitButton(ByVal Value As Boolean)
 PropSplitButton = Value
-If CommandButtonHandle <> 0 And ComCtlsSupportLevel() >= 2 Then
+If CommandButtonHandle <> NULL_PTR And ComCtlsSupportLevel() >= 2 Then
     Dim dwStyle As Long
     dwStyle = GetWindowLong(CommandButtonHandle, GWL_STYLE)
     If Not (dwStyle And BS_OWNERDRAW) = BS_OWNERDRAW Then
@@ -1377,7 +1682,7 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
-If CommandButtonHandle <> 0 And ComCtlsSupportLevel() >= 2 Then
+If CommandButtonHandle <> NULL_PTR And ComCtlsSupportLevel() >= 2 Then
     Dim BTNSPLITINFO As BUTTON_SPLITINFO
     With BTNSPLITINFO
     .Mask = BCSIF_STYLE
@@ -1395,13 +1700,13 @@ UserControl.PropertyChanged "SplitButtonAlignment"
 End Property
 
 Public Property Get SplitButtonNoSplit() As Boolean
-Attribute SplitButtonNoSplit.VB_Description = "Returns/sets a value indicating that the split on the part of the button that activates the drop-down will not be displayed. If so, the 'DropDown' event will not be fired. Use the 'Click' event instead. Requires comctl32.dll version 6.1 or higher."
+Attribute SplitButtonNoSplit.VB_Description = "Returns/sets a value indicating that the split on the part of the button that activates the drop-down will not be displayed. If so, the DropDown event will not be fired. Use the Click event instead. Requires comctl32.dll version 6.1 or higher."
 SplitButtonNoSplit = PropSplitButtonNoSplit
 End Property
 
 Public Property Let SplitButtonNoSplit(ByVal Value As Boolean)
 PropSplitButtonNoSplit = Value
-If CommandButtonHandle <> 0 And ComCtlsSupportLevel() >= 2 Then
+If CommandButtonHandle <> NULL_PTR And ComCtlsSupportLevel() >= 2 Then
     Dim BTNSPLITINFO As BUTTON_SPLITINFO
     With BTNSPLITINFO
     .Mask = BCSIF_STYLE
@@ -1433,7 +1738,7 @@ With BTNSPLITINFO
 .Mask = BCSIF_GLYPH Or BCSIF_STYLE
 If Value Is Nothing Then
     Set PropSplitButtonGlyph = Nothing
-    If CommandButtonHandle <> 0 And ComCtlsSupportLevel() >= 2 Then
+    If CommandButtonHandle <> NULL_PTR And ComCtlsSupportLevel() >= 2 Then
         SendMessage CommandButtonHandle, BCM_GETSPLITINFO, 0, ByVal VarPtr(BTNSPLITINFO)
         If (.uSplitStyle And BCSS_IMAGE) = BCSS_IMAGE Then .uSplitStyle = .uSplitStyle And Not BCSS_IMAGE
         .hImageListGlyph = CommandButtonDefaultImageListGlyphHandle
@@ -1444,17 +1749,17 @@ Else
     Set UserControl.Picture = Value
     Set PropSplitButtonGlyph = UserControl.Picture
     Set UserControl.Picture = Nothing
-    If CommandButtonHandle <> 0 And ComCtlsSupportLevel() >= 2 Then
+    If CommandButtonHandle <> NULL_PTR And ComCtlsSupportLevel() >= 2 Then
         SendMessage CommandButtonHandle, BCM_GETSPLITINFO, 0, ByVal VarPtr(BTNSPLITINFO)
         If (.uSplitStyle And BCSS_IMAGE) = BCSS_IMAGE Then .uSplitStyle = .uSplitStyle And Not BCSS_IMAGE
         .hImageListGlyph = CommandButtonDefaultImageListGlyphHandle
         SendMessage CommandButtonHandle, BCM_SETSPLITINFO, 0, ByVal VarPtr(BTNSPLITINFO)
-        If PropSplitButtonGlyph.Handle <> 0 Then
+        If PropSplitButtonGlyph.Handle <> NULL_PTR Then
             Const ILC_MASK As Long = &H1
             .hImageListGlyph = ImageList_Create(CHimetricToPixel_X(PropSplitButtonGlyph.Width), CHimetricToPixel_Y(PropSplitButtonGlyph.Height), ILC_MASK Or &H18, 1, 0)
-            If .hImageListGlyph <> 0 Then
+            If .hImageListGlyph <> NULL_PTR Then
                 If PropSplitButtonGlyph.Type = vbPicTypeBitmap Then
-                    ImageList_Add .hImageListGlyph, BitmapHandleFromPicture(PropSplitButtonGlyph), 0
+                    ImageList_Add .hImageListGlyph, BitmapHandleFromPicture(PropSplitButtonGlyph), NULL_PTR
                 ElseIf PropSplitButtonGlyph.Type = vbPicTypeIcon Then
                     ImageList_AddIcon .hImageListGlyph, PropSplitButtonGlyph.Handle
                 End If
@@ -1466,9 +1771,9 @@ Else
         Me.Refresh
     End If
 End If
-If CommandButtonImageListGlyphHandle <> 0 Then
+If CommandButtonImageListGlyphHandle <> NULL_PTR Then
     ImageList_Destroy CommandButtonImageListGlyphHandle
-    CommandButtonImageListGlyphHandle = 0
+    CommandButtonImageListGlyphHandle = NULL_PTR
 End If
 If .hImageListGlyph <> CommandButtonDefaultImageListGlyphHandle Then CommandButtonImageListGlyphHandle = .hImageListGlyph
 End With
@@ -1484,7 +1789,7 @@ Public Property Let Style(ByVal Value As VBRUN.ButtonConstants)
 Select Case Value
     Case vbButtonStandard, vbButtonGraphical
         If PropDrawMode <> CmdDrawModeNormal And Value = vbButtonGraphical Then
-            If Ambient.UserMode = False Then
+            If CommandButtonDesignMode = True Then
                 MsgBox "Style must be 0 - Standard when DrawMode is not 0 - Normal", vbCritical + vbOKOnly
                 Exit Property
             Else
@@ -1495,7 +1800,7 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
-If CommandButtonHandle <> 0 Then Call ReCreateCommandButton
+If CommandButtonHandle <> NULL_PTR Then Call ReCreateCommandButton
 UserControl.PropertyChanged "Style"
 End Property
 
@@ -1516,6 +1821,7 @@ Else
     Set PropDisabledPicture = UserControl.Picture
     Set UserControl.Picture = Nothing
 End If
+CommandButtonPictureRenderFlag = 0
 Me.Refresh
 UserControl.PropertyChanged "DisabledPicture"
 End Property
@@ -1537,12 +1843,13 @@ Else
     Set PropDownPicture = UserControl.Picture
     Set UserControl.Picture = Nothing
 End If
+CommandButtonPictureRenderFlag = 0
 Me.Refresh
 UserControl.PropertyChanged "DownPicture"
 End Property
 
 Public Property Get UseMaskColor() As Boolean
-Attribute UseMaskColor.VB_Description = "Returns/sets a value which determines if the button control will use the mask color property. Only applicable if the style property is set to 1."
+Attribute UseMaskColor.VB_Description = "Returns/sets a value which determines if the button control will use the mask color property. Only applicable if the style property is set to 1 (graphical)."
 UseMaskColor = PropUseMaskColor
 End Property
 
@@ -1553,7 +1860,7 @@ UserControl.PropertyChanged "UseMaskColor"
 End Property
 
 Public Property Get MaskColor() As OLE_COLOR
-Attribute MaskColor.VB_Description = "Returns/sets a color in a picture to be a 'mask' (that is, transparent). Only applicable if the style property is set to 1."
+Attribute MaskColor.VB_Description = "Returns/sets a color in a picture to be a 'mask' (that is, transparent). Only applicable if the style property is set to 1 (graphical)."
 MaskColor = PropMaskColor
 End Property
 
@@ -1575,15 +1882,16 @@ Select Case Value
     Case Else
         Err.Raise 380
 End Select
-If CommandButtonHandle <> 0 Then Call ReCreateCommandButton
+If CommandButtonHandle <> NULL_PTR Then Call ReCreateCommandButton
 UserControl.PropertyChanged "DrawMode"
 End Property
 
 Private Sub CreateCommandButton()
-If CommandButtonHandle <> 0 Then Exit Sub
+If CommandButtonHandle <> NULL_PTR Then Exit Sub
 Dim dwStyle As Long, dwExStyle As Long
-dwStyle = WS_CHILD Or WS_VISIBLE Or BS_PUSHBUTTON Or BS_TEXT Or BS_NOTIFY
-If PropDisplayAsDefault = True Then dwStyle = dwStyle Or BS_DEFPUSHBUTTON
+' The BS_NOTIFY style must not be set.
+dwStyle = WS_CHILD Or WS_VISIBLE Or BS_PUSHBUTTON Or BS_TEXT
+If CommandButtonDisplayAsDefault = True Then dwStyle = dwStyle Or BS_DEFPUSHBUTTON
 If Me.Appearance = CCAppearanceFlat Then dwStyle = dwStyle Or BS_FLAT
 If PropRightToLeft = True Then dwExStyle = dwExStyle Or WS_EX_RTLREADING
 Select Case PropAlignment
@@ -1612,8 +1920,8 @@ If (dwStyle And BS_OWNERDRAW) = BS_OWNERDRAW Then
     ' The BS_OWNERDRAW style cannot be combined with any other button style.
     dwStyle = WS_CHILD Or WS_VISIBLE Or BS_OWNERDRAW
 End If
-CommandButtonHandle = CreateWindowEx(dwExStyle, StrPtr("Button"), 0, dwStyle, 0, 0, UserControl.ScaleWidth, UserControl.ScaleHeight, UserControl.hWnd, 0, App.hInstance, ByVal 0&)
-If CommandButtonHandle <> 0 Then
+CommandButtonHandle = CreateWindowEx(dwExStyle, StrPtr("Button"), NULL_PTR, dwStyle, 0, 0, UserControl.ScaleWidth, UserControl.ScaleHeight, UserControl.hWnd, NULL_PTR, App.hInstance, ByVal NULL_PTR)
+If CommandButtonHandle <> NULL_PTR Then
     Call ComCtlsShowAllUIStates(CommandButtonHandle)
     If ComCtlsSupportLevel() >= 2 Then
         Dim BTNSPLITINFO As BUTTON_SPLITINFO
@@ -1632,9 +1940,16 @@ If Not PropPicture Is Nothing Then Set Me.Picture = PropPicture
 Me.SplitButtonAlignment = PropSplitButtonAlignment
 Me.SplitButtonNoSplit = PropSplitButtonNoSplit
 If Not PropSplitButtonGlyph Is Nothing Then Set Me.SplitButtonGlyph = PropSplitButtonGlyph
-If Ambient.UserMode = True Then
-    If CommandButtonHandle <> 0 Then Call ComCtlsSetSubclass(CommandButtonHandle, Me, 1)
+If CommandButtonDesignMode = False Then
+    If CommandButtonHandle <> NULL_PTR Then Call ComCtlsSetSubclass(CommandButtonHandle, Me, 1)
     Call ComCtlsSetSubclass(UserControl.hWnd, Me, 2)
+    
+    #If ImplementPreTranslateMsg = True Then
+    
+    If UsePreTranslateMsg = True Then Call ComCtlsPreTranslateMsgAddHook
+    
+    #End If
+    
 Else
     If PropStyle = vbButtonGraphical Then
         Call ComCtlsSetSubclass(UserControl.hWnd, Me, 3)
@@ -1644,14 +1959,14 @@ End If
 End Sub
 
 Private Sub ReCreateCommandButton()
-If Ambient.UserMode = True Then
+If CommandButtonDesignMode = False Then
     Dim Locked As Boolean
     Locked = CBool(LockWindowUpdate(UserControl.hWnd) <> 0)
     Call DestroyCommandButton
     Call CreateCommandButton
     Call UserControl_Resize
     If Not PropImageListControl Is Nothing Then Set Me.ImageList = PropImageListControl
-    If Locked = True Then LockWindowUpdate 0
+    If Locked = True Then LockWindowUpdate NULL_PTR
     Me.Refresh
 Else
     Call DestroyCommandButton
@@ -1662,42 +1977,51 @@ End If
 End Sub
 
 Private Sub DestroyCommandButton()
-If CommandButtonHandle = 0 Then Exit Sub
+If CommandButtonHandle = NULL_PTR Then Exit Sub
 Call ComCtlsRemoveSubclass(CommandButtonHandle)
 Call ComCtlsRemoveSubclass(UserControl.hWnd)
+If CommandButtonDesignMode = False Then
+    
+    #If ImplementPreTranslateMsg = True Then
+    
+    If UsePreTranslateMsg = True Then Call ComCtlsPreTranslateMsgReleaseHook
+    
+    #End If
+    
+End If
 ShowWindow CommandButtonHandle, SW_HIDE
-SetParent CommandButtonHandle, 0
+SetParent CommandButtonHandle, NULL_PTR
 DestroyWindow CommandButtonHandle
-CommandButtonHandle = 0
-If CommandButtonFontHandle <> 0 Then
+CommandButtonHandle = NULL_PTR
+If CommandButtonFontHandle <> NULL_PTR Then
     DeleteObject CommandButtonFontHandle
-    CommandButtonFontHandle = 0
+    CommandButtonFontHandle = NULL_PTR
 End If
-If CommandButtonAcceleratorHandle <> 0 Then
+If CommandButtonAcceleratorHandle <> NULL_PTR Then
     DestroyAcceleratorTable CommandButtonAcceleratorHandle
-    CommandButtonAcceleratorHandle = 0
+    CommandButtonAcceleratorHandle = NULL_PTR
 End If
-If CommandButtonTransparentBrush <> 0 Then
+If CommandButtonTransparentBrush <> NULL_PTR Then
     DeleteObject CommandButtonTransparentBrush
-    CommandButtonTransparentBrush = 0
+    CommandButtonTransparentBrush = NULL_PTR
 End If
-CommandButtonImageListHandle = 0
-If CommandButtonImageListGlyphHandle <> 0 Then
+CommandButtonImageListButtonHandle = NULL_PTR
+If CommandButtonImageListGlyphHandle <> NULL_PTR Then
     ImageList_Destroy CommandButtonImageListGlyphHandle
-    CommandButtonImageListGlyphHandle = 0
+    CommandButtonImageListGlyphHandle = NULL_PTR
 End If
-CommandButtonDefaultImageListGlyphHandle = 0
+CommandButtonDefaultImageListGlyphHandle = NULL_PTR
 End Sub
 
 Public Sub Refresh()
 Attribute Refresh.VB_Description = "Forces a complete repaint of a object."
 Attribute Refresh.VB_UserMemId = -550
-If CommandButtonTransparentBrush <> 0 Then
+If CommandButtonTransparentBrush <> NULL_PTR Then
     DeleteObject CommandButtonTransparentBrush
-    CommandButtonTransparentBrush = 0
+    CommandButtonTransparentBrush = NULL_PTR
 End If
 UserControl.Refresh
-RedrawWindow UserControl.hWnd, 0, 0, RDW_UPDATENOW Or RDW_INVALIDATE Or RDW_ERASE Or RDW_ALLCHILDREN
+RedrawWindow UserControl.hWnd, NULL_PTR, NULL_PTR, RDW_UPDATENOW Or RDW_INVALIDATE Or RDW_ERASE Or RDW_ALLCHILDREN
 End Sub
 
 Public Property Get Value() As Boolean
@@ -1717,10 +2041,10 @@ End Property
 
 Public Sub PerformClick()
 Attribute PerformClick.VB_Description = "Method that simulates a user button click."
-If CommandButtonHandle <> 0 Then
-    Dim hWnd As Long
+If CommandButtonHandle <> NULL_PTR Then
+    Dim hWnd As LongPtr
     hWnd = GetAncestor(CommandButtonHandle, GA_ROOT)
-    If hWnd <> 0 Then SetActiveWindow hWnd
+    If hWnd <> NULL_PTR Then SetActiveWindow hWnd
     SetFocusAPI UserControl.hWnd
     SendMessage CommandButtonHandle, BM_CLICK, 0, ByVal 0&
 End If
@@ -1728,11 +2052,11 @@ End Sub
 
 Public Function SetShield(ByVal State As Boolean) As Long
 Attribute SetShield.VB_Description = "Sets the elevation required state to display an elevated icon. Returns 1 if successful, or an error code otherwise. Requires comctl32.dll version 6.1 or higher."
-If CommandButtonHandle <> 0 And ComCtlsSupportLevel() >= 2 Then
+If CommandButtonHandle <> NULL_PTR And ComCtlsSupportLevel() >= 2 Then
     If State = True Then
-        SetShield = SendMessage(CommandButtonHandle, BCM_SETSHIELD, 0, ByVal 1&)
+        SetShield = CLng(SendMessage(CommandButtonHandle, BCM_SETSHIELD, 0, ByVal 1&))
     Else
-        SetShield = SendMessage(CommandButtonHandle, BCM_SETSHIELD, 0, ByVal 0&)
+        SetShield = CLng(SendMessage(CommandButtonHandle, BCM_SETSHIELD, 0, ByVal 0&))
         Set Me.Picture = PropPicture
     End If
 End If
@@ -1741,17 +2065,17 @@ End Function
 Public Property Get Pushed() As Boolean
 Attribute Pushed.VB_Description = "Returns/sets a value that indicates if the command button is in the pushed state."
 Attribute Pushed.VB_MemberFlags = "400"
-If CommandButtonHandle <> 0 Then Pushed = CBool((SendMessage(CommandButtonHandle, BM_GETSTATE, 0, ByVal 0&) And BST_PUSHED) = BST_PUSHED)
+If CommandButtonHandle <> NULL_PTR Then Pushed = CBool((SendMessage(CommandButtonHandle, BM_GETSTATE, 0, ByVal 0&) And BST_PUSHED) = BST_PUSHED)
 End Property
 
 Public Property Let Pushed(ByVal Value As Boolean)
-If CommandButtonHandle <> 0 Then SendMessage CommandButtonHandle, BM_SETSTATE, IIf(Value = True, 1, 0), ByVal 0&
+If CommandButtonHandle <> NULL_PTR Then SendMessage CommandButtonHandle, BM_SETSTATE, IIf(Value = True, 1, 0), ByVal 0&
 End Property
 
 Public Property Get Hot() As Boolean
 Attribute Hot.VB_Description = "Returns/sets a value that indicates if the command button is hot; that is, the mouse is hovering over it. Requires comctl32.dll version 6.0 or higher."
 Attribute Hot.VB_MemberFlags = "400"
-If CommandButtonHandle <> 0 And ComCtlsSupportLevel() >= 1 Then Hot = CBool((SendMessage(CommandButtonHandle, BM_GETSTATE, 0, ByVal 0&) And BST_HOT) = BST_HOT)
+If CommandButtonHandle <> NULL_PTR And ComCtlsSupportLevel() >= 1 Then Hot = CBool((SendMessage(CommandButtonHandle, BM_GETSTATE, 0, ByVal 0&) And BST_HOT) = BST_HOT)
 End Property
 
 Public Property Let Hot(ByVal Value As Boolean)
@@ -1761,16 +2085,28 @@ End Property
 Public Property Get DroppedDown() As Boolean
 Attribute DroppedDown.VB_Description = "Returns/sets a value that determines whether the split button is dropped down or not. Requires comctl32.dll version 6.1 or higher."
 Attribute DroppedDown.VB_MemberFlags = "400"
-If CommandButtonHandle <> 0 And ComCtlsSupportLevel() >= 2 Then DroppedDown = CBool((SendMessage(CommandButtonHandle, BM_GETSTATE, 0, ByVal 0&) And BST_DROPDOWNPUSHED) = BST_DROPDOWNPUSHED)
+If CommandButtonHandle <> NULL_PTR And ComCtlsSupportLevel() >= 2 Then DroppedDown = CBool((SendMessage(CommandButtonHandle, BM_GETSTATE, 0, ByVal 0&) And BST_DROPDOWNPUSHED) = BST_DROPDOWNPUSHED)
 End Property
 
 Public Property Let DroppedDown(ByVal Value As Boolean)
-If CommandButtonHandle <> 0 And ComCtlsSupportLevel() >= 2 Then SendMessage CommandButtonHandle, BCM_SETDROPDOWNSTATE, IIf(Value = True, 1, 0), ByVal 0&
+If CommandButtonHandle <> NULL_PTR And ComCtlsSupportLevel() >= 2 Then
+    If (GetWindowLong(CommandButtonHandle, GWL_STYLE) And BS_SPLITBUTTON) = BS_SPLITBUTTON Then
+        If Value = True And (SendMessage(CommandButtonHandle, BM_GETSTATE, 0, ByVal 0&) And BST_DROPDOWNPUSHED) = 0 Then
+            SendMessage CommandButtonHandle, BCM_SETDROPDOWNSTATE, 1, ByVal 0&
+            RedrawWindow CommandButtonHandle, NULL_PTR, NULL_PTR, RDW_UPDATENOW Or RDW_INVALIDATE Or RDW_ERASE
+            RaiseEvent DropDown
+        End If
+        If (SendMessage(CommandButtonHandle, BM_GETSTATE, 0, ByVal 0&) And BST_DROPDOWNPUSHED) = BST_DROPDOWNPUSHED Then
+            SendMessage CommandButtonHandle, BCM_SETDROPDOWNSTATE, 0, ByVal 0&
+            RedrawWindow CommandButtonHandle, NULL_PTR, NULL_PTR, RDW_UPDATENOW Or RDW_INVALIDATE Or RDW_ERASE
+        End If
+    End If
+End If
 End Property
 
 Public Sub GetIdealSize(ByRef Width As Single, ByRef Height As Single)
 Attribute GetIdealSize.VB_Description = "Gets the ideal size of the control. Requires comctl32.dll version 6.0 or higher."
-If CommandButtonHandle <> 0 And ComCtlsSupportLevel() >= 1 Then
+If CommandButtonHandle <> NULL_PTR And ComCtlsSupportLevel() >= 1 Then
     Width = 0
     Height = 0
     Dim Size As SIZEAPI
@@ -1782,14 +2118,14 @@ If CommandButtonHandle <> 0 And ComCtlsSupportLevel() >= 1 Then
 End If
 End Sub
 
-Private Sub SetImageList(ByVal hImageList As Long)
-If CommandButtonHandle <> 0 And ComCtlsSupportLevel() >= 1 Then
+Private Sub SetImageList(ByVal hImageList As LongPtr)
+If CommandButtonHandle <> NULL_PTR And ComCtlsSupportLevel() >= 1 Then
     Dim BTNIML As BUTTON_IMAGELIST
     With BTNIML
     .hImageList = hImageList
-    If .hImageList = 0 Then .hImageList = BCCL_NOGLYPH
-    CommandButtonImageListHandle = hImageList
-    If CommandButtonImageListHandle = BCCL_NOGLYPH Then CommandButtonImageListHandle = 0
+    If .hImageList = NULL_PTR Then .hImageList = BCCL_NOGLYPH
+    CommandButtonImageListButtonHandle = hImageList
+    If CommandButtonImageListButtonHandle = BCCL_NOGLYPH Then CommandButtonImageListButtonHandle = NULL_PTR
     If .hImageList <> BCCL_NOGLYPH Then
         Dim dwStyle As Long
         dwStyle = GetWindowLong(CommandButtonHandle, GWL_STYLE)
@@ -1833,14 +2169,36 @@ End Sub
 Private Function CoalescePicture(ByVal Picture As IPictureDisp, ByVal DefaultPicture As IPictureDisp) As IPictureDisp
 If Picture Is Nothing Then
     Set CoalescePicture = DefaultPicture
-ElseIf Picture.Handle = 0 Then
+ElseIf Picture.Handle = NULL_PTR Then
     Set CoalescePicture = DefaultPicture
 Else
     Set CoalescePicture = Picture
 End If
 End Function
 
+Private Function PropImageListControl() As Object
+If CommandButtonImageListObjectPointer <> NULL_PTR Then Set PropImageListControl = PtrToObj(CommandButtonImageListObjectPointer)
+End Function
+
+#If ImplementPreTranslateMsg = True Then
+
+Private Function PreTranslateMsg(ByVal lParam As LongPtr) As LongPtr
+PreTranslateMsg = 0
+If lParam <> NULL_PTR Then
+    Dim Msg As TMSG, Handled As Boolean, RetVal As Long
+    CopyMemory Msg, ByVal lParam, LenB(Msg)
+    IOleInPlaceActiveObjectVB_TranslateAccelerator Handled, RetVal, Msg.hWnd, Msg.Message, Msg.wParam, Msg.lParam, GetShiftStateFromMsg()
+    If Handled = True Then PreTranslateMsg = 1
+End If
+End Function
+
+#End If
+
+#If VBA7 Then
+Private Function ISubclass_Message(ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, ByVal dwRefData As LongPtr) As LongPtr
+#Else
 Private Function ISubclass_Message(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal dwRefData As Long) As Long
+#End If
 Select Case dwRefData
     Case 1
         ISubclass_Message = WindowProcControl(hWnd, wMsg, wParam, lParam)
@@ -1851,19 +2209,48 @@ Select Case dwRefData
 End Select
 End Function
 
-Private Function WindowProcControl(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Function WindowProcControl(ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
 Select Case wMsg
     Case WM_SETFOCUS
         If wParam <> UserControl.hWnd Then SetFocusAPI UserControl.hWnd: Exit Function
-    Case WM_KEYDOWN, WM_KEYUP
+        
+        #If ImplementPreTranslateMsg = True Then
+        
+        If UsePreTranslateMsg = False Then Call ActivateIPAO(Me) Else Call ComCtlsPreTranslateMsgActivate(hWnd)
+        
+        #Else
+        
+        Call ActivateIPAO(Me)
+        
+        #End If
+        
+    Case WM_KILLFOCUS
+        
+        #If ImplementPreTranslateMsg = True Then
+        
+        If UsePreTranslateMsg = False Then Call DeActivateIPAO Else Call ComCtlsPreTranslateMsgDeActivate
+        
+        #Else
+        
+        Call DeActivateIPAO
+        
+        #End If
+        
+    Case WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP
         Dim KeyCode As Integer
-        KeyCode = wParam And &HFF&
-        If wMsg = WM_KEYDOWN Then
+        KeyCode = CLng(wParam) And &HFF&
+        If wMsg = WM_KEYDOWN Or wMsg = WM_KEYUP Then
+            If wMsg = WM_KEYDOWN Then
+                RaiseEvent KeyDown(KeyCode, GetShiftStateFromMsg())
+            ElseIf wMsg = WM_KEYUP Then
+                RaiseEvent KeyUp(KeyCode, GetShiftStateFromMsg())
+            End If
+            CommandButtonCharCodeCache = ComCtlsPeekCharCode(hWnd)
+        ElseIf wMsg = WM_SYSKEYDOWN Then
             RaiseEvent KeyDown(KeyCode, GetShiftStateFromMsg())
-        ElseIf wMsg = WM_KEYUP Then
+        ElseIf wMsg = WM_SYSKEYUP Then
             RaiseEvent KeyUp(KeyCode, GetShiftStateFromMsg())
         End If
-        CommandButtonCharCodeCache = ComCtlsPeekCharCode(hWnd)
         wParam = KeyCode
     Case WM_CHAR
         Dim KeyChar As Integer
@@ -1871,47 +2258,34 @@ Select Case wMsg
             KeyChar = CUIntToInt(CommandButtonCharCodeCache And &HFFFF&)
             CommandButtonCharCodeCache = 0
         Else
-            KeyChar = CUIntToInt(wParam And &HFFFF&)
+            KeyChar = CUIntToInt(CLng(wParam) And &HFFFF&)
         End If
         RaiseEvent KeyPress(KeyChar)
         wParam = CIntToUInt(KeyChar)
     Case WM_UNICHAR
-        If wParam = UNICODE_NOCHAR Then WindowProcControl = 1 Else SendMessage hWnd, WM_CHAR, wParam, ByVal lParam
+        If wParam = UNICODE_NOCHAR Then
+            WindowProcControl = 1
+        Else
+            Dim UTF16 As String
+            UTF16 = UTF32CodePoint_To_UTF16(CLng(wParam))
+            If Len(UTF16) = 1 Then
+                SendMessage hWnd, WM_CHAR, CIntToUInt(AscW(UTF16)), ByVal lParam
+            ElseIf Len(UTF16) = 2 Then
+                SendMessage hWnd, WM_CHAR, CIntToUInt(AscW(Left$(UTF16, 1))), ByVal lParam
+                SendMessage hWnd, WM_CHAR, CIntToUInt(AscW(Right$(UTF16, 1))), ByVal lParam
+            End If
+            WindowProcControl = 0
+        End If
         Exit Function
     Case WM_IME_CHAR
         SendMessage hWnd, WM_CHAR, wParam, ByVal lParam
         Exit Function
-    Case WM_MOUSEACTIVATE
-        Static InProc As Boolean
-        If ComCtlsRootIsEditor(hWnd) = False And GetFocus() <> CommandButtonHandle Then
-            If InProc = True Then WindowProcControl = MA_NOACTIVATEANDEAT: Exit Function
-            Select Case HiWord(lParam)
-                Case WM_LBUTTONDOWN
-                    On Error Resume Next
-                    With UserControl
-                    If .Extender.CausesValidation = True Then
-                        InProc = True
-                        Call ComCtlsTopParentValidateControls(Me)
-                        InProc = False
-                        If Err.Number = 380 Then
-                            WindowProcControl = MA_NOACTIVATEANDEAT
-                        Else
-                            SetFocusAPI .hWnd
-                            WindowProcControl = MA_NOACTIVATE
-                        End If
-                    Else
-                        SetFocusAPI .hWnd
-                        WindowProcControl = MA_NOACTIVATE
-                    End If
-                    End With
-                    On Error GoTo 0
-                    Exit Function
-            End Select
-        End If
+    Case WM_LBUTTONDOWN
+        If GetFocus() <> hWnd Then UCNoSetFocusFwd = True: SetFocusAPI UserControl.hWnd: UCNoSetFocusFwd = False
     Case WM_SETCURSOR
-        If LoWord(lParam) = HTCLIENT Then
+        If LoWord(CLng(lParam)) = HTCLIENT Then
             If MousePointerID(PropMousePointer) <> 0 Then
-                SetCursor LoadCursor(0, MousePointerID(PropMousePointer))
+                SetCursor LoadCursor(NULL_PTR, MousePointerID(PropMousePointer))
                 WindowProcControl = 1
                 Exit Function
             ElseIf PropMousePointer = 99 Then
@@ -1924,11 +2298,27 @@ Select Case wMsg
         End If
     Case WM_LBUTTONDBLCLK
         If (GetWindowLong(hWnd, GWL_STYLE) And BS_OWNERDRAW) = BS_OWNERDRAW Then
-            ' Buttons having the BS_OWNERDRAW style will not respond to double click as normal buttons do.
+            ' The BS_OWNERDRAW style generates BN_DOUBLECLICKED even though the BS_NOTIFY style is not set.
             ' Thus the default window procedure of the button will be called with WM_LBUTTONDOWN instead of the actual WM_LBUTTONDBLCLK.
             WindowProcControl = ComCtlsDefaultProc(hWnd, WM_LBUTTONDOWN, wParam, lParam)
             Exit Function
         End If
+    
+    #If ImplementThemedGraphical = True Then
+    
+    Case WM_THEMECHANGED
+        CommandButtonEnabledVisualStyles = EnabledVisualStyles()
+    
+    #End If
+    
+    #If ImplementPreTranslateMsg = True Then
+    
+    Case UM_PRETRANSLATEMSG
+        WindowProcControl = PreTranslateMsg(lParam)
+        Exit Function
+    
+    #End If
+    
 End Select
 WindowProcControl = ComCtlsDefaultProc(hWnd, wMsg, wParam, lParam)
 Select Case wMsg
@@ -1945,10 +2335,25 @@ Select Case wMsg
             Case WM_RBUTTONDOWN
                 RaiseEvent MouseDown(vbRightButton, GetShiftStateFromParam(wParam), X, Y)
             Case WM_MOUSEMOVE
-                If CommandButtonMouseOver = False And PropMouseTrack = True Then
-                    CommandButtonMouseOver = True
-                    RaiseEvent MouseEnter
-                    Call ComCtlsRequestMouseLeave(hWnd)
+                If (CommandButtonMouseOver(0) = False And PropStyle = vbButtonGraphical) Or (CommandButtonMouseOver(1) = False And PropMouseTrack = True) Then
+                    
+                    #If ImplementThemedGraphical = True Then
+                    
+                    If CommandButtonMouseOver(0) = False And PropStyle = vbButtonGraphical Then
+                        If CommandButtonEnabledVisualStyles = True And PropVisualStyles = True Then
+                            CommandButtonMouseOver(0) = True
+                            InvalidateRect hWnd, ByVal NULL_PTR, 0
+                        End If
+                    End If
+                    
+                    #End If
+                    
+                    If CommandButtonMouseOver(1) = False And PropMouseTrack = True Then
+                        CommandButtonMouseOver(1) = True
+                        If PropDrawMode = CmdDrawModeOwnerDraw Then InvalidateRect hWnd, ByVal NULL_PTR, 0
+                        RaiseEvent MouseEnter
+                    End If
+                    If CommandButtonMouseOver(0) = True Or CommandButtonMouseOver(1) = True Then Call ComCtlsRequestMouseLeave(hWnd)
                 End If
                 RaiseEvent MouseMove(GetMouseStateFromParam(wParam), GetShiftStateFromParam(wParam), X, Y)
             Case WM_LBUTTONUP, WM_MBUTTONUP, WM_RBUTTONUP
@@ -1962,19 +2367,30 @@ Select Case wMsg
                 End Select
         End Select
     Case WM_MOUSELEAVE
-        If CommandButtonMouseOver = True Then
-            CommandButtonMouseOver = False
+        
+        #If ImplementThemedGraphical = True Then
+        
+        If CommandButtonMouseOver(0) = True Then
+            CommandButtonMouseOver(0) = False
+            InvalidateRect hWnd, ByVal NULL_PTR, 0
+        End If
+        
+        #End If
+        
+        If CommandButtonMouseOver(1) = True Then
+            CommandButtonMouseOver(1) = False
+            If PropDrawMode = CmdDrawModeOwnerDraw Then InvalidateRect hWnd, ByVal NULL_PTR, 0
             RaiseEvent MouseLeave
         End If
 End Select
 End Function
 
-Private Function WindowProcUserControl(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Function WindowProcUserControl(ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
 Select Case wMsg
     Case WM_COMMAND
         If lParam = CommandButtonHandle Then
-            Select Case HiWord(wParam)
-                Case BN_CLICKED, BN_DOUBLECLICKED
+            Select Case HiWord(CLng(wParam))
+                Case BN_CLICKED
                     CommandButtonValue = True
                     RaiseEvent Click
                     CommandButtonValue = False
@@ -1995,28 +2411,35 @@ Select Case wMsg
                     End With
                 Case BCN_DROPDOWN
                     RaiseEvent DropDown
+                    ' Remove any left mouse button down or double-click messages so that we can get a toggle effect on the split button.
+                    Dim Msg As TMSG
+                    Const PM_REMOVE As Long = &H1
+                    While PeekMessage(Msg, CommandButtonHandle, WM_LBUTTONDOWN, WM_LBUTTONDOWN, PM_REMOVE) <> 0 Or PeekMessage(Msg, CommandButtonHandle, WM_LBUTTONDBLCLK, WM_LBUTTONDBLCLK, PM_REMOVE) <> 0: Wend
             End Select
         End If
     Case WM_CTLCOLORSTATIC, WM_CTLCOLORBTN
         WindowProcUserControl = ComCtlsDefaultProc(hWnd, wMsg, wParam, lParam)
         If PropTransparent = True Then
             SetBkMode wParam, 1
-            Dim hDCBmp As Long
-            Dim hBmp As Long, hBmpOld As Long
+            Dim hDCBmp As LongPtr
+            Dim hBmp As LongPtr, hBmpOld As LongPtr
             With UserControl
-            If CommandButtonTransparentBrush = 0 Then
+            If CommandButtonTransparentBrush = NULL_PTR Then
                 hDCBmp = CreateCompatibleDC(wParam)
-                If hDCBmp <> 0 Then
+                If hDCBmp <> NULL_PTR Then
                     hBmp = CreateCompatibleBitmap(wParam, .ScaleWidth, .ScaleHeight)
-                    If hBmp <> 0 Then
+                    If hBmp <> NULL_PTR Then
+                        Dim hWndParent As LongPtr
+                        hWndParent = GetParent(.hWnd)
+                        If (GetWindowLong(hWndParent, GWL_EXSTYLE) And WS_EX_LAYOUTRTL) = WS_EX_LAYOUTRTL Then SetLayout hDCBmp, LAYOUT_RTL
                         hBmpOld = SelectObject(hDCBmp, hBmp)
                         Dim WndRect As RECT, P As POINTAPI
                         GetWindowRect .hWnd, WndRect
-                        MapWindowPoints HWND_DESKTOP, .ContainerHwnd, WndRect, 2
+                        MapWindowPoints HWND_DESKTOP, hWndParent, WndRect, 2
                         P.X = WndRect.Left
                         P.Y = WndRect.Top
                         SetViewportOrgEx hDCBmp, -P.X, -P.Y, P
-                        SendMessage .ContainerHwnd, WM_PAINT, hDCBmp, ByVal 0&
+                        SendMessage hWndParent, WM_PAINT, hDCBmp, ByVal 0&
                         SetViewportOrgEx hDCBmp, P.X, P.Y, P
                         CommandButtonTransparentBrush = CreatePatternBrush(hBmp)
                         SelectObject hDCBmp, hBmpOld
@@ -2026,7 +2449,7 @@ Select Case wMsg
                 End If
             End If
             End With
-            If CommandButtonTransparentBrush <> 0 Then WindowProcUserControl = CommandButtonTransparentBrush
+            If CommandButtonTransparentBrush <> NULL_PTR Then WindowProcUserControl = CommandButtonTransparentBrush
         End If
         Exit Function
     Case WM_DRAWITEM
@@ -2034,36 +2457,14 @@ Select Case wMsg
         CopyMemory DIS, ByVal lParam, LenB(DIS)
         If DIS.CtlType = ODT_BUTTON And DIS.hWndItem = CommandButtonHandle Then
             If PropStyle = vbButtonGraphical Then
-                Dim Flags As Long
-                Flags = DFCS_BUTTONPUSH
-                If (DIS.ItemState And ODS_SELECTED) = ODS_SELECTED Then Flags = Flags Or DFCS_PUSHED
-                If (DIS.ItemState And ODS_DISABLED) = ODS_DISABLED Then Flags = Flags Or DFCS_INACTIVE
-                If Me.Appearance = CCAppearanceFlat Then Flags = Flags Or DFCS_FLAT
-                If PropDisplayAsDefault = True Then DrawEdge DIS.hDC, DIS.RCItem, BDR_RAISEDOUTER, BF_RECT Or BF_MONO Or BF_ADJUST
-                DrawFrameControl DIS.hDC, DIS.RCItem, DFC_BUTTON, Flags Or DFCS_ADJUSTRECT
-                Dim Brush As Long
-                Brush = CreateSolidBrush(WinColor(UserControl.BackColor))
-                FillRect DIS.hDC, DIS.RCItem, Brush
-                DeleteObject Brush
-                If (DIS.ItemState And ODS_DISABLED) = ODS_DISABLED Then
-                    SetTextColor DIS.hDC, WinColor(vbGrayText)
-                Else
-                    SetTextColor DIS.hDC, WinColor(Me.ForeColor)
-                End If
-                Call OffsetRect(DIS.RCItem, 1, 1, -1, -1)
-                If (DIS.ItemState And ODS_FOCUS) = ODS_FOCUS Then
-                    If Not (DIS.ItemState And ODS_NOFOCUSRECT) = ODS_NOFOCUSRECT Then DrawFocusRect DIS.hDC, DIS.RCItem
-                End If
-                If PropDisplayAsDefault = True Then Call OffsetRect(DIS.RCItem, -1, -1, 1, 1)
-                Dim OldBkMode As Long
-                OldBkMode = SetBkMode(DIS.hDC, 1)
-                Dim TextRect As RECT, Text As String, ButtonPicture As IPictureDisp, DisabledPictureAvailable As Boolean
-                LSet TextRect = DIS.RCItem
+                Dim Brush As LongPtr, Text As String, TextRect As RECT
+                Brush = CreateSolidBrush(WinColor(Me.BackColor))
                 Text = Me.Caption
+                Dim ButtonPicture As IPictureDisp, DisabledPictureAvailable As Boolean
                 If (DIS.ItemState And ODS_DISABLED) = ODS_DISABLED Then
                     Set ButtonPicture = CoalescePicture(PropDisabledPicture, PropPicture)
                     If Not PropDisabledPicture Is Nothing Then
-                        If PropDisabledPicture.Handle <> 0 Then DisabledPictureAvailable = True
+                        If PropDisabledPicture.Handle <> NULL_PTR Then DisabledPictureAvailable = True
                     End If
                 ElseIf (DIS.ItemState And ODS_SELECTED) = ODS_SELECTED Then
                     Set ButtonPicture = CoalescePicture(PropDownPicture, PropPicture)
@@ -2071,55 +2472,161 @@ Select Case wMsg
                     Set ButtonPicture = PropPicture
                 End If
                 If Not ButtonPicture Is Nothing Then
-                    If ButtonPicture.Handle = 0 Then Set ButtonPicture = Nothing
+                    If ButtonPicture.Handle = NULL_PTR Then Set ButtonPicture = Nothing
                 End If
-                DrawText DIS.hDC, StrPtr(Text), -1, TextRect, DT_CALCRECT Or DT_WORDBREAK Or CLng(IIf((DIS.ItemState And ODS_NOACCEL) = ODS_NOACCEL, DT_HIDEPREFIX, 0))
-                TextRect.Left = DIS.RCItem.Left
-                TextRect.Right = DIS.RCItem.Right
-                If ButtonPicture Is Nothing Then
-                    TextRect.Top = ((DIS.RCItem.Bottom - TextRect.Bottom) / 2) + (3 * PixelsPerDIP_Y())
-                    TextRect.Bottom = TextRect.Top + TextRect.Bottom
-                Else
-                    TextRect.Top = (DIS.RCItem.Bottom - TextRect.Bottom) + (1 * PixelsPerDIP_Y())
-                    TextRect.Bottom = DIS.RCItem.Bottom
+                Dim Theme As LongPtr
+                
+                #If ImplementThemedGraphical = True Then
+                
+                If CommandButtonEnabledVisualStyles = True And PropVisualStyles = True Then Theme = OpenThemeData(CommandButtonHandle, StrPtr("Button"))
+                If Theme <> NULL_PTR Then
+                    Dim ButtonPart As Long, ButtonState As Long
+                    ButtonPart = BP_PUSHBUTTON
+                    If (DIS.ItemState And ODS_DISABLED) = ODS_DISABLED Then
+                        ButtonState = PBS_DISABLED
+                    ElseIf CommandButtonMouseOver(0) = True And Not (DIS.ItemState And ODS_SELECTED) = ODS_SELECTED Then
+                        ButtonState = PBS_HOT
+                    ElseIf (DIS.ItemState And ODS_SELECTED) = ODS_SELECTED Then
+                        ButtonState = PBS_PRESSED
+                    ElseIf (DIS.ItemState And ODS_FOCUS) = ODS_FOCUS Or CommandButtonDisplayAsDefault = True Then
+                        ButtonState = PBS_DEFAULTED
+                    Else
+                        ButtonState = PBS_NORMAL
+                    End If
+                    Dim RgnClip As LongPtr
+                    GetThemeBackgroundRegion Theme, DIS.hDC, ButtonPart, ButtonState, DIS.RCItem, RgnClip
+                    ExtSelectClipRgn DIS.hDC, RgnClip, RGN_DIFF
+                    FillRect DIS.hDC, DIS.RCItem, Brush
+                    If IsThemeBackgroundPartiallyTransparent(Theme, ButtonPart, ButtonState) <> 0 Then DrawThemeParentBackground DIS.hWndItem, DIS.hDC, DIS.RCItem
+                    ExtSelectClipRgn DIS.hDC, NULL_PTR, RGN_COPY
+                    DeleteObject RgnClip
+                    DrawThemeBackground Theme, DIS.hDC, ButtonPart, ButtonState, DIS.RCItem, DIS.RCItem
+                    GetThemeBackgroundContentRect Theme, DIS.hDC, ButtonPart, ButtonState, DIS.RCItem, DIS.RCItem
+                    If (DIS.ItemState And ODS_DISABLED) = ODS_DISABLED Then
+                        SetTextColor DIS.hDC, WinColor(vbGrayText)
+                    Else
+                        SetTextColor DIS.hDC, WinColor(Me.ForeColor)
+                    End If
+                    If (DIS.ItemState And ODS_FOCUS) = ODS_FOCUS Then
+                        If Not (DIS.ItemState And ODS_NOFOCUSRECT) = ODS_NOFOCUSRECT Then DrawFocusRect DIS.hDC, DIS.RCItem
+                    End If
+                    If Not Text = vbNullString Then
+                        LSet TextRect = DIS.RCItem
+                        DrawText DIS.hDC, StrPtr(Text), -1, TextRect, DT_CALCRECT Or DT_WORDBREAK Or CLng(IIf((DIS.ItemState And ODS_NOACCEL) = ODS_NOACCEL, DT_HIDEPREFIX, 0))
+                        TextRect.Left = DIS.RCItem.Left
+                        TextRect.Right = DIS.RCItem.Right
+                        If ButtonPicture Is Nothing Then
+                            TextRect.Top = ((DIS.RCItem.Bottom - TextRect.Bottom) \ 2) + 3
+                            TextRect.Bottom = TextRect.Top + TextRect.Bottom
+                        Else
+                            TextRect.Top = (DIS.RCItem.Bottom - TextRect.Bottom) + 1
+                            TextRect.Bottom = DIS.RCItem.Bottom
+                        End If
+                        If ComCtlsSupportLevel() >= 2 Then
+                            Dim DTTO As DTTOPTS
+                            DTTO.dwSize = LenB(DTTO)
+                            DTTO.dwFlags = DTT_TEXTCOLOR
+                            If Not (DIS.ItemState And ODS_DISABLED) = ODS_DISABLED Then
+                                DTTO.crText = WinColor(Me.ForeColor)
+                            Else
+                                DTTO.crText = WinColor(vbGrayText)
+                            End If
+                            DrawThemeTextEx Theme, DIS.hDC, ButtonPart, ButtonState, StrPtr(Text), -1, DT_CENTER Or DT_WORDBREAK Or CLng(IIf((DIS.ItemState And ODS_NOACCEL) = ODS_NOACCEL, DT_HIDEPREFIX, 0)), TextRect, DTTO
+                        Else
+                            DrawThemeText Theme, DIS.hDC, ButtonPart, ButtonState, StrPtr(Text), -1, DT_CENTER Or DT_WORDBREAK Or CLng(IIf((DIS.ItemState And ODS_NOACCEL) = ODS_NOACCEL, DT_HIDEPREFIX, 0)), 0, TextRect
+                        End If
+                        DIS.RCItem.Bottom = TextRect.Top
+                        DIS.RCItem.Left = TextRect.Left
+                    End If
+                    CloseThemeData Theme
                 End If
-                If (DIS.ItemState And ODS_SELECTED) = ODS_SELECTED Then Call OffsetRect(TextRect, 1, 1, 1, 1)
-                DrawText DIS.hDC, StrPtr(Text), -1, TextRect, DT_CENTER Or DT_WORDBREAK Or CLng(IIf((DIS.ItemState And ODS_NOACCEL) = ODS_NOACCEL, DT_HIDEPREFIX, 0))
-                DIS.RCItem.Bottom = TextRect.Top
-                DIS.RCItem.Left = TextRect.Left
+                
+                #End If
+                
+                If Theme = NULL_PTR Then
+                    Dim Flags As Long
+                    Flags = DFCS_BUTTONPUSH
+                    If (DIS.ItemState And ODS_SELECTED) = ODS_SELECTED Then Flags = Flags Or DFCS_PUSHED
+                    If (DIS.ItemState And ODS_DISABLED) = ODS_DISABLED Then Flags = Flags Or DFCS_INACTIVE
+                    If Me.Appearance = CCAppearanceFlat Then Flags = Flags Or DFCS_FLAT
+                    If CommandButtonDisplayAsDefault = True Then DrawEdge DIS.hDC, DIS.RCItem, BDR_RAISEDOUTER, BF_RECT Or BF_MONO Or BF_ADJUST
+                    DrawFrameControl DIS.hDC, DIS.RCItem, DFC_BUTTON, Flags Or DFCS_ADJUSTRECT
+                    FillRect DIS.hDC, DIS.RCItem, Brush
+                    If (DIS.ItemState And ODS_DISABLED) = ODS_DISABLED Then
+                        SetTextColor DIS.hDC, WinColor(vbGrayText)
+                    Else
+                        SetTextColor DIS.hDC, WinColor(Me.ForeColor)
+                    End If
+                    Call OffsetRect(DIS.RCItem, 1, 1, -1, -1)
+                    If (DIS.ItemState And ODS_FOCUS) = ODS_FOCUS Then
+                        If Not (DIS.ItemState And ODS_NOFOCUSRECT) = ODS_NOFOCUSRECT Then DrawFocusRect DIS.hDC, DIS.RCItem
+                    End If
+                    If CommandButtonDisplayAsDefault = True Then Call OffsetRect(DIS.RCItem, -1, -1, 1, 1)
+                    If Not Text = vbNullString Then
+                        Dim OldBkMode As Long
+                        OldBkMode = SetBkMode(DIS.hDC, 1)
+                        LSet TextRect = DIS.RCItem
+                        DrawText DIS.hDC, StrPtr(Text), -1, TextRect, DT_CALCRECT Or DT_WORDBREAK Or CLng(IIf((DIS.ItemState And ODS_NOACCEL) = ODS_NOACCEL, DT_HIDEPREFIX, 0))
+                        TextRect.Left = DIS.RCItem.Left
+                        TextRect.Right = DIS.RCItem.Right
+                        If ButtonPicture Is Nothing Then
+                            TextRect.Top = ((DIS.RCItem.Bottom - TextRect.Bottom) \ 2) + 3
+                            TextRect.Bottom = TextRect.Top + TextRect.Bottom
+                        Else
+                            TextRect.Top = (DIS.RCItem.Bottom - TextRect.Bottom) + 1
+                            TextRect.Bottom = DIS.RCItem.Bottom
+                        End If
+                        If (DIS.ItemState And ODS_SELECTED) = ODS_SELECTED Then Call OffsetRect(TextRect, 1, 1, 1, 1)
+                        DrawText DIS.hDC, StrPtr(Text), -1, TextRect, DT_CENTER Or DT_WORDBREAK Or CLng(IIf((DIS.ItemState And ODS_NOACCEL) = ODS_NOACCEL, DT_HIDEPREFIX, 0))
+                        DIS.RCItem.Bottom = TextRect.Top
+                        DIS.RCItem.Left = TextRect.Left
+                        SetBkMode DIS.hDC, OldBkMode
+                    End If
+                End If
                 If Not ButtonPicture Is Nothing Then
                     Dim CX As Long, CY As Long, X As Long, Y As Long
                     CX = CHimetricToPixel_X(ButtonPicture.Width)
                     CY = CHimetricToPixel_Y(ButtonPicture.Height)
-                    X = DIS.RCItem.Left + ((DIS.RCItem.Right - DIS.RCItem.Left - CX) / 2)
-                    Y = DIS.RCItem.Top + ((DIS.RCItem.Bottom - DIS.RCItem.Top - CY) / 2)
+                    X = DIS.RCItem.Left + ((DIS.RCItem.Right - DIS.RCItem.Left - CX) \ 2)
+                    Y = DIS.RCItem.Top + ((DIS.RCItem.Bottom - DIS.RCItem.Top - CY) \ 2)
                     If Not (DIS.ItemState And ODS_DISABLED) = ODS_DISABLED Or DisabledPictureAvailable = True Then
                         If ButtonPicture.Type = vbPicTypeBitmap And PropUseMaskColor = True Then
-                            Dim hDC1 As Long, hBmpOld1 As Long
+                            Dim hDC1 As LongPtr, hBmpOld1 As LongPtr
                             hDC1 = CreateCompatibleDC(DIS.hDC)
-                            If hDC1 <> 0 Then
+                            If hDC1 <> NULL_PTR Then
                                 hBmpOld1 = SelectObject(hDC1, ButtonPicture.Handle)
                                 TransparentBlt DIS.hDC, X, Y, CX, CY, hDC1, 0, 0, CX, CY, WinColor(PropMaskColor)
                                 SelectObject hDC1, hBmpOld1
                                 DeleteDC hDC1
                             End If
                         Else
-                            With ButtonPicture
-                            .Render DIS.hDC Or 0&, X Or 0&, Y + CY Or 0&, CX Or 0&, -CY Or 0&, 0&, 0&, .Width, .Height, ByVal 0&
-                            End With
+                            Call RenderPicture(ButtonPicture, DIS.hDC, X, Y, CX, CY, CommandButtonPictureRenderFlag)
                         End If
                     Else
                         If ButtonPicture.Type = vbPicTypeIcon Then
-                            DrawState DIS.hDC, 0, 0, ButtonPicture.Handle, 0, X, Y, CX, CY, DST_ICON Or DSS_DISABLED
-                        ElseIf ButtonPicture.Type = vbPicTypeBitmap Then
-                            DrawState DIS.hDC, 0, 0, ButtonPicture.Handle, 0, X, Y, CX, CY, DST_BITMAP Or DSS_DISABLED
+                            DrawState DIS.hDC, NULL_PTR, NULL_PTR, ButtonPicture.Handle, 0, X, Y, CX, CY, DST_ICON Or DSS_DISABLED
+                        Else
+                            Dim hImage As LongPtr
+                            hImage = BitmapHandleFromPicture(ButtonPicture, vbWhite)
+                            ' The DrawState API with DSS_DISABLED will draw white as transparent.
+                            ' This will ensure GIF bitmaps or metafiles are better drawn.
+                            DrawState DIS.hDC, NULL_PTR, NULL_PTR, hImage, 0, X, Y, CX, CY, DST_BITMAP Or DSS_DISABLED
+                            DeleteObject hImage
                         End If
                     End If
                 End If
-                SetBkMode DIS.hDC, OldBkMode
+                DeleteObject Brush
             Else
                 With DIS
-                RaiseEvent OwnerDraw(PropDisplayAsDefault, .ItemAction, .ItemState, .hDC, .RCItem.Left, .RCItem.Top, .RCItem.Right, .RCItem.Bottom)
+                If (.ItemState And ODS_HOTLIGHT) = ODS_HOTLIGHT Then .ItemState = .ItemState And Not ODS_HOTLIGHT
+                If CommandButtonMouseOver(1) = True Then .ItemState = .ItemState Or ODS_HOTLIGHT
+                #If Win64 Then
+                Dim hDC32 As Long
+                CopyMemory ByVal VarPtr(hDC32), ByVal VarPtr(.hDC), 4
+                RaiseEvent OwnerDraw(CommandButtonDisplayAsDefault, .ItemAction, .ItemState, hDC32, .RCItem.Left, .RCItem.Top, .RCItem.Right, .RCItem.Bottom)
+                #Else
+                RaiseEvent OwnerDraw(CommandButtonDisplayAsDefault, .ItemAction, .ItemState, .hDC, .RCItem.Left, .RCItem.Top, .RCItem.Right, .RCItem.Bottom)
+                #End If
                 End With
             End If
             WindowProcUserControl = 1
@@ -2127,10 +2634,10 @@ Select Case wMsg
         End If
 End Select
 WindowProcUserControl = ComCtlsDefaultProc(hWnd, wMsg, wParam, lParam)
-If wMsg = WM_SETFOCUS Then SetFocusAPI CommandButtonHandle
+If wMsg = WM_SETFOCUS And UCNoSetFocusFwd = False Then SetFocusAPI CommandButtonHandle
 End Function
 
-Private Function WindowProcUserControlDesignMode(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Function WindowProcUserControlDesignMode(ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
 Select Case wMsg
     Case WM_CTLCOLORBTN, WM_DRAWITEM
         WindowProcUserControlDesignMode = WindowProcUserControl(hWnd, wMsg, wParam, lParam)
@@ -2140,10 +2647,5 @@ WindowProcUserControlDesignMode = ComCtlsDefaultProc(hWnd, wMsg, wParam, lParam)
 Select Case wMsg
     Case WM_DESTROY, WM_NCDESTROY
         Call ComCtlsRemoveSubclass(hWnd)
-    Case WM_STYLECHANGED
-        Dim dwStyleOld As Long, dwStyleNew As Long
-        CopyMemory dwStyleOld, ByVal lParam, 4
-        CopyMemory dwStyleNew, ByVal UnsignedAdd(lParam, 4), 4
-        If dwStyleOld = dwStyleNew Then Call ComCtlsRemoveSubclass(hWnd)
 End Select
 End Function

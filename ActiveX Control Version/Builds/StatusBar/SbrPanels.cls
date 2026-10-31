@@ -12,11 +12,23 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
 Option Explicit
-Private ShadowObjectPointer As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+Private ShadowObjectPointer As LongPtr
 Private PropPanel As Collection
 
 Private Function ShadowStatusBar() As StatusBar
-ComCtlsPtrToShadowObj ShadowStatusBar, ShadowObjectPointer
+ComCtlsObjSetAddRef ShadowStatusBar, ShadowObjectPointer
 End Function
 
 Private Sub Class_Initialize()
@@ -37,10 +49,23 @@ Friend Sub FInit(ByVal Object As StatusBar)
 ShadowObjectPointer = ObjPtr(Object)
 End Sub
 
+Friend Sub FChangeKey(ByVal Index As Long, ByRef OldKey As String, ByVal NewKey As String)
+Dim Item As Variant
+Set Item = PropPanel(Index)
+If NewKey = vbNullString Then
+    PropPanel.Add Item, , Index
+    OldKey = vbNullString
+Else
+    PropPanel.Add Item, NewKey, Index
+    OldKey = NewKey
+End If
+PropPanel.Remove Index + 1
+End Sub
+
 Public Function Add(Optional ByVal Index As Long, Optional ByVal Key As String, Optional ByVal Text As String, Optional ByVal Style As SbrPanelStyleConstants) As SbrPanel
 Attribute Add.VB_Description = "Adds a panel to the panels collection."
 If Index > (PropPanel.Count + 1) Or Index < 0 Then Err.Raise Number:=35600, Description:="Index out of bounds"
-ShadowStatusBar.FPanelsAdd Index, Text, Style
+If PropPanel.Count >= 255 Then Err.Raise Number:=35616, Description:="Maximum Panels Exceeded"
 Dim NewPanel As New SbrPanel
 NewPanel.FInit ShadowStatusBar, Key
 If Key = vbNullString Then
@@ -64,6 +89,7 @@ Else
         Me.Item(i).Index = i
     Next i
 End If
+ShadowStatusBar.FPanelsAdd Index, Text, Style
 Set Add = NewPanel
 End Function
 

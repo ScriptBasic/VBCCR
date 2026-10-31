@@ -61,6 +61,13 @@ library OLEGuids
 	typedef	OLECLSID *REFIID;
 	typedef struct
 	{
+		LONG rgvarg;
+		LONG rgdispidNamedArgs;
+		LONG cArgs;
+		LONG cNamedArgs;
+	}OLEDISPPARAMS;
+	typedef struct
+	{
 		LONG cElems;
 		LONG pElems;
 	}OLECAUUID;
@@ -113,7 +120,34 @@ library OLEGuids
 	{
 		HRESULT SetClientSite([in] IOleClientSite *pClientSite);
 		HRESULT GetClientSite([out, retval] IOleClientSite **ppClientSite);
+		HRESULT SetHostNames([in] LONG lpszContainerApp, [in] LONG lpszContainerObj);
+		HRESULT Close([in] LONG dwSaveOption);
+		HRESULT SetMoniker([in] LONG dwWhichMoniker, [in] LONG lpmk);
+		HRESULT GetMoniker([in] LONG dwAssign, [in] LONG dwWhichMoniker, [out, retval] LONG *lppmk);
+		HRESULT InitFromData([in] LONG lpDataObject, [in] LONG fCreation, [in] LONG dwReserved);
+		HRESULT GetClipboardData([in] LONG dwReserved, [out, retval] LONG *lppDataObject);
+		LONG DoVerb([in] LONG iVerb, [in] LONG lpMsg, [in] IOleClientSite *pActiveSite, [in] LONG Index, [in] LONG hWndParent, [in] LONG lprcPosRect);
 		// Lots more.
+	};
+	[
+		uuid(00000113-0000-0000-C000-000000000046),
+		odl
+	]
+	interface IOleInPlaceObject : IOleWindow
+	{
+		HRESULT InPlaceDeactivate();
+		HRESULT UIDeactivate();
+		HRESULT SetObjectRects([in] LONG lprcPosRect, [in] LONG lprcClipRect);
+		HRESULT ReactivateAndUndo();
+	};
+	[
+		uuid(1C2056CC-5EF4-101B-8BC8-00AA003E3B29),
+		odl
+	]
+	interface IOleInPlaceObjectWindowless : IOleInPlaceObject
+	{
+		LONG OnWindowMessage([in] LONG wMsg, [in] LONG wParam, [in] LONG lParam, [out] LONG *Result);
+		LONG GetDropTarget([out] LONG *lppDropTarget);
 	};
 	[
 		uuid(B196B288-BAB4-101A-B69C-00AA00341D07),
@@ -123,8 +157,8 @@ library OLEGuids
 	{
 		LONG GetControlInfo([out] OLECONTROLINFO *pCI);
 		LONG OnMnemonic([in] OLEACCELMSG *pMsg);
-		LONG OnAmbientPropertyChange([in] LONG DispID);
-		LONG FreezeEvents([in] LONG bFreeze);
+		HRESULT OnAmbientPropertyChange([in] LONG DispId);
+		HRESULT FreezeEvents([in] LONG bFreeze);
 	};
 	[
 		uuid(B196B289-BAB4-101A-B69C-00AA00341D07),
@@ -163,7 +197,7 @@ library OLEGuids
 		HRESULT GetBorder([in] LONG lpRectBorder);
 		HRESULT RequestBorderSpace([in] LONG pBorderWidths);
 		HRESULT SetBorderSpace([in] LONG pBorderWidths);
-		HRESULT SetActiveObject([in] IOleInPlaceActiveObject *pActiveObject, [in] LPWSTR pszObjName);
+		HRESULT SetActiveObject([in] IOleInPlaceActiveObject *pActiveObject, [in] LONG lpszObjName);
     	};
 	[
 		uuid(00000116-0000-0000-C000-000000000046),
@@ -183,7 +217,7 @@ library OLEGuids
 		HRESULT OnInPlaceActivate();
 		HRESULT OnUIActivate();
 		HRESULT GetWindowContext([out] IOleInPlaceFrame **ppFrame, [out] IOleInPlaceUIWindow **ppDoc, [in] LONG lprcPosRect, [in] LONG lprcClipRect, [in] LONG lpFrameInfo);
-		HRESULT Scroll([in] CURRENCY scrollExtant);
+		HRESULT Scroll([in] CURRENCY ScrollExtant);
 		HRESULT OnUIDeactivate([in] LONG fUndoable);
 		HRESULT OnInPlaceDeactivate();
 		HRESULT DiscardUndoState();
@@ -194,24 +228,23 @@ library OLEGuids
 		uuid(00020400-0000-0000-C000-000000000046),
 		odl
 	]
-	interface IDispatch : IUnknown
+	interface IDispatchUnrestricted : IUnknown
 	{
-		typedef IDispatch *LPDISPATCH;
 		HRESULT GetTypeInfoCount([out] LONG *pctInfo);
     		HRESULT GetTypeInfo([in] LONG itinfo, [in] LONG lcid, [out] LONG *pptinfo);
-    		HRESULT GetIDsOfNames([in] REFIID riid, [in] LPWSTR *rgszNames, [in] LONG cNames, [in] LONG lcid, [in, out] LONG *rgDispID);
-    		HRESULT Invoke([in] LONG DispIDMember, [in] REFIID riid, [in] LONG lcid, [in] SHORT wFlags, [in] DISPPARAMS *pdispparams, [in, out] VARIANT *pvarResult, [out] EXCEPINFO *pexcepinfo, [out] LONG *puArgErr);
+    		HRESULT GetIDsOfNames([in] REFIID riid, [in] LONG *rgszNames, [in] LONG cNames, [in] LONG lcid, [in, out] LONG *rgDispId);
+    		HRESULT Invoke([in] LONG DispId, [in] REFIID riid, [in] LONG lcid, [in] SHORT wFlags, [in] LONG lpdispparams, [in] LONG lpvarResult, [in] LONG lpexcepinfo, [out] LONG *puArgErr);
 	};
 	[
 		uuid(376BD3AA-3845-101B-84ED-08002B2EC713),
 		odl
 	]
-	interface IPerPropertyBrowsing : IDispatch
+	interface IPerPropertyBrowsing : IUnknown
 	{
-		HRESULT GetDisplayString([in] LONG DispID, [out] BSTR *DisplayName);
-		HRESULT MapPropertyToPage([in] LONG DispID, [out] OLECLSID *pCLSID);
-		HRESULT GetPredefinedStrings([in] LONG DispID, [out] OLECALPOLESTR *pCaStringsOut, [out] OLECADWORD *pCaCookiesOut);
-		HRESULT GetPredefinedValue([in] LONG DispID, [in] LONG dwCookie, [out] VARIANT *pVarOut);
+		LONG GetDisplayString([in] LONG DispId, [out] LONG *lpDisplayName);
+		LONG MapPropertyToPage([in] LONG DispId, [out] OLECLSID *pCLSID);
+		LONG GetPredefinedStrings([in] LONG DispId, [out] OLECALPOLESTR *pCaStringsOut, [out] OLECADWORD *pCaCookiesOut);
+		LONG GetPredefinedValue([in] LONG DispId, [in] LONG dwCookie, [out] VARIANT *pVarOut);
 	};
 	[
 		uuid(B196B28B-BAB4-101A-B69C-00AA00341D07),
@@ -227,7 +260,7 @@ library OLEGuids
 	]
 	interface IEnumVARIANTUnrestricted : IDispatch
 	{
-		HRESULT Next([in] LONG cElt, [in, out] VARIANT *rgVar, [in] LONG pcEltFetched);
+		HRESULT Next([in] LONG cElt, [in, out] VARIANT *rgVar, [in] LONG lpcEltFetched);
 		HRESULT Skip([in] LONG cElt);
 		HRESULT Reset();
 		HRESULT Clone([in, out] IEnumVARIANT **ppEnum);
@@ -268,7 +301,7 @@ library OLEGuids
 	interface IOleInPlaceActiveObjectVB : IDispatch
 	{
         	[id(0x00000001)]
-        	HRESULT TranslateAccelerator([in, out] boolean *Handled, [in, out] LONG *RetVal, [in] LONG wMsg, [in] LONG wParam, [in] LONG lParam, [in] LONG Shift);
+        	HRESULT TranslateAccelerator([in, out] boolean *Handled, [in, out] LONG *RetVal, [in] LONG hWnd, [in] LONG wMsg, [in] LONG wParam, [in] LONG lParam, [in] LONG Shift);
     	};
 	[
 		uuid(C895C8F9-6564-4123-8760-529F72AB9322),
@@ -283,7 +316,7 @@ library OLEGuids
         	[id(0x00000001)]
         	HRESULT GetControlInfo([in, out] boolean *Handled, [in, out] SHORT *AccelCount, [in, out] LONG *AccelTable, [in, out] LONG *Flags);
 		[id(0x00000002)]
-		HRESULT OnMnemonic([in, out] boolean *Handled, [in] LONG wMsg, [in] LONG wParam, [in] LONG lParam, [in] LONG Shift);
+		HRESULT OnMnemonic([in, out] boolean *Handled, [in] LONG hWnd, [in] LONG wMsg, [in] LONG wParam, [in] LONG lParam, [in] LONG Shift);
 	};
     	[
 		uuid(D5D3BBE3-DB60-4522-AF5B-D767FE736DDB),
@@ -296,11 +329,24 @@ library OLEGuids
     	interface IPerPropertyBrowsingVB : IDispatch 
 	{
 		[id(0x00000001)]
-        	HRESULT GetDisplayString([in, out] boolean *Handled, [in] LONG DispID, [in, out] BSTR *DisplayName);
+        	HRESULT GetDisplayString([in, out] boolean *Handled, [in] LONG DispId, [in, out] BSTR *DisplayName);
 		[id(0x00000002)]
-        	HRESULT GetPredefinedStrings([in, out] boolean *Handled, [in] LONG DispID, [in, out] SAFEARRAY(BSTR) *StringsOut, [in, out] SAFEARRAY(LONG) *CookiesOut);
+        	HRESULT GetPredefinedStrings([in, out] boolean *Handled, [in] LONG DispId, [in, out] SAFEARRAY(BSTR) *StringsOut, [in, out] SAFEARRAY(LONG) *CookiesOut);
 		[id(0x00000003)]
-		HRESULT GetPredefinedValue([in, out] boolean *Handled, [in] LONG DispID, [in] LONG Cookie, [in, out] VARIANT *Value);
+		HRESULT GetPredefinedValue([in, out] boolean *Handled, [in] LONG DispId, [in] LONG Cookie, [in, out] VARIANT *Value);
+    	};
+	[
+		uuid(061D3A2F-A213-4016-9756-B89140604819),
+		odl,
+		version(1.0),
+		dual,
+		nonextensible,
+		oleautomation
+	]
+	interface IOleInPlaceObjectWindowlessVB : IDispatch
+	{
+        	[id(0x00000001)]
+        	HRESULT OnWindowMessage([in, out] boolean *Handled, [in] LONG wMsg, [in] LONG wParam, [in] LONG lParam, [in, out] LONG *Result);
     	};
 	[
 		uuid(00020D00-0000-0000-C000-000000000046),
@@ -313,9 +359,9 @@ library OLEGuids
 		LONG GetLinkCount();
 		LONG GetObject([in] LONG iob, [in] void *pREOBJECT, [in] LONG dwFlags);
 		LONG InsertObject([in] void *pREOBJECT);
-		LONG ConvertObject([in] LONG iob, [in] OLECLSID *pCLSIDNew, [in] LPSTR pstrUserTypeNew);
+		LONG ConvertObject([in] LONG iob, [in] OLECLSID *pCLSIDNew, [in] LONG lpstrUserTypeNew);
 		LONG ActivateAs([in] OLECLSID *pCLSID, [in] OLECLSID *pCLSIDAs);
-		LONG SetHostNames([in] LPSTR pstrContainerApp, [in] LPSTR pstrContainerObj);
+		LONG SetHostNames([in] LONG lpstrContainerApp, [in] LONG lpstrContainerObj);
 		LONG SetLinkAvailable([in] LONG iob, [in] LONG fAvailable);
 		LONG SetDvaspect([in] LONG iob, [in] LONG dvAspect);
 		LONG HandsOffStorage([in] LONG iob);

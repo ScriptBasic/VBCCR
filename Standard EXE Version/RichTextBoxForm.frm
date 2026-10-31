@@ -23,12 +23,11 @@ Begin VB.Form RichTextBoxForm
          Height          =   315
          Left            =   11415
          TabIndex        =   2
-         Top             =   30
+         Top             =   45
          Width           =   1335
          _ExtentX        =   2355
          _ExtentY        =   556
          Style           =   0
-         Text            =   "RichTextBoxForm.frx":0290
          RecentMax       =   3
       End
       Begin ComCtlsDemo.ToolBar ToolBar1 
@@ -42,19 +41,19 @@ Begin VB.Form RichTextBoxForm
          Wrappable       =   0   'False
          AllowCustomize  =   0   'False
          ButtonWidth     =   83
-         InitButtons     =   "RichTextBoxForm.frx":02C4
+         InitButtons     =   "RichTextBoxForm.frx":0290
       End
       Begin ComCtlsDemo.FontCombo FontCombo1 
          Height          =   315
          Left            =   8955
          TabIndex        =   1
-         Top             =   30
+         Top             =   45
          Width           =   2205
          _ExtentX        =   3889
          _ExtentY        =   556
          BuddyControl    =   "FontCombo2"
+         Style           =   0
          FontType        =   2
-         Text            =   "RichTextBoxForm.frx":06F8
          RecentMax       =   3
       End
    End
@@ -69,8 +68,8 @@ Begin VB.Form RichTextBoxForm
       HideSelection   =   0   'False
       MultiLine       =   -1  'True
       ScrollBars      =   3
-      Text            =   "RichTextBoxForm.frx":072C
-      TextRTF         =   "RichTextBoxForm.frx":0764
+      AutoVerbMenu    =   -1  'True
+      TextRTF         =   "RichTextBoxForm.frx":06C4
    End
 End
 Attribute VB_Name = "RichTextBoxForm"
@@ -79,39 +78,32 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 Option Explicit
-Private Type MENUITEMINFO
-cbSize As Long
-fMask As Long
-fType As Long
-fState As Long
-wID As Long
-hSubMenu As Long
-hBmpChecked As Long
-hBmpUnchecked As Long
-dwItemData As Long
-dwTypeData As Long
-cch As Long
-hBmpItem As Long
-End Type
-Private Const MIIM_STATE As Long = &H1
-Private Const MIIM_ID As Long = &H2
-Private Const MIIM_TYPE As Long = &H10
-Private Const MFT_STRING As Long = &H0
-Private Const MFS_ENABLED As Long = &H0
-Private Const MFS_DISABLED As Long = &H3
-Private Const CF_UNICODETEXT As Long = 13
-Private Declare Function CreatePopupMenu Lib "user32" () As Long
-Private Declare Function InsertMenuItem Lib "user32" Alias "InsertMenuItemW" (ByVal hMenu As Long, ByVal uItem As Long, ByVal fByPosition As Long, ByRef lpmii As MENUITEMINFO) As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+#If VBA7 Then
+Private Declare PtrSafe Function GetLocaleInfo Lib "kernel32" Alias "GetLocaleInfoW" (ByVal LCID As Long, ByVal LCType As Long, ByVal lpLCData As LongPtr, ByVal cchData As Long) As Long
+Private Declare PtrSafe Function SetActiveWindow Lib "user32" (ByVal hWnd As LongPtr) As LongPtr
+#Else
 Private Declare Function GetLocaleInfo Lib "kernel32" Alias "GetLocaleInfoW" (ByVal Locale As Long, ByVal LCType As Long, ByVal lpLCData As Long, ByVal cchData As Long) As Long
 Private Declare Function SetActiveWindow Lib "user32" (ByVal hWnd As Long) As Long
+#End If
 Private LocaleMeasure As Long
-Private FindDialogHandle As Long
+Private FindDialogHandle As LongPtr
 Private FontComboFreezeClick As Boolean
 Private RichTextBoxFreezeSelChange As Boolean
+Private CommonDialogPrinter As CommonDialog
 Private WithEvents CommonDialogPageSetup As CommonDialog
 Attribute CommonDialogPageSetup.VB_VarHelpID = -1
-Private WithEvents CommonDialogPrinter As CommonDialog
-Attribute CommonDialogPrinter.VB_VarHelpID = -1
 Private WithEvents CommonDialogFont As CommonDialog
 Attribute CommonDialogFont.VB_VarHelpID = -1
 Private WithEvents CommonDialogFind As CommonDialog
@@ -137,16 +129,23 @@ If (CommonDialogFind.Flags And CdlFRMatchCase) = CdlFRMatchCase Then Options = O
 If (CommonDialogFind.Flags And CdlFRDown) = CdlFRDown Then
     RetVal = RichTextBox1.Find(CommonDialogFind.FindWhat, RichTextBox1.SelStart + RichTextBox1.SelLength, , Options)
 Else
-    RetVal = RichTextBox1.Find(CommonDialogFind.FindWhat, , RichTextBox1.SelStart, Options)
+    Options = Options Or RtfFindOptionReverse
+    RetVal = RichTextBox1.Find(CommonDialogFind.FindWhat, RichTextBox1.SelStart, , Options)
 End If
 If RetVal = -1 Then MsgBox "Could not find '" & CommonDialogFind.FindWhat & "'.", vbInformation + vbOKOnly + vbSystemModal
 End Sub
 
 Private Sub Form_Load()
-Call SetupVisualStyles(Me)
+Call SetupVisualStylesFixes(Me)
+Set CommonDialogPrinter = New CommonDialog
+CommonDialogPrinter.PrinterDefault = False
+CommonDialogPrinter.PrinterDefaultInit = False
 Set CommonDialogPageSetup = New CommonDialog
+Const LOCALE_USER_DEFAULT As Long = &H400
 Const LOCALE_IMEASURE As Long = &HD, LOCALE_RETURN_NUMBER As Long = &H20000000
-GetLocaleInfo 0, LOCALE_IMEASURE Or LOCALE_RETURN_NUMBER, VarPtr(LocaleMeasure), LenB(LocaleMeasure)
+' cchData = sizeof(DWORD) / sizeof(TCHAR)
+' That is, 2 for Unicode and 4 for ANSI.
+GetLocaleInfo LOCALE_USER_DEFAULT, LOCALE_IMEASURE Or LOCALE_RETURN_NUMBER, VarPtr(LocaleMeasure), 2
 CommonDialogPageSetup.PageLeftMargin = IIf(LocaleMeasure = 0, 2500, 1000)
 CommonDialogPageSetup.PageTopMargin = IIf(LocaleMeasure = 0, 2500, 1000)
 CommonDialogPageSetup.PageRightMargin = IIf(LocaleMeasure = 0, 2500, 1000)
@@ -154,13 +153,9 @@ CommonDialogPageSetup.PageBottomMargin = IIf(LocaleMeasure = 0, 2500, 1000)
 CommonDialogPageSetup.Flags = IIf(LocaleMeasure = 0, CdlPSDInHundredthsOfMillimeters, CdlPSDInThousandthsOfInches) Or CdlPSDDefaultMinMargins Or CdlPSDMargins Or CdlPSDHelpButton
 CommonDialogPageSetup.PrinterDefault = False
 CommonDialogPageSetup.PrinterDefaultInit = False
-Set CommonDialogPrinter = New CommonDialog
-CommonDialogPrinter.PrinterDefault = False
-CommonDialogPrinter.PrinterDefaultInit = False
 Set CommonDialogFont = New CommonDialog
 Set CommonDialogFind = New CommonDialog
 CommonDialogFind.Flags = CdlFRDown
-If Not IsNull(RichTextBox1.SelFontName) Then FontCombo1.Text = RichTextBox1.SelFontName
 End Sub
 
 Private Sub Form_Resize()
@@ -255,12 +250,12 @@ Select Case Button.Caption
         End If
         End With
     Case "&Find"
-        Dim RetVal As Long
+        Dim RetVal As LongPtr
         RetVal = CommonDialogFind.ShowFind
-        If RetVal <> 0 Then
+        If RetVal <> NULL_PTR Then
             FindDialogHandle = RetVal
         Else
-            If FindDialogHandle <> 0 Then SetActiveWindow FindDialogHandle
+            If FindDialogHandle <> NULL_PTR Then SetActiveWindow FindDialogHandle
         End If
 End Select
 End Sub
@@ -344,56 +339,4 @@ If (SelType And RtfSelTypeText) <> 0 Or SelType = RtfSelTypeEmpty Then
     End If
     FontComboFreezeClick = False
 End If
-End Sub
-
-Private Sub RichTextBox1_OLEGetContextMenu(ByVal SelType As Integer, ByVal LpOleObject As Long, ByVal SelStart As Long, ByVal SelEnd As Long, hMenu As Long)
-Dim hPopupMenu As Long
-hPopupMenu = CreatePopupMenu()
-If hPopupMenu = 0 Then Exit Sub
-Dim i As Long
-Dim MII As MENUITEMINFO, Text As String
-For i = 1 To 4
-    MII.cbSize = LenB(MII)
-    MII.fMask = MIIM_TYPE Or MIIM_ID Or MIIM_STATE
-    MII.fType = MFT_STRING
-    Text = VBA.Choose(i, "Cut", "Copy", "Paste", "Paste Special")
-    MII.dwTypeData = StrPtr(Text)
-    MII.cch = Len(Text)
-    If i = 1 Or i = 2 Then
-        If SelType <> 0 Then
-            MII.fState = MFS_ENABLED
-        Else
-            MII.fState = MFS_DISABLED
-        End If
-    ElseIf i = 3 Or i = 4 Then
-        If RichTextBox1.CanPaste = True Then
-            MII.fState = MFS_ENABLED
-        Else
-            MII.fState = MFS_DISABLED
-        End If
-    Else
-        MII.fState = MFS_ENABLED
-    End If
-    MII.wID = i
-    InsertMenuItem hPopupMenu, 0, 0, MII
-Next i
-hMenu = hPopupMenu
-' The client should not destroy the menu as this will be done automatically by the rich text box control.
-End Sub
-
-Private Sub RichTextBox1_OLEContextMenuClick(ByVal ID As Long)
-Select Case ID
-    Case 1
-        RichTextBox1.Cut
-    Case 2
-        RichTextBox1.Copy
-    Case 3
-        RichTextBox1.Paste
-    Case 4
-        If VB.Clipboard.GetFormat(CF_UNICODETEXT) = True Then
-            RichTextBox1.PasteSpecial CF_UNICODETEXT
-        ElseIf VB.Clipboard.GetFormat(vbCFText) = True Then
-            RichTextBox1.PasteSpecial vbCFText
-        End If
-End Select
 End Sub

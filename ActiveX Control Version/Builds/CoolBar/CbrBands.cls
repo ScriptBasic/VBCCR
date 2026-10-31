@@ -12,12 +12,24 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
 Option Explicit
-Private ShadowObjectPointer As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+Private ShadowObjectPointer As LongPtr
 Private PropUserMode As Boolean
 Private PropBand As Collection
 
 Private Function ShadowCoolBar() As CoolBar
-ComCtlsPtrToShadowObj ShadowCoolBar, ShadowObjectPointer
+ComCtlsObjSetAddRef ShadowCoolBar, ShadowObjectPointer
 End Function
 
 Private Sub Class_Initialize()
@@ -37,6 +49,19 @@ End Function
 Friend Sub FInit(ByVal Object As CoolBar, UserMode As Boolean)
 ShadowObjectPointer = ObjPtr(Object)
 PropUserMode = UserMode
+End Sub
+
+Friend Sub FChangeKey(ByVal Index As Long, ByRef OldKey As String, ByVal NewKey As String)
+Dim Item As Variant
+Set Item = PropBand(Index)
+If NewKey = vbNullString Then
+    PropBand.Add Item, , Index
+    OldKey = vbNullString
+Else
+    PropBand.Add Item, NewKey, Index
+    OldKey = NewKey
+End If
+PropBand.Remove Index + 1
 End Sub
 
 Public Function Add(Optional ByVal Index As Long, Optional ByVal Key As String, Optional ByVal Caption As String, Optional ByVal Image As Variant, Optional ByVal NewRow As Boolean, Optional ByVal Child As Variant, Optional ByVal Visible As Boolean = True) As CbrBand

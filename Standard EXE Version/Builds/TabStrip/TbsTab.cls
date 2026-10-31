@@ -12,14 +12,26 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
-Private ShadowObjectPointer As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+Private ShadowObjectPointer As LongPtr
 Private PropIndex As Long, PropKey As String
 Private PropTag As Variant
 Private PropToolTipText As String
 Private PropImage As Variant, PropImageIndex As Long
 
 Private Function ShadowTabStrip() As TabStrip
-ComCtlsPtrToShadowObj ShadowTabStrip, ShadowObjectPointer
+ComCtlsObjSetAddRef ShadowTabStrip, ShadowObjectPointer
 End Function
 
 Friend Sub FInit(ByVal Object As TabStrip, ByVal Key As String, ByVal Image As Variant, ByVal ImageIndex As Long)
@@ -41,6 +53,10 @@ End Property
 Public Property Get Key() As String
 Attribute Key.VB_Description = "Returns the key used in the collection."
 Key = PropKey
+End Property
+
+Public Property Let Key(ByVal Value As String)
+ShadowTabStrip.Tabs.FChangeKey PropIndex, PropKey, Value
 End Property
 
 Public Property Get Tag() As Variant
@@ -103,7 +119,7 @@ End Property
 Public Property Get ImageIndex() As Long
 Attribute ImageIndex.VB_Description = "Returns the index of an image in an associated image list control."
 ImageIndex = PropImageIndex
-End Function
+End Property
 
 Public Property Get Selected() As Boolean
 Attribute Selected.VB_Description = "Returns/sets a value that determines whether the tab is selected or not."

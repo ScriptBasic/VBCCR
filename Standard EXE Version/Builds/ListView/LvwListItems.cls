@@ -12,13 +12,23 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
-Private ShadowObjectPointer As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+Private ShadowObjectPointer As LongPtr
 Private PropListItem As Collection
-Private WithEvents PropEnumeration As Enumeration
-Attribute PropEnumeration.VB_VarHelpID = -1
 
 Private Function ShadowListView() As ListView
-ComCtlsPtrToShadowObj ShadowListView, ShadowObjectPointer
+ComCtlsObjSetAddRef ShadowListView, ShadowObjectPointer
 End Function
 
 Private Sub Class_Initialize()
@@ -29,29 +39,36 @@ Private Sub Class_Terminate()
 Set PropListItem = Nothing
 End Sub
 
-Private Sub PropEnumeration_GetNextItem(ByRef Index As Long, ByRef Control As Long, ByRef Data As Long, ByRef VNextItem As Variant, ByRef NoMoreItems As Boolean)
-ShadowListView.FListItemsNextItem Index, Control, Data, VNextItem, NoMoreItems
-If NoMoreItems = True Then Set PropEnumeration = Nothing
-End Sub
-
-Private Sub PropEnumeration_Reset(ByRef Index As Long, ByRef Control As Long, ByRef Data As Long)
-Index = -1
-Control = ShadowListView.FListItemsControl()
-End Sub
-
-Private Sub PropEnumeration_Skip(ByRef Index As Long, ByRef Control As Long, ByRef Data As Long, ByVal SkipCount As Long, ByRef SkippedAll As Boolean)
-Index = Index + SkipCount
-End Sub
-
 Public Function NewEnum() As IEnumVARIANT
 Attribute NewEnum.VB_UserMemId = -4
 Attribute NewEnum.VB_MemberFlags = "40"
-Set PropEnumeration = New Enumeration
-Set NewEnum = PropEnumeration.GetEnum(ShadowListView.FListItemsControl())
+Set NewEnum = GetNewEnum(Me, Me.Count, 1)
 End Function
 
 Friend Sub FInit(ByVal Object As ListView)
 ShadowObjectPointer = ObjPtr(Object)
+End Sub
+
+#If VBA7 Then
+Friend Sub FChangeKey(ByVal Ptr As LongPtr, ByRef OldKey As String, ByVal NewKey As String)
+#Else
+Friend Sub FChangeKey(ByVal Ptr As Long, ByRef OldKey As String, ByVal NewKey As String)
+#End If
+Dim Item As Variant, i As Long
+For Each Item In PropListItem
+    i = i + 1
+    If ObjPtr(Item) = Ptr Then
+        If NewKey = vbNullString Then
+            PropListItem.Add Item
+            OldKey = vbNullString
+        Else
+            PropListItem.Add Item, NewKey
+            OldKey = NewKey
+        End If
+        PropListItem.Remove i
+        Exit For
+    End If
+Next Item
 End Sub
 
 Public Function Add(Optional ByVal Index As Long, Optional ByVal Key As String, Optional ByVal Text As String, Optional ByVal Icon As Variant, Optional ByVal SmallIcon As Variant) As LvwListItem
@@ -70,30 +87,33 @@ Else
     Call ComCtlsImlListImageIndex(ShadowListView, ShadowListView.SmallIcons, SmallIcon, SmallIconIndex)
 End If
 Dim NewListItem As New LvwListItem
-Dim Ptr As Long
+Dim Ptr As LongPtr
 Ptr = ObjPtr(NewListItem)
 If Index = 0 Then Index = PropListItem.Count + 1
 NewListItem.FInit ShadowObjectPointer, Index, Key, Ptr, Text, Icon, IconIndex, SmallIcon, SmallIconIndex
-ShadowListView.FListItemsAdd Ptr, Index, Text
 If Key = vbNullString Then
     PropListItem.Add NewListItem
 Else
     PropListItem.Add NewListItem, Key
 End If
+ShadowListView.FListItemsAdd Ptr, Index, Text
 Set Add = NewListItem
 End Function
 
 Public Property Get Item(ByVal Index As Variant) As LvwListItem
 Attribute Item.VB_Description = "Returns a list item given its index or key."
 Attribute Item.VB_UserMemId = 0
-Select Case VarType(Index)
-    Case vbLong, vbInteger, vbByte, vbDouble, vbSingle
-        Set Item = PtrToObj(ShadowListView.FListItemPtr(Index))
-    Case vbString
-        Set Item = PropListItem(Index)
-    Case Else
-        Err.Raise 13
-End Select
+If VarType(Index) = vbString Then
+    Set Item = PropListItem(Index)
+Else
+    Dim Ptr As LongPtr
+    Ptr = ShadowListView.FListItemPtr(Index)
+    If Ptr <> NULL_PTR Then
+        Set Item = PtrToObj(Ptr)
+    Else
+        Err.Raise Number:=35600, Description:="Index out of bounds"
+    End If
+End If
 End Property
 
 Public Function Exists(ByVal Index As Variant) As Boolean
@@ -117,10 +137,14 @@ End Sub
 
 Public Sub Remove(ByVal Index As Variant)
 Attribute Remove.VB_Description = "Removes a list item from the collection."
-Select Case VarType(Index)
-    Case vbLong, vbInteger, vbByte, vbDouble, vbSingle
-        Dim Ptr As Long, Item As Variant, i As Long
-        Ptr = ShadowListView.FListItemPtr(Index)
+If VarType(Index) = vbString Then
+    ShadowListView.FListItemsRemove ShadowListView.FListItemIndex(ObjPtr(PropListItem(Index)))
+    PropListItem.Remove Index
+Else
+    Dim Ptr As LongPtr
+    Ptr = ShadowListView.FListItemPtr(Index)
+    If Ptr <> NULL_PTR Then
+        Dim Item As Variant, i As Long
         ShadowListView.FListItemsRemove Index
         For Each Item In PropListItem
             i = i + 1
@@ -129,10 +153,8 @@ Select Case VarType(Index)
                 Exit For
             End If
         Next Item
-    Case vbString
-        ShadowListView.FListItemsRemove ShadowListView.FListItemIndex(ObjPtr(PropListItem(Index)))
-        PropListItem.Remove Index
-    Case Else
-        Err.Raise 13
-End Select
+    Else
+        Err.Raise Number:=35600, Description:="Index out of bounds"
+    End If
+End If
 End Sub

@@ -12,17 +12,33 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
 Option Explicit
-Private ShadowObjectPointer As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+Private ShadowObjectPointer As LongPtr
 Private ShadowListItem As LvwListItem
 Private PropIndex As Long
-Private PropPtr As Long
+Private PropPtr As LongPtr
 Private PropSubItemIndex As Long
 
 Private Function ShadowListView() As ListView
-ComCtlsPtrToShadowObj ShadowListView, ShadowObjectPointer
+ComCtlsObjSetAddRef ShadowListView, ShadowObjectPointer
 End Function
 
+#If VBA7 Then
+Friend Sub FInit(ByVal ObjectPointer As LongPtr, ByVal ListItem As LvwListItem, ByVal Index As Long, ByVal Ptr As LongPtr, ByVal SubItemIndex As Long)
+#Else
 Friend Sub FInit(ByVal ObjectPointer As Long, ByVal ListItem As LvwListItem, ByVal Index As Long, ByVal Ptr As Long, ByVal SubItemIndex As Long)
+#End If
 ShadowObjectPointer = ObjectPointer
 Set ShadowListItem = ListItem
 PropIndex = Index
@@ -65,6 +81,7 @@ End Property
 
 Public Property Get Text() As String
 Attribute Text.VB_Description = "Returns/sets the text of the list sub item."
+Attribute Text.VB_UserMemId = 0
 Text = ShadowListItem.FListSubItemProp(PropSubItemIndex, 3)
 End Property
 
@@ -97,7 +114,7 @@ End Property
 Public Property Get ReportIconIndex() As Long
 Attribute ReportIconIndex.VB_Description = "Returns the index of an report icon in an associated image list control."
 ReportIconIndex = ShadowListItem.FListSubItemProp(PropSubItemIndex, 5)
-End Function
+End Property
 
 Public Property Get Bold() As Boolean
 Attribute Bold.VB_Description = "Returns/sets a value that determines whether the text is displayed with a bold font or not."
@@ -137,4 +154,40 @@ End Property
 
 Public Property Let ToolTipText(ByVal Value As String)
 ShadowListItem.FListSubItemProp(PropSubItemIndex, 8) = Value
+End Property
+
+Public Property Get Left() As Single
+Attribute Left.VB_Description = "Returns the distance between the internal left edge of an object and the left edge of its container."
+If ShadowListView.FListItemVerify(PropPtr, PropIndex) = True Then Left = ShadowListView.FListSubItemLeft(PropIndex, PropSubItemIndex)
+End Property
+
+Public Property Let Left(ByVal Value As Single)
+Err.Raise Number:=383, Description:="Property is read-only"
+End Property
+
+Public Property Get Top() As Single
+Attribute Top.VB_Description = "Returns the distance between the internal top edge of an object and the top edge of its container."
+If ShadowListView.FListItemVerify(PropPtr, PropIndex) = True Then Top = ShadowListView.FListSubItemTop(PropIndex, PropSubItemIndex)
+End Property
+
+Public Property Let Top(ByVal Value As Single)
+Err.Raise Number:=383, Description:="Property is read-only"
+End Property
+
+Public Property Get Width() As Single
+Attribute Width.VB_Description = "Returns the width of the list sub item."
+If ShadowListView.FListItemVerify(PropPtr, PropIndex) = True Then Width = ShadowListView.FListSubItemWidth(PropIndex, PropSubItemIndex)
+End Property
+
+Public Property Let Width(ByVal Value As Single)
+Err.Raise Number:=383, Description:="Property is read-only"
+End Property
+
+Public Property Get Height() As Single
+Attribute Height.VB_Description = "Returns the height of the list sub item."
+If ShadowListView.FListItemVerify(PropPtr, PropIndex) = True Then Height = ShadowListView.FListSubItemHeight(PropIndex, PropSubItemIndex)
+End Property
+
+Public Property Let Height(ByVal Value As Single)
+Err.Raise Number:=383, Description:="Property is read-only"
 End Property

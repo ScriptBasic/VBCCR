@@ -12,41 +12,38 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
 Option Explicit
-Private ShadowObjectPointer As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+Private ShadowObjectPointer As LongPtr
 Private ShadowListItem As LvwListItem
 Private PropIndex As Long
-Private PropPtr As Long
-Private WithEvents PropEnumeration As Enumeration
-Attribute PropEnumeration.VB_VarHelpID = -1
+Private PropPtr As LongPtr
 
 Private Function ShadowListView() As ListView
-ComCtlsPtrToShadowObj ShadowListView, ShadowObjectPointer
+ComCtlsObjSetAddRef ShadowListView, ShadowObjectPointer
 End Function
-
-Private Sub PropEnumeration_GetNextItem(ByRef Index As Long, ByRef Control As Long, ByRef Data As Long, ByRef VNextItem As Variant, ByRef NoMoreItems As Boolean)
-Dim ListItem As LvwListItem
-Set ListItem = PtrToObj(PropPtr)
-ShadowListView.FListSubItemsNextItem ListItem, Index, Control, Data, VNextItem, NoMoreItems
-If NoMoreItems = True Then Set PropEnumeration = Nothing
-End Sub
-
-Private Sub PropEnumeration_Reset(ByRef Index As Long, ByRef Control As Long, ByRef Data As Long)
-Index = -1
-Control = ShadowListView.FListItemsControl()
-End Sub
-
-Private Sub PropEnumeration_Skip(ByRef Index As Long, ByRef Control As Long, ByRef Data As Long, ByVal SkipCount As Long, ByRef SkippedAll As Boolean)
-Index = Index + SkipCount
-End Sub
 
 Public Function NewEnum() As IEnumVARIANT
 Attribute NewEnum.VB_UserMemId = -4
 Attribute NewEnum.VB_MemberFlags = "40"
-Set PropEnumeration = New Enumeration
-Set NewEnum = PropEnumeration.GetEnum(ShadowListView.FListItemsControl())
+Set NewEnum = GetNewEnum(Me, Me.Count, 1)
 End Function
 
+#If VBA7 Then
+Friend Sub FInit(ByVal ObjectPointer As LongPtr, ByVal ListItem As LvwListItem, ByVal Ptr As LongPtr, ByVal Index As Long)
+#Else
 Friend Sub FInit(ByVal ObjectPointer As Long, ByVal ListItem As LvwListItem, ByVal Ptr As Long, ByVal Index As Long)
+#End If
 ShadowObjectPointer = ObjectPointer
 Set ShadowListItem = ListItem
 PropPtr = Ptr
@@ -90,9 +87,8 @@ Attribute Item.VB_UserMemId = 0
 Dim SubItemIndex As Long
 SubItemIndex = ShadowListItem.FListSubItemsItem(Index)
 If SubItemIndex > 0 And SubItemIndex <= ShadowListItem.FListSubItemsCount Then
-    Dim NewListSubItem As New LvwListSubItem
-    NewListSubItem.FInit ShadowObjectPointer, ShadowListItem, PropIndex, PropPtr, SubItemIndex
-    Set Item = NewListSubItem
+    Set Item = New LvwListSubItem
+    Item.FInit ShadowObjectPointer, ShadowListItem, PropIndex, PropPtr, SubItemIndex
 Else
     Err.Raise 9
 End If

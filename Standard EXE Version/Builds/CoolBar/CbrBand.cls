@@ -12,7 +12,19 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
-Private ShadowObjectPointer As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+Private ShadowObjectPointer As LongPtr
 Private PropIndex As Long, PropKey As String, PropID As Long
 Private PropTag As Variant
 Private PropChild As Variant
@@ -25,7 +37,7 @@ Private PropBackColor As OLE_COLOR
 Private PropForeColor As OLE_COLOR
 
 Private Function ShadowCoolBar() As CoolBar
-ComCtlsPtrToShadowObj ShadowCoolBar, ShadowObjectPointer
+ComCtlsObjSetAddRef ShadowCoolBar, ShadowObjectPointer
 End Function
 
 Private Sub Class_Initialize()
@@ -39,7 +51,7 @@ Friend Sub FInit(ByVal Object As CoolBar, ByVal Key As String, ByVal Child As Va
 ShadowObjectPointer = ObjPtr(Object)
 PropKey = Key
 If IsObject(Child) Then
-    Set PropChild = Child
+    PropChild = ObjPtr(Child)
 ElseIf VarType(Child) = vbString Then
     PropChild = Child
 End If
@@ -59,6 +71,10 @@ End Property
 Public Property Get Key() As String
 Attribute Key.VB_Description = "Returns the key used in the collection."
 Key = PropKey
+End Property
+
+Public Property Let Key(ByVal Value As String)
+ShadowCoolBar.Bands.FChangeKey PropIndex, PropKey, Value
 End Property
 
 Public Property Get Tag() As Variant
@@ -104,29 +120,38 @@ End Property
 
 Public Property Get Child() As Object
 Attribute Child.VB_Description = "Returns/sets the control to be moved and sized with the band."
-If IsObject(PropChild) Then
-    Set Child = PropChild
-ElseIf VarType(PropChild) = vbString Then
-    If Not PropChild = vbNullString Then
-        Dim ControlEnum As Object
-        For Each ControlEnum In ShadowCoolBar.ContainedControls
-            If ProperControlName(ControlEnum) = PropChild Then
-                Set Child = ControlEnum
-                Exit For
-            End If
-        Next ControlEnum
-    End If
-End If
+Select Case VarType(PropChild)
+    Case vbLong, &H14 ' vbLongLong
+        If PropChild <> NULL_PTR Then Set Child = PtrToObj(PropChild)
+    Case vbString
+        If Not PropChild = vbNullString Then
+            Dim ControlEnum As Object
+            For Each ControlEnum In ShadowCoolBar.ContainedControls
+                If ProperControlName(ControlEnum) = PropChild Then
+                    Set Child = ControlEnum
+                    Exit For
+                End If
+            Next ControlEnum
+        End If
+End Select
 End Property
 
 Public Property Let Child(ByVal Value As Object)
-Set PropChild = Value
-ShadowCoolBar.FBandChild(PropID) = PropChild
+If Not Value Is Nothing Then
+    PropChild = ObjPtr(Value)
+Else
+    PropChild = Empty
+End If
+ShadowCoolBar.FBandChild(PropID) = Value
 End Property
 
 Public Property Set Child(ByVal Value As Object)
-Set PropChild = Value
-Set ShadowCoolBar.FBandChild(PropID) = PropChild
+If Not Value Is Nothing Then
+    PropChild = ObjPtr(Value)
+Else
+    PropChild = Empty
+End If
+Set ShadowCoolBar.FBandChild(PropID) = Value
 End Property
 
 Public Property Get Style() As CbrBandStyleConstants
@@ -156,7 +181,7 @@ End Property
 Public Property Get ImageIndex() As Long
 Attribute ImageIndex.VB_Description = "Returns the index of an image in an associated image list control."
 ImageIndex = PropImageIndex
-End Function
+End Property
 
 Public Property Get Width() As Single
 Attribute Width.VB_Description = "Returns/sets the width of the band."
@@ -245,12 +270,17 @@ If Value Is Nothing Then
     Set PropPicture = Nothing
 Else
     If Value.Type = vbPicTypeBitmap Or Value.Handle = 0 Then
-        Set PropPicture = Value
+        Set PropPicture = New StdPicture
+        Set ShadowCoolBar.FBandPicture(PropID, PropPicture) = Value
     Else
         Err.Raise 481
     End If
 End If
-ShadowCoolBar.FBandPicture(PropID) = IIf(PropUseCoolBarPicture = True, ShadowCoolBar.Picture, PropPicture)
+If PropUseCoolBarPicture = True Then
+    Set ShadowCoolBar.FBandPicture(PropID) = ShadowCoolBar.Picture
+Else
+    Set ShadowCoolBar.FBandPicture(PropID) = PropPicture
+End If
 End Property
 
 Public Property Get UseCoolBarColors() As Boolean

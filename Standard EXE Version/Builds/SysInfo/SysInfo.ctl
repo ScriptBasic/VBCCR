@@ -5,6 +5,7 @@ Begin VB.UserControl SysInfo
    ClientLeft      =   0
    ClientTop       =   0
    ClientWidth     =   2400
+   DrawStyle       =   5  'Transparent
    BeginProperty Font 
       Name            =   "Tahoma"
       Size            =   6.75
@@ -34,9 +35,20 @@ Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
 #If False Then
 Private SysDeviceTypeOEM, SysDeviceTypeDevNode, SysDeviceTypeVolume, SysDeviceTypePort, SysDeviceTypeDevInterface
-Private SysVolumeDeviceDataDrive, SysVolumeDeviceDataMedia, SysVolumeDeviceDataNetwork
 Private SysACStatusOffline, SysACStatusOnline, SysACStatusUnknown
 Private SysBatteryStatusHigh, SysBatteryStatusLow, SysBatteryStatusCritical, SysBatteryStatusCharging, SysBatteryStatusNone, SysBatteryStatusUnknown
 #End If
@@ -52,13 +64,6 @@ SysDeviceTypeDevNode = DBT_DEVTYP_DEVNODE
 SysDeviceTypeVolume = DBT_DEVTYP_VOLUME
 SysDeviceTypePort = DBT_DEVTYP_PORT
 SysDeviceTypeDevInterface = DBT_DEVTYP_DEVICEINTERFACE
-End Enum
-Private Const DBTF_MEDIA As Long = &H1 ' If not set, change affects physical device or drive.
-Private Const DBTF_NET As Long = &H2
-Public Enum SysVolumeDeviceDataConstants
-SysVolumeDeviceDataDrive = 0
-SysVolumeDeviceDataMedia = DBTF_MEDIA
-SysVolumeDeviceDataNetwork = DBTF_NET
 End Enum
 Public Enum SysACStatusConstants
 SysACStatusOffline = 0
@@ -98,15 +103,14 @@ hdr As DEV_BROADCAST_HDR
 UnitMask As Long
 Flags As Integer
 End Type
-Private Const MAX_PATH As Long = 260
 Private Type DEV_BROADCAST_PORT
 hdr As DEV_BROADCAST_HDR
-pszName(0 To ((MAX_PATH * 2) - 1)) As Byte
+pszName As Integer
 End Type
 Private Type DEV_BROADCAST_DEVICEINTERFACE
 hdr As DEV_BROADCAST_HDR
 ClassGuid As OLEGuids.OLECLSID
-pszDeviceName(0 To ((MAX_PATH * 2) - 1)) As Byte
+pszDeviceName As Integer
 End Type
 Private Type SYSTEM_POWER_STATUS
 ACLineStatus As Byte
@@ -158,15 +162,27 @@ Public Event PowerSuspend()
 Attribute PowerSuspend.VB_Description = "Occurs immediately before the system goes into suspend mode."
 Public Event ThemeChanged()
 Attribute ThemeChanged.VB_Description = "Occurs on activation of a theme, the deactivation of a theme, or a transition from one theme to another. Requires Windows XP (or above)."
+#If VBA7 Then
+Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (ByRef Destination As Any, ByRef Source As Any, ByVal Length As LongPtr)
+Private Declare PtrSafe Function RegisterDeviceNotification Lib "user32" Alias "RegisterDeviceNotificationW" (ByVal hRecipient As LongPtr, ByRef NotificationFilter As Any, ByVal Flags As Long) As LongPtr
+Private Declare PtrSafe Function UnregisterDeviceNotification Lib "user32" (ByVal hDevNotify As LongPtr) As Long
+Private Declare PtrSafe Function GetSystemPowerStatus Lib "kernel32" (ByRef lpSystemPowerStatus As SYSTEM_POWER_STATUS) As Long
+Private Declare PtrSafe Function SystemParametersInfo Lib "user32" Alias "SystemParametersInfoW" (ByVal uAction As Long, ByVal uiParam As Long, ByVal lpvParam As LongPtr, ByVal fWinIni As Long) As Long
+Private Declare PtrSafe Function GetSystemMetrics Lib "user32" (ByVal nIndex As Long) As Long
+Private Declare PtrSafe Function GetAncestor Lib "user32" (ByVal hWnd As LongPtr, ByVal gaFlags As Long) As LongPtr
+Private Declare PtrSafe Function lstrlen Lib "kernel32" Alias "lstrlenW" (ByVal lpString As LongPtr) As Long
+Private Declare PtrSafe Function DrawEdge Lib "user32" (ByVal hDC As LongPtr, ByRef qRC As RECT, ByVal Edge As Long, ByVal grfFlags As Long) As Long
+#Else
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (ByRef Destination As Any, ByRef Source As Any, ByVal Length As Long)
 Private Declare Function RegisterDeviceNotification Lib "user32" Alias "RegisterDeviceNotificationW" (ByVal hRecipient As Long, ByRef NotificationFilter As Any, ByVal Flags As Long) As Long
 Private Declare Function UnregisterDeviceNotification Lib "user32" (ByVal hDevNotify As Long) As Long
 Private Declare Function GetSystemPowerStatus Lib "kernel32" (ByRef lpSystemPowerStatus As SYSTEM_POWER_STATUS) As Long
-Private Declare Function SystemParametersInfo Lib "user32" Alias "SystemParametersInfoW" (ByVal uAction As Long, ByVal uParam As Long, ByRef pvParam As Any, ByVal fWinIni As Long) As Long
+Private Declare Function SystemParametersInfo Lib "user32" Alias "SystemParametersInfoW" (ByVal uAction As Long, ByVal uiParam As Long, ByVal lpvParam As Long, ByVal fWinIni As Long) As Long
 Private Declare Function GetSystemMetrics Lib "user32" (ByVal nIndex As Long) As Long
 Private Declare Function GetAncestor Lib "user32" (ByVal hWnd As Long, ByVal gaFlags As Long) As Long
 Private Declare Function lstrlen Lib "kernel32" Alias "lstrlenW" (ByVal lpString As Long) As Long
 Private Declare Function DrawEdge Lib "user32" (ByVal hDC As Long, ByRef qRC As RECT, ByVal Edge As Long, ByVal grfFlags As Long) As Long
+#End If
 Private Const GA_ROOTOWNER As Long = 3
 Private Const BF_LEFT As Long = 1
 Private Const BF_TOP As Long = 2
@@ -184,6 +200,7 @@ Private Const WM_SETTINGCHANGE As Long = &H1A
 Private Const WM_DEVMODECHANGE As Long = &H1B
 Private Const WM_TIMECHANGE As Long = &H1E
 Private Const WM_FONTCHANGE As Long = &H1D
+Private Const WM_THEMECHANGED As Long = &H31A
 Private Const WM_DISPLAYCHANGE As Long = &H7E
 Private Const WM_DEVICECHANGE As Long = &H219
 Private Const DBT_DEVNODES_CHANGED As Long = &H7
@@ -201,11 +218,20 @@ Private Const PBT_APMQUERYSUSPENDFAILED As Long = &H2
 Private Const PBT_APMSUSPEND As Long = &H4
 Private Const PBT_APMRESUMESUSPEND As Long = &H7
 Private Const PBT_APMPOWERSTATUSCHANGE As Long = &HA
-Private Const WM_THEMECHANGED As Long = &H31A
 Implements ISubclass
-Private SysInfoMainHandle As Long
-Private SysInfoDevNotifyHandle As Long
+Implements OLEGuids.IObjectSafety
+Private SysInfoMainHandle As LongPtr
+Private SysInfoDevNotifyHandle As LongPtr
 Private SysInfoName As String
+
+Private Sub IObjectSafety_GetInterfaceSafetyOptions(ByRef riid As OLEGuids.OLECLSID, ByRef pdwSupportedOptions As Long, ByRef pdwEnabledOptions As Long)
+Const INTERFACESAFE_FOR_UNTRUSTED_CALLER As Long = &H1, INTERFACESAFE_FOR_UNTRUSTED_DATA As Long = &H2
+pdwSupportedOptions = INTERFACESAFE_FOR_UNTRUSTED_CALLER Or INTERFACESAFE_FOR_UNTRUSTED_DATA
+pdwEnabledOptions = INTERFACESAFE_FOR_UNTRUSTED_CALLER Or INTERFACESAFE_FOR_UNTRUSTED_DATA
+End Sub
+
+Private Sub IObjectSafety_SetInterfaceSafetyOptions(ByRef riid As OLEGuids.OLECLSID, ByVal dwOptionsSetMask As Long, ByVal dwEnabledOptions As Long)
+End Sub
 
 Private Sub UserControl_InitProperties()
 If Ambient.UserMode = True Then
@@ -247,11 +273,6 @@ Private Sub UserControl_Terminate()
 Call ClearSysInfo
 End Sub
 
-Public Sub IDEStop()
-Attribute IDEStop.VB_MemberFlags = "40"
-Call ClearSysInfo
-End Sub
-
 Public Property Get Name() As String
 Attribute Name.VB_Description = "Returns the name used in code to identify an object."
 Name = Ambient.DisplayName
@@ -271,33 +292,38 @@ Attribute Parent.VB_Description = "Returns the object on which this object is lo
 Set Parent = UserControl.Parent
 End Property
 
+#If VBA7 Then
+Public Property Get hMain() As LongPtr
+Attribute hMain.VB_Description = "Returns a handle to the hidden top-level main window of the application."
+#Else
 Public Property Get hMain() As Long
 Attribute hMain.VB_Description = "Returns a handle to the hidden top-level main window of the application."
+#End If
 hMain = SysInfoMainHandle
 End Property
 
 Private Sub InitSysInfo()
-If SysInfoMainHandle <> 0 Then Exit Sub
+If SysInfoMainHandle <> NULL_PTR Then Exit Sub
 SysInfoMainHandle = GetAncestor(UserControl.hWnd, GA_ROOTOWNER)
-If SysInfoMainHandle <> 0 Then
+If SysInfoMainHandle <> NULL_PTR Then
     Call ComCtlsSetSubclass(SysInfoMainHandle, Me, 1, SysInfoName)
     Call ComCtlsSetSubclass(UserControl.hWnd, Me, 2)
-    Dim DBCC As DEV_BROADCAST_DEVICEINTERFACE
-    With DBCC.hdr
-    .cbSize = LenB(DBCC)
+    Dim DBCDI As DEV_BROADCAST_DEVICEINTERFACE
+    With DBCDI.hdr
+    .cbSize = LenB(DBCDI)
     .DeviceType = DBT_DEVTYP_DEVICEINTERFACE
     End With
-    SysInfoDevNotifyHandle = RegisterDeviceNotification(UserControl.hWnd, DBCC, DEVICE_NOTIFY_WINDOW_HANDLE Or DEVICE_NOTIFY_ALL_INTERFACE_CLASSES)
+    SysInfoDevNotifyHandle = RegisterDeviceNotification(UserControl.hWnd, DBCDI, DEVICE_NOTIFY_WINDOW_HANDLE Or DEVICE_NOTIFY_ALL_INTERFACE_CLASSES)
 End If
 End Sub
 
 Private Sub ClearSysInfo()
-If SysInfoMainHandle = 0 Then Exit Sub
+If SysInfoMainHandle = NULL_PTR Then Exit Sub
 Call ComCtlsRemoveSubclass(SysInfoMainHandle, SysInfoName)
-If SysInfoDevNotifyHandle <> 0 Then UnregisterDeviceNotification SysInfoDevNotifyHandle
+If SysInfoDevNotifyHandle <> NULL_PTR Then UnregisterDeviceNotification SysInfoDevNotifyHandle
 Call ComCtlsRemoveSubclass(UserControl.hWnd)
-SysInfoMainHandle = 0
-SysInfoDevNotifyHandle = 0
+SysInfoMainHandle = NULL_PTR
+SysInfoDevNotifyHandle = NULL_PTR
 End Sub
 
 Public Property Get ACStatus() As SysACStatusConstants
@@ -359,7 +385,7 @@ Public Property Get WorkAreaLeft() As Single
 Attribute WorkAreaLeft.VB_Description = "Returns the coordinate for the left edge of the visible desktop adjusted for the windows taskbar."
 Attribute WorkAreaLeft.VB_MemberFlags = "400"
 Dim RC As RECT
-If SystemParametersInfo(SPI_GETWORKAREA, 0, RC, 0) <> 0 Then WorkAreaLeft = RC.Left * (1440 / DPI_X())
+If SystemParametersInfo(SPI_GETWORKAREA, 0, VarPtr(RC), 0) <> 0 Then WorkAreaLeft = RC.Left * (1440 / DPI_X())
 End Property
 
 Public Property Let WorkAreaLeft(ByVal Value As Single)
@@ -370,7 +396,7 @@ Public Property Get WorkAreaTop() As Single
 Attribute WorkAreaTop.VB_Description = "Returns the coordinate for the top edge of the visible desktop adjusted for the windows taskbar."
 Attribute WorkAreaTop.VB_MemberFlags = "400"
 Dim RC As RECT
-If SystemParametersInfo(SPI_GETWORKAREA, 0, RC, 0) <> 0 Then WorkAreaTop = RC.Top * (1440 / DPI_Y())
+If SystemParametersInfo(SPI_GETWORKAREA, 0, VarPtr(RC), 0) <> 0 Then WorkAreaTop = RC.Top * (1440 / DPI_Y())
 End Property
 
 Public Property Let WorkAreaTop(ByVal Value As Single)
@@ -381,7 +407,7 @@ Public Property Get WorkAreaWidth() As Single
 Attribute WorkAreaWidth.VB_Description = "Returns the width of the visible desktop adjusted for the windows taskbar."
 Attribute WorkAreaWidth.VB_MemberFlags = "400"
 Dim RC As RECT
-If SystemParametersInfo(SPI_GETWORKAREA, 0, RC, 0) <> 0 Then WorkAreaWidth = (RC.Right - RC.Left) * (1440 / DPI_X())
+If SystemParametersInfo(SPI_GETWORKAREA, 0, VarPtr(RC), 0) <> 0 Then WorkAreaWidth = (RC.Right - RC.Left) * (1440 / DPI_X())
 End Property
 
 Public Property Let WorkAreaWidth(ByVal Value As Single)
@@ -392,7 +418,7 @@ Public Property Get WorkAreaHeight() As Single
 Attribute WorkAreaHeight.VB_Description = "Returns the height of the visible desktop adjusted for the windows taskbar."
 Attribute WorkAreaHeight.VB_MemberFlags = "400"
 Dim RC As RECT
-If SystemParametersInfo(SPI_GETWORKAREA, 0, RC, 0) <> 0 Then WorkAreaHeight = (RC.Bottom - RC.Top) * (1440 / DPI_Y())
+If SystemParametersInfo(SPI_GETWORKAREA, 0, VarPtr(RC), 0) <> 0 Then WorkAreaHeight = (RC.Bottom - RC.Top) * (1440 / DPI_Y())
 End Property
 
 Public Property Let WorkAreaHeight(ByVal Value As Single)
@@ -410,7 +436,11 @@ Public Property Let ScrollBarSize(ByVal Value As Single)
 Err.Raise Number:=383, Description:="Property is read-only"
 End Property
 
+#If VBA7 Then
+Private Function ISubclass_Message(ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, ByVal dwRefData As LongPtr) As LongPtr
+#Else
 Private Function ISubclass_Message(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal dwRefData As Long) As Long
+#End If
 Select Case dwRefData
     Case 1
         ISubclass_Message = WindowProcMain(hWnd, wMsg, wParam, lParam)
@@ -419,22 +449,21 @@ Select Case dwRefData
 End Select
 End Function
 
-Private Function WindowProcMain(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
-Dim Cancel As Boolean
+Private Function WindowProcMain(ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+Dim Length As Long, Cancel As Boolean
 Select Case wMsg
     Case WM_SYSCOLORCHANGE
         RaiseEvent SysColorsChanged
     Case WM_SETTINGCHANGE
         Dim Section As String
         If lParam <> 0 Then
-            Dim Length As Long
             Length = lstrlen(lParam)
             If Length > 0 Then
                 Section = String(Length, vbNullChar)
                 CopyMemory ByVal StrPtr(Section), ByVal lParam, Length * 2
             End If
         End If
-        RaiseEvent SettingChanged(wParam, Section)
+        RaiseEvent SettingChanged(CLng(wParam), Section)
     Case WM_DEVMODECHANGE
         RaiseEvent DevModeChanged
     Case WM_TIMECHANGE
@@ -442,7 +471,7 @@ Select Case wMsg
     Case WM_FONTCHANGE
         RaiseEvent FontChanged
     Case WM_DISPLAYCHANGE
-        RaiseEvent DisplayChanged(wParam, LoWord(lParam) * (1440 / DPI_X()), HiWord(lParam) * (1440 / DPI_Y()))
+        RaiseEvent DisplayChanged(CLng(wParam), LoWord(CLng(lParam)) * (1440 / DPI_X()), HiWord(CLng(lParam)) * (1440 / DPI_Y()))
     Case WM_DEVICECHANGE
         Select Case wParam
             Case DBT_DEVICEARRIVAL To DBT_DEVICEREMOVECOMPLETE
@@ -472,9 +501,13 @@ Select Case wMsg
                         Next i
                         DeviceData = DBCV.Flags
                     Case DBT_DEVTYP_PORT
-                        Dim DBCP As DEV_BROADCAST_PORT
-                        CopyMemory DBCP, ByVal lParam, LenB(DBCP)
-                        DeviceName = Left$(DBCP.pszName, InStr(DBCP.pszName, vbNullChar) - 1)
+                        Dim DBCP As DEV_BROADCAST_PORT, Offset As Long
+                        Offset = Len(DBCP) ' LenB() is not applicable due to padding bytes.
+                        Length = ((DBCHDR.cbSize - Offset) / 2) - 1
+                        If Length > 0 Then
+                            DeviceName = String(Length, vbNullChar)
+                            CopyMemory ByVal StrPtr(DeviceName), ByVal UnsignedAdd(lParam, Offset - 2), Length * 2
+                        End If
                     Case Else
                         WindowProcMain = ComCtlsDefaultProc(hWnd, wMsg, wParam, lParam)
                         Exit Function
@@ -531,7 +564,7 @@ End Select
 WindowProcMain = ComCtlsDefaultProc(hWnd, wMsg, wParam, lParam)
 End Function
 
-Private Function WindowProcUserControl(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Function WindowProcUserControl(ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
 Select Case wMsg
     Case WM_DEVICECHANGE
         Select Case wParam
@@ -539,9 +572,14 @@ Select Case wMsg
                 Dim DBCHDR As DEV_BROADCAST_HDR
                 CopyMemory DBCHDR, ByVal lParam, LenB(DBCHDR)
                 If DBCHDR.DeviceType = DBT_DEVTYP_DEVICEINTERFACE Then
-                    Dim DBCDI As DEV_BROADCAST_DEVICEINTERFACE, DeviceName As String
-                    CopyMemory DBCDI, ByVal lParam, LenB(DBCDI)
-                    DeviceName = Left$(DBCDI.pszDeviceName, InStr(DBCDI.pszDeviceName, vbNullChar) - 1)
+                    Dim DBCDI As DEV_BROADCAST_DEVICEINTERFACE
+                    Dim Offset As Long, Length As Long, DeviceName As String
+                    Offset = Len(DBCDI) ' LenB() is not applicable due to padding bytes.
+                    Length = ((DBCHDR.cbSize - Offset) / 2) - 1
+                    If Length > 0 Then
+                        DeviceName = String(Length, vbNullChar)
+                        CopyMemory ByVal StrPtr(DeviceName), ByVal UnsignedAdd(lParam, Offset - 2), Length * 2
+                    End If
                     Select Case wParam
                         Case DBT_DEVICEARRIVAL
                             RaiseEvent DeviceArrival(DBCHDR.DeviceType, 0, DeviceName, 0)

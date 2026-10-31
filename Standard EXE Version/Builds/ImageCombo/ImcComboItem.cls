@@ -12,18 +12,35 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
-Private ShadowObjectPointer As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+Private ShadowObjectPointer As LongPtr
 Private PropIndex As Long, PropKey As String
 Private PropTag As Variant
 Private PropImage As Variant, PropImageIndex As Long
 Private PropSelImage As Variant, PropSelImageIndex As Long
 
 Private Function ShadowImageCombo() As ImageCombo
-ComCtlsPtrToShadowObj ShadowImageCombo, ShadowObjectPointer
+ComCtlsObjSetAddRef ShadowImageCombo, ShadowObjectPointer
 End Function
 
-Friend Sub FInit(ByVal Object As ImageCombo, ByVal Key As String, ByVal Image As Variant, ByVal ImageIndex As Long, ByVal SelImage As Variant, ByVal SelImageIndex As Long)
-ShadowObjectPointer = ObjPtr(Object)
+#If VBA7 Then
+Friend Sub FInit(ByVal ObjectPointer As LongPtr, ByRef IndexPtr As LongPtr, ByVal Key As String, ByVal Image As Variant, ByVal ImageIndex As Long, ByVal SelImage As Variant, ByVal SelImageIndex As Long)
+#Else
+Friend Sub FInit(ByVal ObjectPointer As Long, ByRef IndexPtr As Long, ByVal Key As String, ByVal Image As Variant, ByVal ImageIndex As Long, ByVal SelImage As Variant, ByVal SelImageIndex As Long)
+#End If
+ShadowObjectPointer = ObjectPointer
+IndexPtr = VarPtr(PropIndex)
 PropKey = Key
 PropImage = Image
 PropImageIndex = ImageIndex
@@ -41,8 +58,12 @@ PropIndex = Value
 End Property
 
 Public Property Get Key() As String
-Attribute Key.VB_Description = "Returns the key used in the collection."
+Attribute Key.VB_Description = "Returns/sets the key used in the collection."
 Key = PropKey
+End Property
+
+Public Property Let Key(ByVal Value As String)
+ShadowImageCombo.ComboItems.FChangeKey PropIndex, PropKey, Value
 End Property
 
 Public Property Get Tag() As Variant
@@ -96,7 +117,7 @@ End Property
 Public Property Get ImageIndex() As Long
 Attribute ImageIndex.VB_Description = "Returns the index of an image in an associated image list control."
 ImageIndex = PropImageIndex
-End Function
+End Property
 
 Public Property Get SelImage() As Long
 Attribute SelImage.VB_Description = "Returns/sets the index or key of an image in an associated image list control."
@@ -116,7 +137,7 @@ End Property
 Public Property Get SelImageIndex() As Long
 Attribute SelImageIndex.VB_Description = "Returns the index of an image in an associated image list control."
 SelImageIndex = PropSelImageIndex
-End Function
+End Property
 
 Public Property Get Indentation() As Long
 Attribute Indentation.VB_Description = "Returns/sets the indentation of the combo item in icon widths."
@@ -136,11 +157,20 @@ Public Property Let Selected(ByVal Value As Boolean)
 ShadowImageCombo.FComboItemSelected(PropIndex) = Value
 End Property
 
+#If VBA7 Then
+Public Property Get Data() As LongPtr
+Attribute Data.VB_Description = "Returns/sets a specific number of the combo item."
+#Else
 Public Property Get Data() As Long
 Attribute Data.VB_Description = "Returns/sets a specific number of the combo item."
+#End If
 Data = ShadowImageCombo.FComboItemData(PropIndex)
 End Property
 
+#If VBA7 Then
+Public Property Let Data(ByVal Value As LongPtr)
+#Else
 Public Property Let Data(ByVal Value As Long)
+#End If
 ShadowImageCombo.FComboItemData(PropIndex) = Value
 End Property

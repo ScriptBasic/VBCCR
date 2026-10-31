@@ -2,67 +2,99 @@ VERSION 5.00
 Begin VB.PropertyPage PPStatusBarPanels 
    AutoRedraw      =   -1  'True
    Caption         =   "Panels"
-   ClientHeight    =   4140
+   ClientHeight    =   4500
    ClientLeft      =   0
    ClientTop       =   0
    ClientWidth     =   5925
    LockControls    =   -1  'True
    PaletteMode     =   0  'Halftone
-   ScaleHeight     =   4140
+   ScaleHeight     =   4500
    ScaleWidth      =   5925
-   Begin VBCCR15.ComboBoxW ComboDTFormat 
-      Height          =   315
-      Left            =   1200
-      TabIndex        =   23
-      Top             =   3360
-      Width           =   1575
-      _ExtentX        =   2778
-      _ExtentY        =   556
-      BackColor       =   -2147483633
+   Begin VBCCR18.TextBoxW TextPictureIndent 
+      BackColor       =   &H8000000F&
       Enabled         =   0   'False
-      Style           =   2
+      Height          =   315
+      Left            =   4080
+      TabIndex        =   39
+      Top             =   3000
+      Width           =   1575
    End
-   Begin VBCCR15.CommandButtonW CommandForeColor 
-      Height          =   225
+   Begin VBCCR18.TextBoxW TextTextIndent 
+      BackColor       =   &H8000000F&
+      Enabled         =   0   'False
+      Height          =   315
       Left            =   1200
       TabIndex        =   25
       Top             =   3720
-      Width           =   495
-      _ExtentX        =   0
-      _ExtentY        =   0
-      BackColor       =   -2147483630
-      Enabled         =   0   'False
-      Style           =   1
+      Width           =   1575
    End
-   Begin VBCCR15.CheckBoxW CheckBold 
+   Begin VB.CheckBox CheckPictureOnRight 
+      Caption         =   "&PictureOnRight"
+      Enabled         =   0   'False
       Height          =   285
       Left            =   3000
-      TabIndex        =   37
-      Top             =   3360
-      Width           =   1215
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Enabled         =   0   'False
-      Caption         =   "PPStatusBarPanels.pgx":0000
+      TabIndex        =   43
+      Top             =   4050
+      Width           =   2655
    End
-   Begin VBCCR15.TextBoxW TextToolTipText 
+   Begin VB.ComboBox ComboDTFormat 
+      BackColor       =   &H8000000F&
+      Enabled         =   0   'False
+      Height          =   315
+      Left            =   1200
+      Style           =   2  'Dropdown List
+      TabIndex        =   23
+      Top             =   3360
+      Width           =   1575
+   End
+   Begin VB.CommandButton CommandForeColor 
+      BackColor       =   &H80000012&
+      Enabled         =   0   'False
+      Height          =   225
+      Left            =   1200
+      Style           =   1  'Graphical
+      TabIndex        =   27
+      Top             =   4080
+      Width           =   495
+   End
+   Begin VB.CheckBox CheckBold 
+      Caption         =   "&Bold"
+      Enabled         =   0   'False
+      Height          =   285
+      Left            =   3000
+      TabIndex        =   42
+      Top             =   3720
+      Width           =   1215
+   End
+   Begin VBCCR18.TextBoxW TextToolTipText 
+      BackColor       =   &H8000000F&
+      Enabled         =   0   'False
       Height          =   315
       Left            =   1200
       TabIndex        =   9
       Top             =   840
       Width           =   4455
-      _ExtentX        =   0
-      _ExtentY        =   0
-      BackColor       =   -2147483633
-      Enabled         =   0   'False
    End
    Begin VB.Frame FramePicture 
       Caption         =   "Picture"
       Height          =   1065
       Left            =   3000
-      TabIndex        =   30
+      TabIndex        =   32
       Top             =   1920
       Width           =   2655
+      Begin VB.PictureBox PictureDraw 
+         Appearance      =   0  'Flat
+         Enabled         =   0   'False
+         ForeColor       =   &H80000008&
+         Height          =   720
+         Left            =   120
+         ScaleHeight     =   690
+         ScaleWidth      =   930
+         TabIndex        =   33
+         TabStop         =   0   'False
+         Top             =   240
+         Width           =   960
+      End
       Begin VB.PictureBox PictureCommandPictureNo 
          BorderStyle     =   0  'None
          Enabled         =   0   'False
@@ -70,20 +102,18 @@ Begin VB.PropertyPage PPStatusBarPanels
          Left            =   1440
          ScaleHeight     =   315
          ScaleWidth      =   1035
-         TabIndex        =   33
+         TabIndex        =   36
          TabStop         =   0   'False
          Top             =   630
          Width           =   1035
-         Begin VBCCR15.CommandButtonW CommandPictureNo 
+         Begin VB.CommandButton CommandPictureNo 
+            Caption         =   "No &Picture"
+            Enabled         =   0   'False
             Height          =   315
             Left            =   0
-            TabIndex        =   34
+            TabIndex        =   37
             Top             =   0
             Width           =   1035
-            _ExtentX        =   0
-            _ExtentY        =   0
-            Enabled         =   0   'False
-            Caption         =   "PPStatusBarPanels.pgx":002A
          End
       End
       Begin VB.PictureBox PictureCommandPictureBrowse 
@@ -93,20 +123,18 @@ Begin VB.PropertyPage PPStatusBarPanels
          Left            =   1440
          ScaleHeight     =   315
          ScaleWidth      =   1035
-         TabIndex        =   31
+         TabIndex        =   34
          TabStop         =   0   'False
          Top             =   240
          Width           =   1035
-         Begin VBCCR15.CommandButtonW CommandPictureBrowse 
+         Begin VB.CommandButton CommandPictureBrowse 
+            Caption         =   "Br&owse..."
+            Enabled         =   0   'False
             Height          =   315
             Left            =   0
-            TabIndex        =   32
+            TabIndex        =   35
             Top             =   0
             Width           =   1035
-            _ExtentX        =   0
-            _ExtentY        =   0
-            Enabled         =   0   'False
-            Caption         =   "PPStatusBarPanels.pgx":0060
          End
       End
       Begin VB.Image ImagePicture 
@@ -116,144 +144,136 @@ Begin VB.PropertyPage PPStatusBarPanels
          Height          =   720
          Left            =   120
          Top             =   240
+         Visible         =   0   'False
          Width           =   960
       End
    End
-   Begin VBCCR15.CheckBoxW CheckEnabled 
+   Begin VB.CheckBox CheckEnabled 
+      Caption         =   "&Enabled"
+      Enabled         =   0   'False
       Height          =   285
       Left            =   3000
-      TabIndex        =   35
-      Top             =   3030
+      TabIndex        =   40
+      Top             =   3390
       Width           =   1215
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Enabled         =   0   'False
-      Caption         =   "PPStatusBarPanels.pgx":0094
    End
-   Begin VBCCR15.CheckBoxW CheckVisible 
+   Begin VB.CheckBox CheckVisible 
+      Caption         =   "&Visible"
+      Enabled         =   0   'False
       Height          =   285
       Left            =   4440
-      TabIndex        =   36
-      Top             =   3030
+      TabIndex        =   41
+      Top             =   3390
       Width           =   1215
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Enabled         =   0   'False
-      Caption         =   "PPStatusBarPanels.pgx":00C4
    End
-   Begin VBCCR15.TextBoxW TextActualWidth 
+   Begin VBCCR18.TextBoxW TextActualWidth 
+      BackColor       =   &H8000000F&
+      Height          =   315
+      Left            =   4080
+      Locked          =   -1  'True
+      TabIndex        =   31
+      Top             =   1560
+      Width           =   1575
+   End
+   Begin VBCCR18.TextBoxW TextMinWidth 
+      BackColor       =   &H8000000F&
+      Enabled         =   0   'False
       Height          =   315
       Left            =   4080
       TabIndex        =   29
-      Top             =   1560
-      Width           =   1575
-      _ExtentX        =   0
-      _ExtentY        =   0
-      BackColor       =   -2147483633
-      Locked          =   -1  'True
-   End
-   Begin VBCCR15.TextBoxW TextMinWidth 
-      Height          =   315
-      Left            =   4080
-      TabIndex        =   27
       Top             =   1200
       Width           =   1575
-      _ExtentX        =   0
-      _ExtentY        =   0
-      BackColor       =   -2147483633
-      Enabled         =   0   'False
    End
-   Begin VBCCR15.ComboBoxW ComboAutoSize 
+   Begin VB.ComboBox ComboAutoSize 
+      BackColor       =   &H8000000F&
+      Enabled         =   0   'False
       Height          =   315
       Left            =   1200
+      Style           =   2  'Dropdown List
       TabIndex        =   19
       Top             =   2640
       Width           =   1575
-      _ExtentX        =   2778
-      _ExtentY        =   556
-      BackColor       =   -2147483633
-      Enabled         =   0   'False
-      Style           =   2
    End
-   Begin VBCCR15.ComboBoxW ComboBevel 
+   Begin VB.ComboBox ComboBevel 
+      BackColor       =   &H8000000F&
+      Enabled         =   0   'False
       Height          =   315
       Left            =   1200
+      Style           =   2  'Dropdown List
       TabIndex        =   17
       Top             =   2280
       Width           =   1575
-      _ExtentX        =   2778
-      _ExtentY        =   556
-      BackColor       =   -2147483633
-      Enabled         =   0   'False
-      Style           =   2
    End
-   Begin VBCCR15.ComboBoxW ComboStyle 
+   Begin VB.ComboBox ComboStyle 
+      BackColor       =   &H8000000F&
+      Enabled         =   0   'False
       Height          =   315
       Left            =   1200
+      Style           =   2  'Dropdown List
       TabIndex        =   15
       Top             =   1920
       Width           =   1575
-      _ExtentX        =   2778
-      _ExtentY        =   556
-      BackColor       =   -2147483633
-      Enabled         =   0   'False
-      Style           =   2
    End
-   Begin VBCCR15.ComboBoxW ComboAlignment 
+   Begin VB.ComboBox ComboAlignment 
+      BackColor       =   &H8000000F&
+      Enabled         =   0   'False
       Height          =   315
       Left            =   1200
+      Style           =   2  'Dropdown List
       TabIndex        =   21
       Top             =   3000
       Width           =   1575
-      _ExtentX        =   2778
-      _ExtentY        =   556
-      BackColor       =   -2147483633
-      Enabled         =   0   'False
-      Style           =   2
    End
-   Begin VBCCR15.TextBoxW TextTag 
+   Begin VBCCR18.TextBoxW TextTag 
+      BackColor       =   &H8000000F&
+      Enabled         =   0   'False
       Height          =   315
       Left            =   1200
       TabIndex        =   13
       Top             =   1560
       Width           =   1575
-      _ExtentX        =   0
-      _ExtentY        =   0
-      BackColor       =   -2147483633
-      Enabled         =   0   'False
    End
-   Begin VBCCR15.TextBoxW TextText 
+   Begin VBCCR18.TextBoxW TextText 
+      BackColor       =   &H8000000F&
+      Enabled         =   0   'False
       Height          =   315
       Left            =   1200
       TabIndex        =   7
       Top             =   480
       Width           =   4455
-      _ExtentX        =   0
-      _ExtentY        =   0
-      BackColor       =   -2147483633
-      Enabled         =   0   'False
    End
-   Begin VBCCR15.TextBoxW TextKey 
+   Begin VBCCR18.TextBoxW TextKey 
+      BackColor       =   &H8000000F&
+      Enabled         =   0   'False
       Height          =   315
       Left            =   1200
       TabIndex        =   11
       Top             =   1200
       Width           =   1575
-      _ExtentX        =   0
-      _ExtentY        =   0
-      BackColor       =   -2147483633
-      Enabled         =   0   'False
    End
-   Begin VBCCR15.CommandButtonW CommandBack 
+   Begin VB.CommandButton CommandBack 
+      Caption         =   "3"
+      Enabled         =   0   'False
+      BeginProperty Font 
+         Name            =   "Marlett"
+         Size            =   9
+         Charset         =   2
+         Weight          =   500
+         Underline       =   0   'False
+         Italic          =   0   'False
+         Strikethrough   =   0   'False
+      EndProperty
       Height          =   315
       Left            =   2160
       TabIndex        =   2
       ToolTipText     =   "Select Previous Panel"
       Top             =   120
       Width           =   300
-      _ExtentX        =   0
-      _ExtentY        =   0
-      BeginProperty Font {0BE35203-8F91-11CE-9DE3-00AA004BB851} 
+   End
+   Begin VB.CommandButton CommandNext 
+      Caption         =   "4"
+      Enabled         =   0   'False
+      BeginProperty Font 
          Name            =   "Marlett"
          Size            =   9
          Charset         =   2
@@ -262,63 +282,56 @@ Begin VB.PropertyPage PPStatusBarPanels
          Italic          =   0   'False
          Strikethrough   =   0   'False
       EndProperty
-      Enabled         =   0   'False
-      Caption         =   "PPStatusBarPanels.pgx":00F4
-   End
-   Begin VBCCR15.CommandButtonW CommandNext 
       Height          =   315
       Left            =   2460
       TabIndex        =   3
       ToolTipText     =   "Select Next Panel"
       Top             =   120
       Width           =   300
-      _ExtentX        =   0
-      _ExtentY        =   0
-      BeginProperty Font {0BE35203-8F91-11CE-9DE3-00AA004BB851} 
-         Name            =   "Marlett"
-         Size            =   9
-         Charset         =   2
-         Weight          =   500
-         Underline       =   0   'False
-         Italic          =   0   'False
-         Strikethrough   =   0   'False
-      EndProperty
-      Enabled         =   0   'False
-      Caption         =   "PPStatusBarPanels.pgx":0116
    End
-   Begin VBCCR15.TextBoxW TextIndex 
+   Begin VBCCR18.TextBoxW TextIndex 
+      BackColor       =   &H8000000F&
+      Enabled         =   0   'False
       Height          =   315
       Left            =   1200
+      Locked          =   -1  'True
       TabIndex        =   1
       Top             =   120
       Width           =   870
-      _ExtentX        =   0
-      _ExtentY        =   0
-      BackColor       =   -2147483633
-      Text            =   "PPStatusBarPanels.pgx":0138
-      Locked          =   -1  'True
    End
-   Begin VBCCR15.CommandButtonW CommandRemove 
+   Begin VB.CommandButton CommandRemove 
+      Caption         =   "&Remove..."
       Height          =   315
       Left            =   4620
       TabIndex        =   5
       ToolTipText     =   "Remove Selected Panel"
       Top             =   120
       Width           =   1035
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Caption         =   "PPStatusBarPanels.pgx":0164
    End
-   Begin VBCCR15.CommandButtonW CommandInsert 
+   Begin VB.CommandButton CommandInsert 
+      Caption         =   "I&nsert..."
       Height          =   315
       Left            =   3480
       TabIndex        =   4
       ToolTipText     =   "Insert Panel"
       Top             =   120
       Width           =   1035
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Caption         =   "PPStatusBarPanels.pgx":0198
+   End
+   Begin VB.Label LabelPictureIndent 
+      Caption         =   "Picture&Indent:"
+      Height          =   240
+      Left            =   3000
+      TabIndex        =   38
+      Top             =   3000
+      Width           =   975
+   End
+   Begin VB.Label LabelTextIndent 
+      Caption         =   "Text&Indent:"
+      Height          =   240
+      Left            =   120
+      TabIndex        =   24
+      Top             =   3720
+      Width           =   975
    End
    Begin VB.Label LabelDTFormat 
       Caption         =   "&DTFormat:"
@@ -332,8 +345,8 @@ Begin VB.PropertyPage PPStatusBarPanels
       Caption         =   "&ForeColor:"
       Height          =   195
       Left            =   120
-      TabIndex        =   24
-      Top             =   3720
+      TabIndex        =   26
+      Top             =   4080
       Width           =   975
    End
    Begin VB.Label LabelToolTipText 
@@ -348,7 +361,7 @@ Begin VB.PropertyPage PPStatusBarPanels
       Caption         =   "A&ctualWidth:"
       Height          =   240
       Left            =   3000
-      TabIndex        =   28
+      TabIndex        =   30
       Top             =   1560
       Width           =   975
    End
@@ -356,7 +369,7 @@ Begin VB.PropertyPage PPStatusBarPanels
       Caption         =   "Min&Width:"
       Height          =   240
       Left            =   3000
-      TabIndex        =   26
+      TabIndex        =   28
       Top             =   1200
       Width           =   975
    End
@@ -431,6 +444,18 @@ Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
 Option Explicit
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
 Private Type ShadowPanelStruct
 Text As String
 Key As String
@@ -441,16 +466,25 @@ Bevel As SbrPanelBevelConstants
 AutoSize As SbrPanelAutoSizeConstants
 Alignment As SbrPanelAlignmentConstants
 DTFormat As SbrPanelDTFormatConstants
+TextIndent As Single
 ForeColor As OLE_COLOR
 MinWidth As Single
 Picture As IPictureDisp
+PictureIndent As Single
 Enabled As Boolean
 Visible As Boolean
 Bold As Boolean
+PictureOnRight As Boolean
 End Type
-Private Declare Function OleCreatePropertyFrame Lib "olepro32" (ByVal hWndOwner As Long, ByVal X As Long, ByVal Y As Long, ByVal lpszCaption As Long, ByVal cObjects As Long, ByRef pUnk As IUnknown, ByVal cPages As Long, ByRef pPageCLSID As Any, ByVal LCID As Long, ByVal dwReserved As Long, ByVal pvReserved As Long) As Long
+#If VBA7 Then
+Private Declare PtrSafe Function OleCreatePropertyFrame Lib "oleaut32" (ByVal hWndOwner As LongPtr, ByVal X As Long, ByVal Y As Long, ByVal lpszCaption As LongPtr, ByVal cObjects As Long, ByRef pUnk As IUnknown, ByVal cPages As Long, ByRef pPageCLSID As Any, ByVal LCID As Long, ByVal dwReserved As Long, ByVal pvReserved As LongPtr) As Long
+Private Declare PtrSafe Function CLSIDFromString Lib "ole32" (ByVal lpszProgID As LongPtr, ByRef pCLSID As Any) As Long
+#Else
+Private Declare Function OleCreatePropertyFrame Lib "oleaut32" (ByVal hWndOwner As Long, ByVal X As Long, ByVal Y As Long, ByVal lpszCaption As Long, ByVal cObjects As Long, ByRef pUnk As IUnknown, ByVal cPages As Long, ByRef pPageCLSID As Any, ByVal LCID As Long, ByVal dwReserved As Long, ByVal pvReserved As Long) As Long
 Private Declare Function CLSIDFromString Lib "ole32" (ByVal lpszProgID As Long, ByRef pCLSID As Any) As Long
+#End If
 Private Const CLSID_StandardColorPage As String = "{7EBDAAE1-8120-11CF-899F-00AA00688B10}"
+Private SelectedControl As Object
 Private CurrIndex As Long
 Private PropShadowPanels() As ShadowPanelStruct
 Private FreezeChanged As Boolean
@@ -485,6 +519,8 @@ With ComboStyle
 .ItemData(.NewIndex) = SbrPanelStyleKanji
 .AddItem SbrPanelStyleHanja & " - Hanja"
 .ItemData(.NewIndex) = SbrPanelStyleHanja
+.AddItem SbrPanelStyleDateTime & " - DateTime"
+.ItemData(.NewIndex) = SbrPanelStyleDateTime
 End With
 With ComboBevel
 .AddItem SbrPanelBevelFlat & " - Flat"
@@ -509,12 +545,20 @@ With ComboAlignment
 .ItemData(.NewIndex) = SbrPanelAlignmentCenter
 .AddItem SbrPanelAlignmentRight & " - Right"
 .ItemData(.NewIndex) = SbrPanelAlignmentRight
+.AddItem SbrPanelAlignmentLeftRight & " - LeftRight"
+.ItemData(.NewIndex) = SbrPanelAlignmentLeftRight
 End With
 With ComboDTFormat
 .AddItem SbrPanelDTFormatShort & " - Short"
 .ItemData(.NewIndex) = SbrPanelDTFormatShort
 .AddItem SbrPanelDTFormatLong & " - Long"
 .ItemData(.NewIndex) = SbrPanelDTFormatLong
+.AddItem SbrPanelDTFormatMedium & " - Medium"
+.ItemData(.NewIndex) = SbrPanelDTFormatMedium
+.AddItem SbrPanelDTFormatGeneral & " - General"
+.ItemData(.NewIndex) = SbrPanelDTFormatGeneral
+.AddItem SbrPanelDTFormatCustom & " - Custom"
+.ItemData(.NewIndex) = SbrPanelDTFormatCustom
 End With
 ReDim PropShadowPanels(0) As ShadowPanelStruct
 End Sub
@@ -527,38 +571,60 @@ On Error GoTo 0
 If CurrIndex > 0 Then
     With PropShadowPanels(CurrIndex)
     .Text = TextText.Text
-    .Key = TextKey.Text
     .Tag = TextTag.Text
     .ToolTipText = TextToolTipText.Text
-    .Style = ComboStyle.ItemData(ComboStyle.ListIndex)
-    .Bevel = ComboBevel.ItemData(ComboBevel.ListIndex)
-    .AutoSize = ComboAutoSize.ItemData(ComboAutoSize.ListIndex)
-    .Alignment = ComboAlignment.ItemData(ComboAlignment.ListIndex)
-    .DTFormat = ComboDTFormat.ItemData(ComboDTFormat.ListIndex)
+    .Style = CLng(ComboStyle.ItemData(ComboStyle.ListIndex))
+    .Bevel = CLng(ComboBevel.ItemData(ComboBevel.ListIndex))
+    .AutoSize = CLng(ComboAutoSize.ItemData(ComboAutoSize.ListIndex))
+    .Alignment = CLng(ComboAlignment.ItemData(ComboAlignment.ListIndex))
+    .DTFormat = CLng(ComboDTFormat.ItemData(ComboDTFormat.ListIndex))
+    .TextIndent = CSng(TextTextIndent.Text)
     .ForeColor = CommandForeColor.BackColor
-    .MinWidth = TextMinWidth.Text
+    .MinWidth = CSng(TextMinWidth.Text)
     Set .Picture = ImagePicture.Picture
+    .PictureIndent = CSng(TextPictureIndent.Text)
     .Enabled = CBool(CheckEnabled.Value = vbChecked)
     .Visible = CBool(CheckVisible.Value = vbChecked)
     .Bold = CBool(CheckBold.Value = vbChecked)
+    .PictureOnRight = CBool(CheckPictureOnRight.Value = vbChecked)
     End With
     With PropertyPage.SelectedControls(0)
     .Panels.Remove CurrIndex
-    With .Panels.Add(CurrIndex, PropShadowPanels(CurrIndex).Key, PropShadowPanels(CurrIndex).Text, PropShadowPanels(CurrIndex).Style)
+    .Panels.Add CurrIndex, , PropShadowPanels(CurrIndex).Text, PropShadowPanels(CurrIndex).Style
+    If Not TextKey.Text = vbNullString Then
+        If .Panels.Exists(TextKey.Text) = True Then
+            MsgBox "This key is already associated with an element of this collection.", vbCritical + vbOKOnly
+            FreezeChanged = True
+            TextKey.Text = PropShadowPanels(CurrIndex).Key
+            FreezeChanged = False
+        Else
+            PropShadowPanels(CurrIndex).Key = TextKey.Text
+        End If
+    Else
+        PropShadowPanels(CurrIndex).Key = vbNullString
+    End If
+    With .Panels(CurrIndex)
+    If Not PropShadowPanels(CurrIndex).Key = vbNullString Then .Key = PropShadowPanels(CurrIndex).Key
     .Tag = PropShadowPanels(CurrIndex).Tag
     .ToolTipText = PropShadowPanels(CurrIndex).ToolTipText
     .Bevel = PropShadowPanels(CurrIndex).Bevel
     .AutoSize = PropShadowPanels(CurrIndex).AutoSize
     .Alignment = PropShadowPanels(CurrIndex).Alignment
     .DTFormat = PropShadowPanels(CurrIndex).DTFormat
+    .TextIndent = PropShadowPanels(CurrIndex).TextIndent
+    TextTextIndent.Text = CStr(.TextIndent)
     .ForeColor = PropShadowPanels(CurrIndex).ForeColor
     .MinWidth = PropShadowPanels(CurrIndex).MinWidth
     TextMinWidth.Text = CStr(.MinWidth)
     Set .Picture = PropShadowPanels(CurrIndex).Picture
+    .PictureIndent = PropShadowPanels(CurrIndex).PictureIndent
+    TextPictureIndent.Text = CStr(.PictureIndent)
     .Enabled = PropShadowPanels(CurrIndex).Enabled
     .Visible = PropShadowPanels(CurrIndex).Visible
     .Bold = PropShadowPanels(CurrIndex).Bold
+    .PictureOnRight = PropShadowPanels(CurrIndex).PictureOnRight
     TextActualWidth.Text = CStr(.Width)
+    CheckEnabled.Value = IIf(.Enabled = True, vbChecked, vbUnchecked)
     End With
     End With
 End If
@@ -566,6 +632,7 @@ Call PropertyPage_SelectionChanged
 End Sub
 
 Private Sub PropertyPage_SelectionChanged()
+If Not SelectedControl Is PropertyPage.SelectedControls(0) Then Set SelectedControl = PropertyPage.SelectedControls(0): CurrIndex = 0
 With PropertyPage.SelectedControls(0)
 If .Panels.Count > 0 And CurrIndex = 0 Then
     Call FillShadowPanels
@@ -608,10 +675,12 @@ If .Panels.Count > 0 And CurrIndex = 0 Then
             Exit For
         End If
     Next i
+    TextTextIndent.Text = CStr(.TextIndent)
     CommandForeColor.BackColor = .ForeColor
     TextMinWidth.Text = CStr(.MinWidth)
     TextActualWidth.Text = CStr(.Width)
     Set ImagePicture.Picture = .Picture
+    PictureDraw.Refresh
     If Not .Picture Is Nothing Then
         If .Picture.Handle <> 0 Then
             PictureCommandPictureNo.Enabled = True
@@ -624,11 +693,15 @@ If .Panels.Count > 0 And CurrIndex = 0 Then
         PictureCommandPictureNo.Enabled = False
         CommandPictureNo.Enabled = False
     End If
+    TextPictureIndent.Text = CStr(.PictureIndent)
     CheckEnabled.Value = IIf(.Enabled = True, vbChecked, vbUnchecked)
     CheckVisible.Value = IIf(.Visible = True, vbChecked, vbUnchecked)
     CheckBold.Value = IIf(.Bold = True, vbChecked, vbUnchecked)
+    CheckPictureOnRight.Value = IIf(.PictureOnRight = True, vbChecked, vbUnchecked)
     FreezeChanged = False
     End With
+ElseIf CurrIndex = 0 Then
+    TextIndex.Text = "0 of 0"
 End If
 Call ApplyControlStates
 End With
@@ -677,10 +750,12 @@ If CurrIndex > 1 Then
             Exit For
         End If
     Next i
+    TextTextIndent.Text = CStr(.TextIndent)
     CommandForeColor.BackColor = .ForeColor
     TextMinWidth.Text = CStr(.MinWidth)
     TextActualWidth.Text = CStr(.Width)
     Set ImagePicture.Picture = .Picture
+    PictureDraw.Refresh
     If Not .Picture Is Nothing Then
         If .Picture.Handle <> 0 Then
             PictureCommandPictureNo.Enabled = True
@@ -693,9 +768,11 @@ If CurrIndex > 1 Then
         PictureCommandPictureNo.Enabled = False
         CommandPictureNo.Enabled = False
     End If
+    TextPictureIndent.Text = CStr(.PictureIndent)
     CheckEnabled.Value = IIf(.Enabled = True, vbChecked, vbUnchecked)
     CheckVisible.Value = IIf(.Visible = True, vbChecked, vbUnchecked)
     CheckBold.Value = IIf(.Bold = True, vbChecked, vbUnchecked)
+    CheckPictureOnRight.Value = IIf(.PictureOnRight = True, vbChecked, vbUnchecked)
     FreezeChanged = False
     End With
 End If
@@ -746,10 +823,12 @@ If CurrIndex < .Panels.Count Then
             Exit For
         End If
     Next i
+    TextTextIndent.Text = CStr(.TextIndent)
     CommandForeColor.BackColor = .ForeColor
     TextMinWidth.Text = CStr(.MinWidth)
     TextActualWidth.Text = CStr(.Width)
     Set ImagePicture.Picture = .Picture
+    PictureDraw.Refresh
     If Not .Picture Is Nothing Then
         If .Picture.Handle <> 0 Then
             PictureCommandPictureNo.Enabled = True
@@ -762,9 +841,11 @@ If CurrIndex < .Panels.Count Then
         PictureCommandPictureNo.Enabled = False
         CommandPictureNo.Enabled = False
     End If
+    TextPictureIndent.Text = CStr(.PictureIndent)
     CheckEnabled.Value = IIf(.Enabled = True, vbChecked, vbUnchecked)
     CheckVisible.Value = IIf(.Visible = True, vbChecked, vbUnchecked)
     CheckBold.Value = IIf(.Bold = True, vbChecked, vbUnchecked)
+    CheckPictureOnRight.Value = IIf(.PictureOnRight = True, vbChecked, vbUnchecked)
     FreezeChanged = False
     End With
 End If
@@ -815,15 +896,19 @@ For i = 0 To ComboDTFormat.ListCount - 1
         Exit For
     End If
 Next i
+TextTextIndent.Text = CStr(.TextIndent)
 CommandForeColor.BackColor = vbButtonText
 TextMinWidth.Text = CStr(.MinWidth)
 TextActualWidth.Text = CStr(.Width)
 Set ImagePicture.Picture = Nothing
+PictureDraw.Refresh
 PictureCommandPictureNo.Enabled = False
 CommandPictureNo.Enabled = False
+TextPictureIndent.Text = CStr(.PictureIndent)
 CheckEnabled.Value = vbChecked
 CheckVisible.Value = vbChecked
 CheckBold.Value = vbUnchecked
+CheckPictureOnRight.Value = vbUnchecked
 FreezeChanged = False
 End With
 End With
@@ -875,10 +960,12 @@ If CurrIndex > 0 Then
                 Exit For
             End If
         Next i
+        TextTextIndent.Text = CStr(.TextIndent)
         CommandForeColor.BackColor = .ForeColor
         TextMinWidth.Text = CStr(.MinWidth)
         TextActualWidth.Text = CStr(.Width)
         Set ImagePicture.Picture = .Picture
+        PictureDraw.Refresh
         If Not .Picture Is Nothing Then
             If .Picture.Handle <> 0 Then
                 PictureCommandPictureNo.Enabled = True
@@ -891,13 +978,16 @@ If CurrIndex > 0 Then
             PictureCommandPictureNo.Enabled = False
             CommandPictureNo.Enabled = False
         End If
+        TextPictureIndent.Text = CStr(.PictureIndent)
         CheckEnabled.Value = IIf(.Enabled = True, vbChecked, vbUnchecked)
         CheckVisible.Value = IIf(.Visible = True, vbChecked, vbUnchecked)
         CheckBold.Value = IIf(.Bold = True, vbChecked, vbUnchecked)
+        CheckPictureOnRight.Value = IIf(.PictureOnRight = True, vbChecked, vbUnchecked)
         FreezeChanged = False
         End With
     Else
         Set ImagePicture.Picture = Nothing
+        PictureDraw.Refresh
     End If
     TextIndex.Text = CurrIndex & " of " & .Panels.Count
     End With
@@ -951,6 +1041,57 @@ If FreezeChanged = True Then Exit Sub
 PropertyPage.Changed = True
 End Sub
 
+Private Sub TextTextIndent_GotFocus()
+If Not TextTextIndent.SelStart = 0 Then Exit Sub
+TextTextIndent.SelLength = Len(TextTextIndent.Text)
+End Sub
+
+Private Sub TextTextIndent_LostFocus()
+TextTextIndent.SelStart = 0
+End Sub
+
+Private Sub TextTextIndent_Change()
+If FreezeChanged = True Then Exit Sub
+If TextTextIndent.Text = vbNullString Then
+    TextTextIndent.Text = "0"
+    TextTextIndent.SelStart = 0
+    TextTextIndent.SelLength = 1
+End If
+PropertyPage.Changed = True
+End Sub
+
+Private Sub TextTextIndent_Validate(Cancel As Boolean)
+If TextTextIndent.Text = vbNullString Then Exit Sub
+If Not IsNumeric(TextTextIndent.Text) Then
+    MsgBox "Invalid property value", vbCritical + vbOKOnly
+    If CurrIndex > 0 Then
+        TextTextIndent.Text = PropertyPage.SelectedControls(0).Panels(CurrIndex).TextIndent
+    Else
+        TextTextIndent.Text = "0"
+    End If
+    If TextTextIndent.Enabled = True Then TextTextIndent.SetFocus
+    Cancel = True
+Else
+    Dim SngValue As Single
+    On Error Resume Next
+    SngValue = CSng(TextTextIndent.Text)
+    Cancel = CBool(Err.Number <> 0)
+    On Error GoTo 0
+    If SngValue < 0 Then Cancel = True
+    If Cancel = False Then
+        TextTextIndent.Text = SngValue
+    Else
+        MsgBox "Invalid property value", vbCritical + vbOKOnly
+        If CurrIndex > 0 Then
+            TextTextIndent.Text = PropertyPage.SelectedControls(0).Panels(CurrIndex).TextIndent
+        Else
+            TextTextIndent.Text = "0"
+        End If
+        If TextTextIndent.Enabled = True Then TextTextIndent.SetFocus
+    End If
+End If
+End Sub
+
 Private Sub CommandForeColor_Click()
 Call ShowPanelColorPage
 End Sub
@@ -962,7 +1103,7 @@ CLSIDFromString StrPtr(CLSID_StandardColorPage), CLSID
 PrevColor = CommandForeColor.BackColor
 Dim PanelProperties As New SbrPanelProperties
 PanelProperties.FInit CommandForeColor, CommandForeColor.BackColor
-OleCreatePropertyFrame PropertyPage.hWnd, 0, 0, StrPtr("Panel"), 1, PanelProperties, 1, CLSID, 0, 0, 0
+OleCreatePropertyFrame PropertyPage.hWnd, 0, 0, StrPtr("Panel"), 1, PanelProperties, 1, CLSID, 0, 0, NULL_PTR
 If PrevColor <> CommandForeColor.BackColor Then PropertyPage.Changed = True
 End Sub
 
@@ -1017,6 +1158,13 @@ Else
 End If
 End Sub
 
+Private Sub PictureDraw_Paint()
+With PictureDraw
+.Cls
+Call RenderPicture(ImagePicture.Picture, .hDC, 0, 0)
+End With
+End Sub
+
 Private Sub PictureCommandPictureBrowse_GotFocus()
 CommandPictureBrowse.SetFocus
 End Sub
@@ -1029,8 +1177,7 @@ If CurrIndex > 0 Then
     .DialogTitle = "Select Picture"
     If .ShowOpen = True Then
         Set ImagePicture.Picture = PictureFromPath(.FileName)
-        ImagePicture.Width = 960
-        ImagePicture.Height = 720
+        PictureDraw.Refresh
         If Not ImagePicture.Picture Is Nothing Then
             If ImagePicture.Picture.Handle <> 0 Then
                 PictureCommandPictureNo.Enabled = True
@@ -1050,12 +1197,62 @@ End Sub
 Private Sub CommandPictureNo_Click()
 If CurrIndex > 0 Then
     Set ImagePicture.Picture = Nothing
-    ImagePicture.Width = 960
-    ImagePicture.Height = 720
+    PictureDraw.Refresh
     CommandPictureBrowse.SetFocus
     PictureCommandPictureNo.Enabled = False
     CommandPictureNo.Enabled = False
     PropertyPage.Changed = True
+End If
+End Sub
+
+Private Sub TextPictureIndent_GotFocus()
+If Not TextPictureIndent.SelStart = 0 Then Exit Sub
+TextPictureIndent.SelLength = Len(TextPictureIndent.Text)
+End Sub
+
+Private Sub TextPictureIndent_LostFocus()
+TextPictureIndent.SelStart = 0
+End Sub
+
+Private Sub TextPictureIndent_Change()
+If FreezeChanged = True Then Exit Sub
+If TextPictureIndent.Text = vbNullString Then
+    TextPictureIndent.Text = "0"
+    TextPictureIndent.SelStart = 0
+    TextPictureIndent.SelLength = 1
+End If
+PropertyPage.Changed = True
+End Sub
+
+Private Sub TextPictureIndent_Validate(Cancel As Boolean)
+If TextPictureIndent.Text = vbNullString Then Exit Sub
+If Not IsNumeric(TextPictureIndent.Text) Then
+    MsgBox "Invalid property value", vbCritical + vbOKOnly
+    If CurrIndex > 0 Then
+        TextPictureIndent.Text = PropertyPage.SelectedControls(0).Panels(CurrIndex).PictureIndent
+    Else
+        TextPictureIndent.Text = "0"
+    End If
+    If TextPictureIndent.Enabled = True Then TextPictureIndent.SetFocus
+    Cancel = True
+Else
+    Dim SngValue As Single
+    On Error Resume Next
+    SngValue = CSng(TextPictureIndent.Text)
+    Cancel = CBool(Err.Number <> 0)
+    On Error GoTo 0
+    If SngValue < 0 Then Cancel = True
+    If Cancel = False Then
+        TextPictureIndent.Text = SngValue
+    Else
+        MsgBox "Invalid property value", vbCritical + vbOKOnly
+        If CurrIndex > 0 Then
+            TextPictureIndent.Text = PropertyPage.SelectedControls(0).Panels(CurrIndex).PictureIndent
+        Else
+            TextPictureIndent.Text = "0"
+        End If
+        If TextPictureIndent.Enabled = True Then TextPictureIndent.SetFocus
+    End If
 End If
 End Sub
 
@@ -1074,10 +1271,16 @@ If FreezeChanged = True Then Exit Sub
 PropertyPage.Changed = True
 End Sub
 
+Private Sub CheckPictureOnRight_Click()
+If FreezeChanged = True Then Exit Sub
+PropertyPage.Changed = True
+End Sub
+
 Private Sub ApplyControlStates()
 With PropertyPage.SelectedControls(0)
 FreezeChanged = True
 If .Panels.Count > 0 Then
+    TextIndex.Enabled = True
     If CurrIndex > 1 Then
         CommandBack.Enabled = True
     Else
@@ -1107,13 +1310,13 @@ If .Panels.Count > 0 Then
     ComboAlignment.Enabled = True
     ComboDTFormat.BackColor = vbWindowBackground
     ComboDTFormat.Enabled = True
+    TextTextIndent.BackColor = vbWindowBackground
+    TextTextIndent.Enabled = True
     CommandForeColor.Enabled = True
     TextMinWidth.BackColor = vbWindowBackground
     TextMinWidth.Enabled = True
     TextActualWidth.Enabled = True
     ImagePicture.Enabled = True
-    ImagePicture.Width = 960
-    ImagePicture.Height = 720
     PictureCommandPictureBrowse.Enabled = True
     CommandPictureBrowse.Enabled = True
     If Not ImagePicture.Picture Is Nothing Then
@@ -1128,10 +1331,14 @@ If .Panels.Count > 0 Then
         PictureCommandPictureNo.Enabled = False
         CommandPictureNo.Enabled = False
     End If
+    TextPictureIndent.BackColor = vbWindowBackground
+    TextPictureIndent.Enabled = True
     CheckEnabled.Enabled = True
     CheckVisible.Enabled = True
     CheckBold.Enabled = True
+    CheckPictureOnRight.Enabled = True
 Else
+    TextIndex.Enabled = False
     CommandBack.Enabled = False
     CommandNext.Enabled = False
     CommandRemove.Enabled = False
@@ -1162,6 +1369,9 @@ Else
     ComboDTFormat.ListIndex = 0
     ComboDTFormat.BackColor = vbButtonFace
     ComboDTFormat.Enabled = False
+    TextTextIndent.Text = vbNullString
+    TextTextIndent.BackColor = vbButtonFace
+    TextTextIndent.Enabled = False
     CommandForeColor.Enabled = False
     TextMinWidth.Text = vbNullString
     TextMinWidth.BackColor = vbButtonFace
@@ -1169,18 +1379,21 @@ Else
     TextActualWidth.Text = vbNullString
     TextActualWidth.Enabled = False
     ImagePicture.Enabled = False
-    ImagePicture.Width = 960
-    ImagePicture.Height = 720
     PictureCommandPictureBrowse.Enabled = False
     CommandPictureBrowse.Enabled = False
     PictureCommandPictureNo.Enabled = False
     CommandPictureNo.Enabled = False
+    TextPictureIndent.Text = vbNullString
+    TextPictureIndent.BackColor = vbButtonFace
+    TextPictureIndent.Enabled = False
     CheckEnabled.Value = vbUnchecked
     CheckEnabled.Enabled = False
     CheckVisible.Value = vbUnchecked
     CheckVisible.Enabled = False
     CheckBold.Value = vbUnchecked
     CheckBold.Enabled = False
+    CheckPictureOnRight.Value = vbUnchecked
+    CheckPictureOnRight.Enabled = False
 End If
 FreezeChanged = False
 End With
@@ -1202,12 +1415,15 @@ For i = 0 To .Panels.Count
         PropShadowPanels(i).AutoSize = .AutoSize
         PropShadowPanels(i).Alignment = .Alignment
         PropShadowPanels(i).DTFormat = .DTFormat
+        PropShadowPanels(i).TextIndent = .TextIndent
         PropShadowPanels(i).ForeColor = .ForeColor
         PropShadowPanels(i).MinWidth = .MinWidth
         Set PropShadowPanels(i).Picture = .Picture
+        PropShadowPanels(i).PictureIndent = .PictureIndent
         PropShadowPanels(i).Enabled = .Enabled
         PropShadowPanels(i).Visible = .Visible
         PropShadowPanels(i).Bold = .Bold
+        PropShadowPanels(i).PictureOnRight = .PictureOnRight
         End With
     End If
 Next i

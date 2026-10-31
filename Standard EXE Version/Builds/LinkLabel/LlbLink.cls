@@ -12,15 +12,31 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
-Private ShadowObjectPointer As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+Private ShadowObjectPointer As LongPtr
 Private PropIndex As Long
 
 Private Function ShadowLinkLabel() As LinkLabel
-ComCtlsPtrToShadowObj ShadowLinkLabel, ShadowObjectPointer
+ComCtlsObjSetAddRef ShadowLinkLabel, ShadowObjectPointer
 End Function
 
-Friend Sub FInit(ByVal Object As LinkLabel, ByVal Index As Long)
-ShadowObjectPointer = ObjPtr(Object)
+#If VBA7 Then
+Friend Sub FInit(ByVal ObjectPointer As LongPtr, ByVal Index As Long)
+#Else
+Friend Sub FInit(ByVal ObjectPointer As Long, ByVal Index As Long)
+#End If
+ShadowObjectPointer = ObjectPointer
 PropIndex = Index
 End Sub
 
@@ -112,7 +128,7 @@ Err.Raise Number:=383, Description:="Property is read-only"
 End Property
 
 Public Property Get Width() As Single
-Attribute Width.VB_Description = "Returns the width of the tab."
+Attribute Width.VB_Description = "Returns the width of the link."
 Width = ShadowLinkLabel.FLinkWidth(PropIndex)
 End Property
 
@@ -121,7 +137,7 @@ Err.Raise Number:=383, Description:="Property is read-only"
 End Property
 
 Public Property Get Height() As Single
-Attribute Height.VB_Description = "Returns the height of the tab."
+Attribute Height.VB_Description = "Returns the height of the link."
 Height = ShadowLinkLabel.FLinkHeight(PropIndex)
 End Property
 

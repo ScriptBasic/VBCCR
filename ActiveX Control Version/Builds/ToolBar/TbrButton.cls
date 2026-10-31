@@ -12,7 +12,19 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
 Option Explicit
-Private ShadowObjectPointer As Long
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
+Private ShadowObjectPointer As LongPtr
 Private PropIndex As Long, PropKey As String, PropID As Long
 Private PropTag As Variant
 Private PropCaption As String
@@ -21,13 +33,15 @@ Private PropToolTipText As String
 Private PropDescription As String
 Private PropForeColor As OLE_COLOR
 Private PropButtonMenus As TbrButtonMenus
+Private PropMenuHandle As LongPtr
 
 Private Function ShadowToolBar() As ToolBar
-ComCtlsPtrToShadowObj ShadowToolBar, ShadowObjectPointer
+ComCtlsObjSetAddRef ShadowToolBar, ShadowObjectPointer
 End Function
 
 Private Sub Class_Initialize()
 PropForeColor = vbButtonText
+PropMenuHandle = NULL_PTR
 End Sub
 
 Friend Sub FInit(ByVal Object As ToolBar, ByVal Key As String, ByVal Caption As String, ByVal Image As Variant, ByVal ImageIndex As Long)
@@ -50,6 +64,10 @@ End Property
 Public Property Get Key() As String
 Attribute Key.VB_Description = "Returns the key used in the collection."
 Key = PropKey
+End Property
+
+Public Property Let Key(ByVal Value As String)
+ShadowToolBar.Buttons.FChangeKey PropIndex, PropKey, Value
 End Property
 
 Public Property Get Tag() As Variant
@@ -97,11 +115,11 @@ End Property
 
 Public Property Get Style() As TbrButtonStyleConstants
 Attribute Style.VB_Description = "Returns/sets the style of the button."
-Style = ShadowToolBar.FButtonStyle(PropID, PropImageIndex)
+Style = ShadowToolBar.FButtonStyle(PropID, vbNullString, 0)
 End Property
 
 Public Property Let Style(ByVal Value As TbrButtonStyleConstants)
-ShadowToolBar.FButtonStyle(PropID, PropImageIndex) = Value
+ShadowToolBar.FButtonStyle(PropID, PropCaption, PropImageIndex) = Value
 End Property
 
 Public Property Get Image() As Variant
@@ -122,7 +140,7 @@ End Property
 Public Property Get ImageIndex() As Long
 Attribute ImageIndex.VB_Description = "Returns the index of an image in an associated image list control."
 ImageIndex = PropImageIndex
-End Function
+End Property
 
 Public Property Get ToolTipText() As String
 Attribute ToolTipText.VB_Description = "Returns/sets the tool tip text of the button. Requires that the show tips property is set to true."
@@ -189,7 +207,7 @@ End Property
 
 Public Property Get NoImage() As Boolean
 Attribute NoImage.VB_Description = "Returns/sets a value indicating that no image will be drawn."
-NoImage = ShadowToolBar.FButtonNoImage(PropID, PropImageIndex)
+NoImage = ShadowToolBar.FButtonNoImage(PropID, 0)
 End Property
 
 Public Property Let NoImage(ByVal Value As Boolean)
@@ -294,4 +312,22 @@ If PropButtonMenus Is Nothing Then
     PropButtonMenus.FInit ShadowToolBar, PropID
 End If
 Set ButtonMenus = PropButtonMenus
+End Property
+
+#If VBA7 Then
+Public Property Get hMenu() As LongPtr
+Attribute hMenu.VB_Description = "Returns/sets a handle to a popup menu which will be used as a button dropdown menu."
+#Else
+Public Property Get hMenu() As Long
+Attribute hMenu.VB_Description = "Returns/sets a handle to a popup menu which will be used as a button dropdown menu."
+#End If
+hMenu = PropMenuHandle
+End Property
+
+#If VBA7 Then
+Public Property Let hMenu(ByVal Value As LongPtr)
+#Else
+Public Property Let hMenu(ByVal Value As Long)
+#End If
+PropMenuHandle = Value
 End Property

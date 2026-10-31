@@ -1,45 +1,63 @@
 VERSION 5.00
 Begin VB.PropertyPage PPRichTextBoxGeneral 
    Caption         =   "General"
-   ClientHeight    =   4875
+   ClientHeight    =   5625
    ClientLeft      =   0
    ClientTop       =   0
    ClientWidth     =   6450
    LockControls    =   -1  'True
    PaletteMode     =   0  'Halftone
-   ScaleHeight     =   4875
+   ScaleHeight     =   5625
    ScaleWidth      =   6450
-   Begin VBCCR15.CheckBoxW CheckOverTypeMode 
+   Begin VB.CheckBox CheckAutoVerbMenu 
+      Caption         =   "AutoVerbMenu"
+      Height          =   285
+      Left            =   4200
+      TabIndex        =   34
+      Top             =   5160
+      Width           =   2160
+   End
+   Begin VB.CheckBox CheckUseCrLf 
+      Caption         =   "UseCrLf"
+      Height          =   285
+      Left            =   4200
+      TabIndex        =   33
+      Top             =   4800
+      Width           =   2160
+   End
+   Begin VB.CheckBox CheckMouseTrack 
+      Caption         =   "MouseTrack"
+      Height          =   285
+      Left            =   4200
+      TabIndex        =   22
+      Top             =   840
+      Width           =   2160
+   End
+   Begin VB.CheckBox CheckOverTypeMode 
+      Caption         =   "OverTypeMode"
       Height          =   285
       Left            =   4200
       TabIndex        =   32
       Top             =   4440
       Width           =   2160
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Caption         =   "PPRichTextBoxGeneral.pgx":0000
    End
-   Begin VBCCR15.CheckBoxW CheckAllowOverType 
+   Begin VB.CheckBox CheckAllowOverType 
+      Caption         =   "AllowOverType"
       Height          =   285
       Left            =   4200
       TabIndex        =   31
       Top             =   4080
       Width           =   2160
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Caption         =   "PPRichTextBoxGeneral.pgx":0038
    End
-   Begin VBCCR15.ComboBoxW ComboIMEMode 
+   Begin VB.ComboBox ComboIMEMode 
       Height          =   315
       Left            =   1800
+      Style           =   2  'Dropdown List
       TabIndex        =   21
       Top             =   3360
       Width           =   2235
-      _ExtentX        =   4233
-      _ExtentY        =   556
-      Style           =   2
    End
-   Begin VBCCR15.TextBoxW TextUndoLimit 
+   Begin VBCCR18.TextBoxW TextUndoLimit 
       Height          =   315
       Left            =   1800
       TabIndex        =   19
@@ -48,17 +66,15 @@ Begin VB.PropertyPage PPRichTextBoxGeneral
       _ExtentX        =   0
       _ExtentY        =   0
    End
-   Begin VBCCR15.ComboBoxW ComboTextMode 
+   Begin VB.ComboBox ComboTextMode 
       Height          =   315
       Left            =   1800
+      Style           =   2  'Dropdown List
       TabIndex        =   17
       Top             =   2640
       Width           =   2235
-      _ExtentX        =   4233
-      _ExtentY        =   556
-      Style           =   2
    End
-   Begin VBCCR15.TextBoxW TextBulletIndent 
+   Begin VBCCR18.TextBoxW TextBulletIndent 
       Height          =   315
       Left            =   1800
       TabIndex        =   15
@@ -67,17 +83,15 @@ Begin VB.PropertyPage PPRichTextBoxGeneral
       _ExtentX        =   0
       _ExtentY        =   0
    End
-   Begin VBCCR15.ComboBoxW ComboScrollBars 
+   Begin VB.ComboBox ComboScrollBars 
       Height          =   315
       Left            =   1800
+      Style           =   2  'Dropdown List
       TabIndex        =   13
       Top             =   1920
       Width           =   2235
-      _ExtentX        =   4233
-      _ExtentY        =   556
-      Style           =   2
    End
-   Begin VBCCR15.TextBoxW TextMaxLength 
+   Begin VBCCR18.TextBoxW TextMaxLength 
       Height          =   315
       Left            =   1800
       TabIndex        =   11
@@ -86,7 +100,7 @@ Begin VB.PropertyPage PPRichTextBoxGeneral
       _ExtentX        =   0
       _ExtentY        =   0
    End
-   Begin VBCCR15.TextBoxW TextPasswordChar 
+   Begin VBCCR18.TextBoxW TextPasswordChar 
       Height          =   315
       Left            =   1800
       TabIndex        =   9
@@ -95,117 +109,95 @@ Begin VB.PropertyPage PPRichTextBoxGeneral
       _ExtentX        =   0
       _ExtentY        =   0
    End
-   Begin VBCCR15.CheckBoxW CheckSelectionBar 
+   Begin VB.CheckBox CheckSelectionBar 
+      Caption         =   "SelectionBar"
       Height          =   285
       Left            =   4200
       TabIndex        =   30
       Top             =   3720
       Width           =   2160
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Caption         =   "PPRichTextBoxGeneral.pgx":0072
    End
-   Begin VBCCR15.CheckBoxW CheckAutoURLDetect 
+   Begin VB.CheckBox CheckAutoURLDetect 
+      Caption         =   "AutoURLDetect"
       Height          =   285
       Left            =   4200
       TabIndex        =   29
       Top             =   3360
       Width           =   2160
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Caption         =   "PPRichTextBoxGeneral.pgx":00AA
    End
-   Begin VBCCR15.CheckBoxW CheckDisableNoScroll 
+   Begin VB.CheckBox CheckDisableNoScroll 
+      Caption         =   "DisableNoScroll"
       Height          =   285
       Left            =   4200
       TabIndex        =   28
       Top             =   3000
       Width           =   2160
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Caption         =   "PPRichTextBoxGeneral.pgx":00E4
    End
-   Begin VBCCR15.CheckBoxW CheckWantReturn 
+   Begin VB.CheckBox CheckWantReturn 
+      Caption         =   "WantReturn"
       Height          =   285
       Left            =   4200
       TabIndex        =   27
       Top             =   2640
       Width           =   2160
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Caption         =   "PPRichTextBoxGeneral.pgx":0122
    End
-   Begin VBCCR15.CheckBoxW CheckMultiLine 
+   Begin VB.CheckBox CheckMultiLine 
+      Caption         =   "MultiLine"
       Height          =   285
       Left            =   4200
       TabIndex        =   26
       Top             =   2280
       Width           =   2160
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Caption         =   "PPRichTextBoxGeneral.pgx":0156
    End
-   Begin VBCCR15.CheckBoxW CheckUseSystemPasswordChar 
+   Begin VB.CheckBox CheckUseSystemPasswordChar 
+      Caption         =   "UseSystemPasswordChar"
       Height          =   285
       Left            =   4200
       TabIndex        =   25
       Top             =   1920
       Width           =   2160
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Caption         =   "PPRichTextBoxGeneral.pgx":0188
    End
-   Begin VBCCR15.CheckBoxW CheckHideSelection 
+   Begin VB.CheckBox CheckHideSelection 
+      Caption         =   "HideSelection"
       Height          =   285
       Left            =   4200
       TabIndex        =   24
       Top             =   1560
       Width           =   2160
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Caption         =   "PPRichTextBoxGeneral.pgx":01D2
    End
-   Begin VBCCR15.CheckBoxW CheckLocked 
+   Begin VB.CheckBox CheckLocked 
+      Caption         =   "Locked"
       Height          =   285
       Left            =   1800
       TabIndex        =   1
       Top             =   120
       Width           =   1620
-      _ExtentX        =   2858
-      _ExtentY        =   503
-      Caption         =   "PPRichTextBoxGeneral.pgx":020C
    End
-   Begin VBCCR15.CheckBoxW CheckOLEDragDrop 
+   Begin VB.CheckBox CheckOLEDragDropRTF 
+      Caption         =   "OLEDragDropRTF"
       Height          =   285
       Left            =   4200
       TabIndex        =   23
       Top             =   1200
       Width           =   2160
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Caption         =   "PPRichTextBoxGeneral.pgx":0238
    End
-   Begin VBCCR15.ComboBoxW ComboMousePointer 
+   Begin VB.ComboBox ComboMousePointer 
       Height          =   315
       Left            =   1800
+      Style           =   2  'Dropdown List
       TabIndex        =   7
       Top             =   840
       Width           =   2235
-      _ExtentX        =   4233
-      _ExtentY        =   556
-      Style           =   2
    End
-   Begin VBCCR15.CommandButtonW CommandFileName 
+   Begin VB.CommandButton CommandFileName 
+      Caption         =   "..."
       Height          =   315
       Left            =   6000
       TabIndex        =   5
       Top             =   480
       Width           =   330
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Caption         =   "PPRichTextBoxGeneral.pgx":026E
    End
-   Begin VBCCR15.TextBoxW TextFileName 
+   Begin VBCCR18.TextBoxW TextFileName 
       Height          =   315
       Left            =   1800
       TabIndex        =   4
@@ -214,35 +206,21 @@ Begin VB.PropertyPage PPRichTextBoxGeneral
       _ExtentX        =   0
       _ExtentY        =   0
    End
-   Begin VBCCR15.CheckBoxW CheckVisualStyles 
+   Begin VB.CheckBox CheckVisualStyles 
+      Caption         =   "VisualStyles"
       Height          =   285
       Left            =   3480
       TabIndex        =   2
       Top             =   120
       Width           =   1620
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Caption         =   "PPRichTextBoxGeneral.pgx":0294
    End
-   Begin VBCCR15.CheckBoxW CheckEnabled 
+   Begin VB.CheckBox CheckEnabled 
+      Caption         =   "Enabled"
       Height          =   285
       Left            =   120
       TabIndex        =   0
       Top             =   120
       Width           =   1620
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Caption         =   "PPRichTextBoxGeneral.pgx":02CC
-   End
-   Begin VBCCR15.CheckBoxW CheckMouseTrack 
-      Height          =   285
-      Left            =   4200
-      TabIndex        =   22
-      Top             =   840
-      Width           =   2160
-      _ExtentX        =   0
-      _ExtentY        =   0
-      Caption         =   "PPRichTextBoxGeneral.pgx":02FA
    End
    Begin VB.Label LabelIMEMode 
       Caption         =   "IMEMode:"
@@ -375,7 +353,7 @@ If .TextMode <> ComboTextMode.ItemData(ComboTextMode.ListIndex) Then .TextMode =
 .UndoLimit = CLng(TextUndoLimit.Text)
 .IMEMode = ComboIMEMode.ItemData(ComboIMEMode.ListIndex)
 .MouseTrack = CBool(CheckMouseTrack.Value = vbChecked)
-.OLEDragDrop = CBool(CheckOLEDragDrop.Value = vbChecked)
+.OLEDragDropRTF = CBool(CheckOLEDragDropRTF.Value = vbChecked)
 .HideSelection = CBool(CheckHideSelection.Value = vbChecked)
 .UseSystemPasswordChar = CBool(CheckUseSystemPasswordChar.Value = vbChecked)
 .MultiLine = CBool(CheckMultiLine.Value = vbChecked)
@@ -385,6 +363,8 @@ If .TextMode <> ComboTextMode.ItemData(ComboTextMode.ListIndex) Then .TextMode =
 .SelectionBar = CBool(CheckSelectionBar.Value = vbChecked)
 .AllowOverType = CBool(CheckAllowOverType.Value = vbChecked)
 .OverTypeMode = CBool(CheckOverTypeMode.Value = vbChecked)
+.UseCrLf = CBool(CheckUseCrLf.Value = vbChecked)
+.AutoVerbMenu = CBool(CheckAutoVerbMenu.Value = vbChecked)
 If Not .FileName = TextFileName.Text Or Not TextFileName.Text = vbNullString Then .FileName = TextFileName.Text
 End With
 Call PropertyPage_SelectionChanged
@@ -426,7 +406,7 @@ For i = 0 To ComboIMEMode.ListCount - 1
     End If
 Next i
 CheckMouseTrack.Value = IIf(.MouseTrack = True, vbChecked, vbUnchecked)
-CheckOLEDragDrop.Value = IIf(.OLEDragDrop = True, vbChecked, vbUnchecked)
+CheckOLEDragDropRTF.Value = IIf(.OLEDragDropRTF = True, vbChecked, vbUnchecked)
 CheckHideSelection.Value = IIf(.HideSelection = True, vbChecked, vbUnchecked)
 CheckUseSystemPasswordChar.Value = IIf(.UseSystemPasswordChar = True, vbChecked, vbUnchecked)
 CheckMultiLine.Value = IIf(.MultiLine = True, vbChecked, vbUnchecked)
@@ -436,6 +416,8 @@ CheckAutoURLDetect.Value = IIf(.AutoURLDetect = True, vbChecked, vbUnchecked)
 CheckSelectionBar.Value = IIf(.SelectionBar = True, vbChecked, vbUnchecked)
 CheckAllowOverType.Value = IIf(.AllowOverType = True, vbChecked, vbUnchecked)
 CheckOverTypeMode.Value = IIf(.OverTypeMode = True, vbChecked, vbUnchecked)
+CheckUseCrLf.Value = IIf(.UseCrLf = True, vbChecked, vbUnchecked)
+CheckAutoVerbMenu.Value = IIf(.AutoVerbMenu = True, vbChecked, vbUnchecked)
 TextFileName.Text = .FileName
 End With
 FreezeChanged = False
@@ -668,7 +650,7 @@ If FreezeChanged = True Then Exit Sub
 PropertyPage.Changed = True
 End Sub
 
-Private Sub CheckOLEDragDrop_Click()
+Private Sub CheckOLEDragDropRTF_Click()
 If FreezeChanged = True Then Exit Sub
 PropertyPage.Changed = True
 End Sub
@@ -714,6 +696,16 @@ PropertyPage.Changed = True
 End Sub
 
 Private Sub CheckOverTypeMode_Click()
+If FreezeChanged = True Then Exit Sub
+PropertyPage.Changed = True
+End Sub
+
+Private Sub CheckUseCrLf_Click()
+If FreezeChanged = True Then Exit Sub
+PropertyPage.Changed = True
+End Sub
+
+Private Sub CheckAutoVerbMenu_Click()
 If FreezeChanged = True Then Exit Sub
 PropertyPage.Changed = True
 End Sub

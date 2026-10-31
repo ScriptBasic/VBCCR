@@ -1,10 +1,24 @@
 Attribute VB_Name = "ComCtlsBase"
 Option Explicit
+#If (VBA7 = 0) Then
+Private Enum LongPtr
+[_]
+End Enum
+#End If
+#If Win64 Then
+Private Const NULL_PTR As LongPtr = 0
+Private Const PTR_SIZE As Long = 8
+#Else
+Private Const NULL_PTR As Long = 0
+Private Const PTR_SIZE As Long = 4
+#End If
 
-#Const ImplementIDEStopProtection = True
+#Const ImplementPreTranslateMsg = (VBCCR_OCX <> 0)
 
 #If False Then
 Private OLEDropModeNone, OLEDropModeManual
+Private CCFontQualityDefault, CCFontQualityDraft, CCFontQualityProof, CCFontQualityNonAntiAliased, CCFontQualityAntiAliased, CCFontQualityClearType, CCFontQualityClearTypeNatural
+Private CCMousePointerDefault, CCMousePointerArrow, CCMousePointerCrosshair, CCMousePointerIbeam, CCMousePointerHand, CCMousePointerSizePointer, CCMousePointerSizeNESW, CCMousePointerSizeNS, CCMousePointerSizeNWSE, CCMousePointerSizeWE, CCMousePointerUpArrow, CCMousePointerHourglass, CCMousePointerNoDrop, CCMousePointerArrowHourglass, CCMousePointerArrowQuestion, CCMousePointerSizeAll, CCMousePointerArrowCD, CCMousePointerPin, CCMousePointerPerson, CCMousePointerPen, CCMousePointerScrollN, CCMousePointerScrollS, CCMousePointerScrollE, CCMousePointerScrollW, CCMousePointerScrollNS, CCMousePointerScrollWE, CCMousePointerScrollNW, CCMousePointerScrollNE, CCMousePointerScrollSW, CCMousePointerScrollSE, CCMousePointerScrollAll, CCMousePointerCustom
 Private CCAppearanceFlat, CCAppearance3D
 Private CCBorderStyleNone, CCBorderStyleSingle, CCBorderStyleThin, CCBorderStyleSunken, CCBorderStyleRaised
 Private CCBackStyleTransparent, CCBackStyleOpaque
@@ -12,10 +26,54 @@ Private CCLeftRightAlignmentLeft, CCLeftRightAlignmentRight
 Private CCVerticalAlignmentTop, CCVerticalAlignmentCenter, CCVerticalAlignmentBottom
 Private CCIMEModeNoControl, CCIMEModeOn, CCIMEModeOff, CCIMEModeDisable, CCIMEModeHiragana, CCIMEModeKatakana, CCIMEModeKatakanaHalf, CCIMEModeAlphaFull, CCIMEModeAlpha, CCIMEModeHangulFull, CCIMEModeHangul
 Private CCRightToLeftModeNoControl, CCRightToLeftModeVBAME, CCRightToLeftModeSystemLocale, CCRightToLeftModeUserLocale, CCRightToLeftModeOSLanguage
+Private CCScrollOrientationHorizontal, CCScrollOrientationVertical, CCScrollOrientationBoth
 #End If
 Public Enum OLEDropModeConstants
 OLEDropModeNone = vbOLEDropNone
 OLEDropModeManual = vbOLEDropManual
+End Enum
+Public Enum CCFontQualityConstants
+CCFontQualityDefault = 0
+CCFontQualityDraft = 1
+CCFontQualityProof = 2
+CCFontQualityNonAntiAliased = 3
+CCFontQualityAntiAliased = 4
+CCFontQualityClearType = 5
+CCFontQualityClearTypeNatural = 6
+End Enum
+Public Enum CCMousePointerConstants
+CCMousePointerDefault = 0
+CCMousePointerArrow = 1
+CCMousePointerCrosshair = 2
+CCMousePointerIbeam = 3
+CCMousePointerHand = 4
+CCMousePointerSizePointer = 5
+CCMousePointerSizeNESW = 6
+CCMousePointerSizeNS = 7
+CCMousePointerSizeNWSE = 8
+CCMousePointerSizeWE = 9
+CCMousePointerUpArrow = 10
+CCMousePointerHourglass = 11
+CCMousePointerNoDrop = 12
+CCMousePointerArrowHourglass = 13
+CCMousePointerArrowQuestion = 14
+CCMousePointerSizeAll = 15
+CCMousePointerArrowCD = 16
+CCMousePointerPin = 17
+CCMousePointerPerson = 18
+CCMousePointerPen = 19
+CCMousePointerScrollN = 20
+CCMousePointerScrollS = 21
+CCMousePointerScrollE = 22
+CCMousePointerScrollW = 23
+CCMousePointerScrollNS = 24
+CCMousePointerScrollWE = 25
+CCMousePointerScrollNW = 26
+CCMousePointerScrollNE = 27
+CCMousePointerScrollSW = 28
+CCMousePointerScrollSE = 29
+CCMousePointerScrollAll = 30
+CCMousePointerCustom = 99
 End Enum
 Public Enum CCAppearanceConstants
 CCAppearanceFlat = 0
@@ -61,6 +119,11 @@ CCRightToLeftModeSystemLocale = 2
 CCRightToLeftModeUserLocale = 3
 CCRightToLeftModeOSLanguage = 4
 End Enum
+Public Enum CCScrollOrientationConstants
+CCScrollOrientationHorizontal = 0
+CCScrollOrientationVertical = 1
+CCScrollOrientationBoth = 2
+End Enum
 Private Type TINITCOMMONCONTROLSEX
 dwSize As Long
 dwICC As Long
@@ -72,14 +135,6 @@ dwMinor As Long
 dwBuildNumber As Long
 dwPlatformID As Long
 End Type
-Private Type OSVERSIONINFO
-dwOSVersionInfoSize As Long
-dwMajorVersion As Long
-dwMinorVersion As Long
-dwBuildNumber As Long
-dwPlatformID As Long
-szCSDVersion(0 To ((128 * 2) - 1)) As Byte
-End Type
 Private Type POINTAPI
 X As Long
 Y As Long
@@ -90,26 +145,25 @@ Top As Long
 Right As Long
 Bottom As Long
 End Type
-Private Type CWPRETSTRUCT
-lResult As Long
-lParam As Long
-wParam As Long
-Message As Long
-hWnd As Long
-End Type
 Private Type TRACKMOUSEEVENTSTRUCT
 cbSize As Long
 dwFlags As Long
-hWndTrack As Long
+hWndTrack As LongPtr
 dwHoverTime As Long
 End Type
 Private Type TMSG
-hWnd As Long
+hWnd As LongPtr
 Message As Long
-wParam As Long
-lParam As Long
+wParam As LongPtr
+lParam As LongPtr
 Time As Long
 PT As POINTAPI
+End Type
+Private Type CLSID
+Data1 As Long
+Data2 As Integer
+Data3 As Integer
+Data4(0 To 7) As Byte
 End Type
 Private Type TLOCALESIGNATURE
 lsUsb(0 To 15) As Byte
@@ -119,24 +173,96 @@ End Type
 Private Type TOOLINFO
 cbSize As Long
 uFlags As Long
-hWnd As Long
-uId As Long
+hWnd As LongPtr
+uId As LongPtr
 RC As RECT
-hInst As Long
-lpszText As Long
-lParam As Long
+hInst As LongPtr
+lpszText As LongPtr
+lParam As LongPtr
 End Type
-Public Declare Function ComCtlsPtrToShadowObj Lib "msvbvm60.dll" Alias "__vbaObjSetAddref" (ByRef Destination As Any, ByVal lpObject As Long) As Long
+#If VBA7 Then
+Public Declare PtrSafe Function ComCtlsObjAddRef Lib "msvbvm60.dll" Alias "__vbaObjAddref" (ByVal lpObject As LongPtr) As Long
+Public Declare PtrSafe Function ComCtlsObjSet Lib "msvbvm60.dll" Alias "__vbaObjSet" (ByRef Destination As Any, ByVal lpObject As LongPtr) As Long
+Public Declare PtrSafe Function ComCtlsObjSetAddRef Lib "msvbvm60.dll" Alias "__vbaObjSetAddref" (ByRef Destination As Any, ByVal lpObject As LongPtr) As Long
+Private Declare PtrSafe Sub CoTaskMemFree Lib "ole32" (ByVal hMem As LongPtr)
+Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (ByRef Destination As Any, ByRef Source As Any, ByVal Length As LongPtr)
+Private Declare PtrSafe Function InitCommonControlsEx Lib "comctl32" (ByRef ICCEX As TINITCOMMONCONTROLSEX) As Long
+Private Declare PtrSafe Function MCIWndRegisterClass Lib "msvfw32" () As Long
+Private Declare PtrSafe Function UnregisterClass Lib "user32" Alias "UnregisterClassW" (ByVal lpClassName As LongPtr, ByVal hInstance As LongPtr) As Long
+Private Declare PtrSafe Function GetClassLong Lib "user32" Alias "GetClassLongW" (ByVal hWnd As LongPtr, ByVal nIndex As Long) As Long
+Private Declare PtrSafe Function SendMessage Lib "user32" Alias "SendMessageW" (ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByRef lParam As Any) As LongPtr
+Private Declare PtrSafe Function PeekMessage Lib "user32" Alias "PeekMessageW" (ByRef lpMsg As TMSG, ByVal hWnd As LongPtr, ByVal wMsgFilterMin As Long, ByVal wMsgFilterMax As Long, ByVal wRemoveMsg As Long) As Long
+Private Declare PtrSafe Function DefWindowProc Lib "user32" Alias "DefWindowProcW" (ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+Private Declare PtrSafe Function SetWindowsHookEx Lib "user32" Alias "SetWindowsHookExW" (ByVal IDHook As Long, ByVal lpfn As LongPtr, ByVal hMod As LongPtr, ByVal dwThreadID As Long) As LongPtr
+Private Declare PtrSafe Function UnhookWindowsHookEx Lib "user32" (ByVal hHook As LongPtr) As Long
+Private Declare PtrSafe Function CallNextHookEx Lib "user32" (ByVal hHook As LongPtr, ByVal nCode As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+Private Declare PtrSafe Function GetKeyboardLayout Lib "user32" (ByVal dwThreadID As Long) As LongPtr
+Private Declare PtrSafe Function CoTaskMemAlloc Lib "ole32" (ByVal cBytes As LongPtr) As LongPtr
+Private Declare PtrSafe Function EnumThreadWindows Lib "user32" (ByVal dwThreadID As Long, ByVal lpfn As LongPtr, ByVal lParam As LongPtr) As Long
+Private Declare PtrSafe Function EnableWindow Lib "user32" (ByVal hWnd As LongPtr, ByVal fEnable As Long) As Long
+Private Declare PtrSafe Function IsWindowEnabled Lib "user32" (ByVal hWnd As LongPtr) As Long
+Private Declare PtrSafe Function ImmIsIME Lib "imm32" (ByVal hKL As LongPtr) As Long
+Private Declare PtrSafe Function ImmCreateContext Lib "imm32" () As LongPtr
+Private Declare PtrSafe Function ImmDestroyContext Lib "imm32" (ByVal hIMC As LongPtr) As Long
+Private Declare PtrSafe Function ImmGetContext Lib "imm32" (ByVal hWnd As LongPtr) As LongPtr
+Private Declare PtrSafe Function ImmReleaseContext Lib "imm32" (ByVal hWnd As LongPtr, ByVal hIMC As LongPtr) As Long
+Private Declare PtrSafe Function ImmGetOpenStatus Lib "imm32" (ByVal hIMC As LongPtr) As Long
+Private Declare PtrSafe Function ImmSetOpenStatus Lib "imm32" (ByVal hIMC As LongPtr, ByVal fOpen As Long) As Long
+Private Declare PtrSafe Function ImmAssociateContext Lib "imm32" (ByVal hWnd As LongPtr, ByVal hIMC As LongPtr) As LongPtr
+Private Declare PtrSafe Function ImmGetConversionStatus Lib "imm32" (ByVal hIMC As LongPtr, ByVal lpfdwConversion As LongPtr, ByVal lpfdwSentence As LongPtr) As Long
+Private Declare PtrSafe Function ImmSetConversionStatus Lib "imm32" (ByVal hIMC As LongPtr, ByVal fdwConversion As Long, ByVal fdwSentence As Long) As Long
+Private Declare PtrSafe Function InvalidateRect Lib "user32" (ByVal hWnd As LongPtr, ByRef lpRect As Any, ByVal bErase As Long) As Long
+Private Declare PtrSafe Function TrackMouseEvent Lib "user32" (ByRef lpEventTrack As TRACKMOUSEEVENTSTRUCT) As Long
+Private Declare PtrSafe Function GetSystemDefaultLangID Lib "kernel32" () As Integer
+Private Declare PtrSafe Function GetUserDefaultLangID Lib "kernel32" () As Integer
+Private Declare PtrSafe Function GetUserDefaultUILanguage Lib "kernel32" () As Integer
+Private Declare PtrSafe Function GetLocaleInfo Lib "kernel32" Alias "GetLocaleInfoW" (ByVal LCID As Long, ByVal LCType As Long, ByVal lpLCData As LongPtr, ByVal cchData As Long) As Long
+Private Declare PtrSafe Function IsDialogMessage Lib "user32" Alias "IsDialogMessageW" (ByVal hDlg As LongPtr, ByRef lpMsg As TMSG) As Long
+Private Declare PtrSafe Function DllGetVersion Lib "comctl32" (ByRef pdvi As DLLVERSIONINFO) As Long
+Private Declare PtrSafe Function GetModuleHandle Lib "kernel32" Alias "GetModuleHandleW" (ByVal lpModuleName As LongPtr) As LongPtr
+Private Declare PtrSafe Function VirtualProtect Lib "kernel32" (ByVal lpAddress As LongPtr, ByVal dwSize As LongPtr, ByVal flNewProtect As Long, ByRef lpflOldProtect As Long) As Long
+Private Declare PtrSafe Function GetProcAddress Lib "kernel32" (ByVal hModule As LongPtr, ByVal lpProcName As Any) As LongPtr
+Private Declare PtrSafe Function GetSysColor Lib "user32" (ByVal nIndex As Long) As Long
+Private Declare PtrSafe Function ImageList_DrawEx Lib "comctl32" (ByVal hImageList As LongPtr, ByVal ImgIndex As Long, ByVal hDC As LongPtr, ByVal X As Long, ByVal Y As Long, ByVal DX As Long, ByVal DY As Long, ByVal rgbBk As Long, ByVal rgbFg As Long, ByVal fStyle As Long) As Long
+Private Declare PtrSafe Function LoadLibrary Lib "kernel32" Alias "LoadLibraryW" (ByVal lpLibFileName As LongPtr) As LongPtr
+Private Declare PtrSafe Function FreeLibrary Lib "kernel32" (ByVal hLibModule As LongPtr) As Long
+Private Declare PtrSafe Function SetWindowLong Lib "user32" Alias "SetWindowLongW" (ByVal hWnd As LongPtr, ByVal nIndex As Long, ByVal dwNewLong As Long) As Long
+Private Declare PtrSafe Function GetWindowLong Lib "user32" Alias "GetWindowLongW" (ByVal hWnd As LongPtr, ByVal nIndex As Long) As Long
+#If Win64 Then
+Private Declare PtrSafe Function SetWindowLongPtr Lib "user32" Alias "SetWindowLongPtrW" (ByVal hWnd As LongPtr, ByVal nIndex As Long, ByVal dwNewLong As LongPtr) As LongPtr
+Private Declare PtrSafe Function GetWindowLongPtr Lib "user32" Alias "GetWindowLongPtrW" (ByVal hWnd As LongPtr, ByVal nIndex As Long) As LongPtr
+#Else
+Private Declare PtrSafe Function SetWindowLongPtr Lib "user32" Alias "SetWindowLongW" (ByVal hWnd As LongPtr, ByVal nIndex As Long, ByVal dwNewLong As LongPtr) As LongPtr
+Private Declare PtrSafe Function GetWindowLongPtr Lib "user32" Alias "GetWindowLongW" (ByVal hWnd As LongPtr, ByVal nIndex As Long) As LongPtr
+#End If
+Private Declare PtrSafe Function SetWindowPos Lib "user32" (ByVal hWnd As LongPtr, ByVal hWndInsertAfter As LongPtr, ByVal X As Long, ByVal Y As Long, ByVal CX As Long, ByVal CY As Long, ByVal wFlags As Long) As Long
+Private Declare PtrSafe Function SetProp Lib "user32" Alias "SetPropW" (ByVal hWnd As LongPtr, ByVal lpString As LongPtr, ByVal hData As LongPtr) As Long
+Private Declare PtrSafe Function GetProp Lib "user32" Alias "GetPropW" (ByVal hWnd As LongPtr, ByVal lpString As LongPtr) As LongPtr
+Private Declare PtrSafe Function RemoveProp Lib "user32" Alias "RemovePropW" (ByVal hWnd As LongPtr, ByVal lpString As LongPtr) As LongPtr
+Private Declare PtrSafe Function SetWindowSubclass Lib "comctl32" (ByVal hWnd As LongPtr, ByVal pfnSubclass As LongPtr, ByVal uIdSubclass As LongPtr, ByVal dwRefData As LongPtr) As Long
+Private Declare PtrSafe Function RemoveWindowSubclass Lib "comctl32" (ByVal hWnd As LongPtr, ByVal pfnSubclass As LongPtr, ByVal uIdSubclass As LongPtr) As Long
+Private Declare PtrSafe Function DefSubclassProc Lib "comctl32" (ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+#Else
+Public Declare Function ComCtlsObjAddRef Lib "msvbvm60.dll" Alias "__vbaObjAddref" (ByVal lpObject As Long) As Long
+Public Declare Function ComCtlsObjSet Lib "msvbvm60.dll" Alias "__vbaObjSet" (ByRef Destination As Any, ByVal lpObject As Long) As Long
+Public Declare Function ComCtlsObjSetAddRef Lib "msvbvm60.dll" Alias "__vbaObjSetAddref" (ByRef Destination As Any, ByVal lpObject As Long) As Long
+Private Declare Sub CoTaskMemFree Lib "ole32" (ByVal hMem As Long)
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (ByRef Destination As Any, ByRef Source As Any, ByVal Length As Long)
 Private Declare Function InitCommonControlsEx Lib "comctl32" (ByRef ICCEX As TINITCOMMONCONTROLSEX) As Long
+Private Declare Function MCIWndRegisterClass Lib "msvfw32" () As Long
+Private Declare Function UnregisterClass Lib "user32" Alias "UnregisterClassW" (ByVal lpClassName As Long, ByVal hInstance As Long) As Long
+Private Declare Function GetClassLong Lib "user32" Alias "GetClassLongW" (ByVal hWnd As Long, ByVal nIndex As Long) As Long
 Private Declare Function SendMessage Lib "user32" Alias "SendMessageW" (ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByRef lParam As Any) As Long
 Private Declare Function PeekMessage Lib "user32" Alias "PeekMessageW" (ByRef lpMsg As TMSG, ByVal hWnd As Long, ByVal wMsgFilterMin As Long, ByVal wMsgFilterMax As Long, ByVal wRemoveMsg As Long) As Long
+Private Declare Function DefWindowProc Lib "user32" Alias "DefWindowProcW" (ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 Private Declare Function SetWindowsHookEx Lib "user32" Alias "SetWindowsHookExW" (ByVal IDHook As Long, ByVal lpfn As Long, ByVal hMod As Long, ByVal dwThreadID As Long) As Long
 Private Declare Function UnhookWindowsHookEx Lib "user32" (ByVal hHook As Long) As Long
 Private Declare Function CallNextHookEx Lib "user32" (ByVal hHook As Long, ByVal nCode As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
-Private Declare Function GetAncestor Lib "user32" (ByVal hWnd As Long, ByVal gaFlags As Long) As Long
-Private Declare Function GetClassName Lib "user32" Alias "GetClassNameW" (ByVal hWnd As Long, ByVal lpClassName As Long, ByVal nMaxCount As Long) As Long
 Private Declare Function GetKeyboardLayout Lib "user32" (ByVal dwThreadID As Long) As Long
+Private Declare Function CoTaskMemAlloc Lib "ole32" (ByVal cBytes As Long) As Long
+Private Declare Function EnumThreadWindows Lib "user32" (ByVal dwThreadID As Long, ByVal lpfn As Long, ByVal lParam As Long) As Long
+Private Declare Function EnableWindow Lib "user32" (ByVal hWnd As Long, ByVal fEnable As Long) As Long
+Private Declare Function IsWindowEnabled Lib "user32" (ByVal hWnd As Long) As Long
 Private Declare Function ImmIsIME Lib "imm32" (ByVal hKL As Long) As Long
 Private Declare Function ImmCreateContext Lib "imm32" () As Long
 Private Declare Function ImmDestroyContext Lib "imm32" (ByVal hIMC As Long) As Long
@@ -145,8 +271,8 @@ Private Declare Function ImmReleaseContext Lib "imm32" (ByVal hWnd As Long, ByVa
 Private Declare Function ImmGetOpenStatus Lib "imm32" (ByVal hIMC As Long) As Long
 Private Declare Function ImmSetOpenStatus Lib "imm32" (ByVal hIMC As Long, ByVal fOpen As Long) As Long
 Private Declare Function ImmAssociateContext Lib "imm32" (ByVal hWnd As Long, ByVal hIMC As Long) As Long
-Private Declare Function ImmGetConversionStatus Lib "imm32" (ByVal hIMC As Long, ByRef lpfdwConversion As Long, ByRef lpfdwSentence As Long) As Long
-Private Declare Function ImmSetConversionStatus Lib "imm32" (ByVal hIMC As Long, ByVal lpfdwConversion As Long, ByVal lpfdwSentence As Long) As Long
+Private Declare Function ImmGetConversionStatus Lib "imm32" (ByVal hIMC As Long, ByVal lpfdwConversion As Long, ByVal lpfdwSentence As Long) As Long
+Private Declare Function ImmSetConversionStatus Lib "imm32" (ByVal hIMC As Long, ByVal fdwConversion As Long, ByVal fdwSentence As Long) As Long
 Private Declare Function InvalidateRect Lib "user32" (ByVal hWnd As Long, ByRef lpRect As Any, ByVal bErase As Long) As Long
 Private Declare Function TrackMouseEvent Lib "user32" (ByRef lpEventTrack As TRACKMOUSEEVENTSTRUCT) As Long
 Private Declare Function GetSystemDefaultLangID Lib "kernel32" () As Integer
@@ -155,11 +281,17 @@ Private Declare Function GetUserDefaultUILanguage Lib "kernel32" () As Integer
 Private Declare Function GetLocaleInfo Lib "kernel32" Alias "GetLocaleInfoW" (ByVal LCID As Long, ByVal LCType As Long, ByVal lpLCData As Long, ByVal cchData As Long) As Long
 Private Declare Function IsDialogMessage Lib "user32" Alias "IsDialogMessageW" (ByVal hDlg As Long, ByRef lpMsg As TMSG) As Long
 Private Declare Function DllGetVersion Lib "comctl32" (ByRef pdvi As DLLVERSIONINFO) As Long
-Private Declare Function GetVersionEx Lib "kernel32" Alias "GetVersionExW" (ByRef lpVersionInfo As OSVERSIONINFO) As Long
+Private Declare Function GetModuleHandle Lib "kernel32" Alias "GetModuleHandleW" (ByVal lpModuleName As Long) As Long
+Private Declare Function VirtualProtect Lib "kernel32" (ByVal lpAddress As Long, ByVal dwSize As Long, ByVal flNewProtect As Long, ByRef lpflOldProtect As Long) As Long
+Private Declare Function GetProcAddress Lib "kernel32" (ByVal hModule As Long, ByVal lpProcName As Any) As Long
+Private Declare Function GetSysColor Lib "user32" (ByVal nIndex As Long) As Long
+Private Declare Function ImageList_DrawEx Lib "comctl32" (ByVal hImageList As Long, ByVal ImgIndex As Long, ByVal hDC As Long, ByVal X As Long, ByVal Y As Long, ByVal DX As Long, ByVal DY As Long, ByVal rgbBk As Long, ByVal rgbFg As Long, ByVal fStyle As Long) As Long
 Private Declare Function LoadLibrary Lib "kernel32" Alias "LoadLibraryW" (ByVal lpLibFileName As Long) As Long
 Private Declare Function FreeLibrary Lib "kernel32" (ByVal hLibModule As Long) As Long
 Private Declare Function SetWindowLong Lib "user32" Alias "SetWindowLongW" (ByVal hWnd As Long, ByVal nIndex As Long, ByVal dwNewLong As Long) As Long
 Private Declare Function GetWindowLong Lib "user32" Alias "GetWindowLongW" (ByVal hWnd As Long, ByVal nIndex As Long) As Long
+Private Declare Function SetWindowLongPtr Lib "user32" Alias "SetWindowLongW" (ByVal hWnd As Long, ByVal nIndex As Long, ByVal dwNewLong As Long) As Long
+Private Declare Function GetWindowLongPtr Lib "user32" Alias "GetWindowLongW" (ByVal hWnd As Long, ByVal nIndex As Long) As Long
 Private Declare Function SetWindowPos Lib "user32" (ByVal hWnd As Long, ByVal hWndInsertAfter As Long, ByVal X As Long, ByVal Y As Long, ByVal CX As Long, ByVal CY As Long, ByVal wFlags As Long) As Long
 Private Declare Function SetProp Lib "user32" Alias "SetPropW" (ByVal hWnd As Long, ByVal lpString As Long, ByVal hData As Long) As Long
 Private Declare Function GetProp Lib "user32" Alias "GetPropW" (ByVal hWnd As Long, ByVal lpString As Long) As Long
@@ -167,9 +299,11 @@ Private Declare Function RemoveProp Lib "user32" Alias "RemovePropW" (ByVal hWnd
 Private Declare Function SetWindowSubclass Lib "comctl32" (ByVal hWnd As Long, ByVal pfnSubclass As Long, ByVal uIdSubclass As Long, ByVal dwRefData As Long) As Long
 Private Declare Function RemoveWindowSubclass Lib "comctl32" (ByVal hWnd As Long, ByVal pfnSubclass As Long, ByVal uIdSubclass As Long) As Long
 Private Declare Function DefSubclassProc Lib "comctl32" (ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
-Private Declare Function SetWindowSubclass_W2K Lib "comctl32" Alias "#410" (ByVal hWnd As Long, ByVal pfnSubclass As Long, ByVal uIdSubclass As Long, ByVal dwRefData As Long) As Long
-Private Declare Function RemoveWindowSubclass_W2K Lib "comctl32" Alias "#412" (ByVal hWnd As Long, ByVal pfnSubclass As Long, ByVal uIdSubclass As Long) As Long
-Private Declare Function DefSubclassProc_W2K Lib "comctl32" Alias "#413" (ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Declare Function SetWindowSubclassW2K Lib "comctl32" Alias "#410" (ByVal hWnd As Long, ByVal pfnSubclass As Long, ByVal uIdSubclass As Long, ByVal dwRefData As Long) As Long
+Private Declare Function RemoveWindowSubclassW2K Lib "comctl32" Alias "#412" (ByVal hWnd As Long, ByVal pfnSubclass As Long, ByVal uIdSubclass As Long) As Long
+Private Declare Function DefSubclassProcW2K Lib "comctl32" Alias "#413" (ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+#End If
+Private Const GCW_ATOM As Long = (-32)
 Private Const GWL_STYLE As Long = (-16)
 Private Const GWL_EXSTYLE As Long = (-20)
 Private Const WM_DESTROY As Long = &H2
@@ -177,90 +311,48 @@ Private Const WM_NCDESTROY As Long = &H82
 Private Const WM_UAHDESTROYWINDOW As Long = &H90
 Private Const WM_INITDIALOG As Long = &H110
 Private Const WM_USER As Long = &H400
-Private ShellModHandle As Long, ShellModCount As Long
-Private CdlPDEXHookHandle As Long, CdlPDEXHookCustData As Long
-Private CdlFRHookHandle As Long
-Private CdlFRDialogHandle() As Long, CdlFRDialogCount As Long
-
-#If ImplementIDEStopProtection = True Then
-
-Private Declare Function VirtualAlloc Lib "kernel32" (ByRef lpAddress As Long, ByVal dwSize As Long, ByVal flAllocType As Long, ByVal flProtect As Long) As Long
-Private Declare Function VirtualProtect Lib "kernel32" (ByVal lpAddress As Long, ByVal dwSize As Long, ByVal flNewProtect As Long, ByRef lpflOldProtect As Long) As Long
-Private Declare Function GetProcAddress Lib "kernel32" (ByVal hModule As Long, ByVal lpProcName As String) As Long
-Private Declare Function GetModuleHandle Lib "kernel32" Alias "GetModuleHandleW" (ByVal lpModuleName As Long) As Long
-Private Const MEM_COMMIT As Long = &H1000
 Private Const PAGE_EXECUTE_READWRITE As Long = &H40
-Private Type IMAGE_DATA_DIRECTORY
-VirtualAddress As Long
-Size As Long
-End Type
-Private Type IMAGE_OPTIONAL_HEADER32
-Magic As Integer
-MajorLinkerVersion As Byte
-MinorLinkerVersion As Byte
-SizeOfCode As Long
-SizeOfInitalizedData As Long
-SizeOfUninitalizedData As Long
-AddressOfEntryPoint As Long
-BaseOfCode As Long
-BaseOfData As Long
-ImageBase As Long
-SectionAlignment As Long
-FileAlignment As Long
-MajorOperatingSystemVer As Integer
-MinorOperatingSystemVer As Integer
-MajorImageVersion As Integer
-MinorImageVersion As Integer
-MajorSubsystemVersion As Integer
-MinorSubsystemVersion As Integer
-Reserved1 As Long
-SizeOfImage As Long
-SizeOfHeaders As Long
-CheckSum As Long
-Subsystem As Integer
-DllCharacteristics As Integer
-SizeOfStackReserve As Long
-SizeOfStackCommit As Long
-SizeOfHeapReserve As Long
-SizeOfHeapCommit As Long
-LoaderFlags As Long
-NumberOfRvaAndSizes As Long
-DataDirectory(15) As IMAGE_DATA_DIRECTORY
-End Type
-Private Type IMAGE_DOS_HEADER
-e_magic As Integer
-e_cblp As Integer
-e_cp As Integer
-e_crlc As Integer
-e_cparhdr As Integer
-e_minalloc As Integer
-e_maxalloc As Integer
-e_ss As Integer
-e_sp As Integer
-e_csum As Integer
-e_ip As Integer
-e_cs As Integer
-e_lfarlc As Integer
-e_onvo As Integer
-e_res(0 To 3) As Integer
-e_oemid As Integer
-e_oeminfo As Integer
-e_res2(0 To 9) As Integer
-e_lfanew As Long
-End Type
+Private Const E_NOINTERFACE As Long = &H80004002
+Private Const E_POINTER As Long = &H80004003
+Private Const S_FALSE As Long = &H1
+Private Const S_OK As Long = &H0
+#If Win64 Then
+Private Const API_HOOK_SIZE As Long = 12
+#Else
+Private Const API_HOOK_SIZE As Long = 6
+#End If
+Private ShellModHandle As LongPtr, ShellModCount As Long
+Private ComCtlsSubclassProcPtr As LongPtr
+#If (VBA7 = 0) Then
+Private ComCtlsSubclassW2K As Integer
+#End If
+Private ComCtlsDisabledThreadWindowsCount As Long
+Private ComCtlsDisabledThreadWindows() As LongPtr
+Private MCIWndRefCount As Long
+Private ImcGetSysColorPtr As LongPtr, ImcGetSysColorRGBBackColor As Long, ImcGetSysColorRGBForeColor As Long, ImcGetSysColorHook(0 To (API_HOOK_SIZE - 1)) As Byte, ImcGetSysColorOrig(0 To (API_HOOK_SIZE - 1)) As Byte
+Private ImcImageListDrawPtr As LongPtr, ImcImageListDrawHook(0 To (API_HOOK_SIZE - 1)) As Byte, ImcImageListDrawOrig(0 To (API_HOOK_SIZE - 1)) As Byte
+Private CdlPDEXVTableIPDCB(0 To 5) As LongPtr
+Private CdlFRHookHandle As LongPtr
+Private CdlFRDialogHandle() As LongPtr, CdlFRDialogCount As Long
+
+#If ImplementPreTranslateMsg = True Then
+
+Private Const UM_PRETRANSLATEMSG As Long = (WM_USER + 1100)
+Private ComCtlsPreTranslateMsgHookHandle As LongPtr
+Private ComCtlsPreTranslateMsgHwnd As LongPtr, ComCtlsPreTranslateMsgCount As Long
 
 #End If
 
 Public Sub ComCtlsLoadShellMod()
-If (ShellModHandle Or ShellModCount) = 0 Then ShellModHandle = LoadLibrary(StrPtr("Shell32.dll"))
+If ShellModHandle = NULL_PTR And ShellModCount = 0 Then ShellModHandle = LoadLibrary(StrPtr("shell32.dll"))
 ShellModCount = ShellModCount + 1
 End Sub
 
 Public Sub ComCtlsReleaseShellMod()
 ShellModCount = ShellModCount - 1
-If ShellModCount = 0 And ShellModHandle <> 0 Then
+If ShellModHandle <> NULL_PTR And ShellModCount = 0 Then
     FreeLibrary ShellModHandle
-    ShellModHandle = 0
+    ShellModHandle = NULL_PTR
 End If
 End Sub
 
@@ -273,7 +365,11 @@ End With
 InitCommonControlsEx ICCEX
 End Sub
 
+#If VBA7 Then
+Public Sub ComCtlsShowAllUIStates(ByVal hWnd As LongPtr)
+#Else
 Public Sub ComCtlsShowAllUIStates(ByVal hWnd As Long)
+#End If
 Const WM_UPDATEUISTATE As Long = &H128
 Const UIS_CLEAR As Long = 2, UISF_HIDEFOCUS As Long = &H1, UISF_HIDEACCEL As Long = &H2
 SendMessage hWnd, WM_UPDATEUISTATE, MakeDWord(UIS_CLEAR, UISF_HIDEFOCUS Or UISF_HIDEACCEL), ByVal 0&
@@ -295,7 +391,11 @@ Select Case Value
 End Select
 End Sub
 
+#If VBA7 Then
+Public Sub ComCtlsChangeBorderStyle(ByVal hWnd As LongPtr, ByVal Value As CCBorderStyleConstants)
+#Else
 Public Sub ComCtlsChangeBorderStyle(ByVal hWnd As Long, ByVal Value As CCBorderStyleConstants)
+#End If
 Const WS_BORDER As Long = &H800000, WS_DLGFRAME As Long = &H400000
 Const WS_EX_CLIENTEDGE As Long = &H200, WS_EX_STATICEDGE As Long = &H20000, WS_EX_WINDOWEDGE As Long = &H100
 Dim dwStyle As Long, dwExStyle As Long
@@ -312,54 +412,79 @@ SetWindowLong hWnd, GWL_EXSTYLE, dwExStyle
 Call ComCtlsFrameChanged(hWnd)
 End Sub
 
+#If VBA7 Then
+Public Sub ComCtlsFrameChanged(ByVal hWnd As LongPtr)
+#Else
 Public Sub ComCtlsFrameChanged(ByVal hWnd As Long)
+#End If
 Const SWP_FRAMECHANGED As Long = &H20, SWP_NOMOVE As Long = &H2, SWP_NOOWNERZORDER As Long = &H200, SWP_NOSIZE As Long = &H1, SWP_NOZORDER As Long = &H4
-SetWindowPos hWnd, 0, 0, 0, 0, 0, SWP_NOMOVE Or SWP_NOSIZE Or SWP_NOOWNERZORDER Or SWP_NOZORDER Or SWP_FRAMECHANGED
+SetWindowPos hWnd, NULL_PTR, 0, 0, 0, 0, SWP_NOMOVE Or SWP_NOSIZE Or SWP_NOOWNERZORDER Or SWP_NOZORDER Or SWP_FRAMECHANGED
 End Sub
 
+#If VBA7 Then
+Public Sub ComCtlsInitToolTip(ByVal hWnd As LongPtr)
+#Else
 Public Sub ComCtlsInitToolTip(ByVal hWnd As Long)
-Const WS_EX_TOPMOST As Long = &H8, HWND_TOPMOST As Long = (-1)
+#End If
+#If VBA7 Then
+Const HWND_TOPMOST As LongPtr = (-1)
+#Else
+Const HWND_TOPMOST As Long = (-1)
+#End If
+Const WS_EX_TOPMOST As Long = &H8
 Const SWP_NOMOVE As Long = &H2, SWP_NOSIZE As Long = &H1, SWP_NOACTIVATE As Long = &H10
 If Not (GetWindowLong(hWnd, GWL_EXSTYLE) And WS_EX_TOPMOST) = WS_EX_TOPMOST Then SetWindowPos hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE Or SWP_NOSIZE Or SWP_NOACTIVATE
 Const TTM_SETMAXTIPWIDTH As Long = (WM_USER + 24)
 SendMessage hWnd, TTM_SETMAXTIPWIDTH, 0, ByVal &H7FFF&
 End Sub
 
+#If VBA7 Then
+Public Sub ComCtlsCreateIMC(ByVal hWnd As LongPtr, ByRef hIMC As LongPtr)
+#Else
 Public Sub ComCtlsCreateIMC(ByVal hWnd As Long, ByRef hIMC As Long)
-If hIMC = 0 Then
+#End If
+If hIMC = NULL_PTR Then
     hIMC = ImmCreateContext()
-    If hIMC <> 0 Then ImmAssociateContext hWnd, hIMC
+    If hIMC <> NULL_PTR Then ImmAssociateContext hWnd, hIMC
 End If
 End Sub
 
+#If VBA7 Then
+Public Sub ComCtlsDestroyIMC(ByVal hWnd As LongPtr, ByRef hIMC As LongPtr)
+#Else
 Public Sub ComCtlsDestroyIMC(ByVal hWnd As Long, ByRef hIMC As Long)
-If hIMC <> 0 Then
-    ImmAssociateContext hWnd, 0
+#End If
+If hIMC <> NULL_PTR Then
+    ImmAssociateContext hWnd, NULL_PTR
     ImmDestroyContext hIMC
-    hIMC = 0
+    hIMC = NULL_PTR
 End If
 End Sub
 
+#If VBA7 Then
+Public Sub ComCtlsSetIMEMode(ByVal hWnd As LongPtr, ByVal hIMCOrig As LongPtr, ByVal Value As CCIMEModeConstants)
+#Else
 Public Sub ComCtlsSetIMEMode(ByVal hWnd As Long, ByVal hIMCOrig As Long, ByVal Value As CCIMEModeConstants)
+#End If
 Const IME_CMODE_ALPHANUMERIC As Long = &H0, IME_CMODE_NATIVE As Long = &H1, IME_CMODE_KATAKANA As Long = &H2, IME_CMODE_FULLSHAPE As Long = &H8
-Dim hKL As Long
+Dim hKL As LongPtr
 hKL = GetKeyboardLayout(0)
-If ImmIsIME(hKL) = 0 Or hIMCOrig = 0 Then Exit Sub
-Dim hIMC As Long
+If ImmIsIME(hKL) = NULL_PTR Or hIMCOrig = NULL_PTR Then Exit Sub
+Dim hIMC As LongPtr
 hIMC = ImmGetContext(hWnd)
 If Value = CCIMEModeDisable Then
-    If hIMC <> 0 Then
+    If hIMC <> NULL_PTR Then
         ImmReleaseContext hWnd, hIMC
-        ImmAssociateContext hWnd, 0
+        ImmAssociateContext hWnd, NULL_PTR
     End If
 Else
-    If hIMC = 0 Then
+    If hIMC = NULL_PTR Then
         ImmAssociateContext hWnd, hIMCOrig
         hIMC = ImmGetContext(hWnd)
     End If
-    If hIMC <> 0 And Value <> CCIMEModeNoControl Then
+    If hIMC <> NULL_PTR And Value <> CCIMEModeNoControl Then
         Dim dwConversion As Long, dwSentence As Long
-        ImmGetConversionStatus hIMC, dwConversion, dwSentence
+        ImmGetConversionStatus hIMC, VarPtr(dwConversion), VarPtr(dwSentence)
         Select Case Value
             Case CCIMEModeOn
                 ImmSetOpenStatus hIMC, 1
@@ -406,7 +531,11 @@ Else
 End If
 End Sub
 
+#If VBA7 Then
+Public Sub ComCtlsRequestMouseLeave(ByVal hWnd As LongPtr)
+#Else
 Public Sub ComCtlsRequestMouseLeave(ByVal hWnd As Long)
+#End If
 Const TME_LEAVE As Long = &H2
 Dim TME As TRACKMOUSEEVENTSTRUCT
 With TME
@@ -442,7 +571,11 @@ Select Case ModeValue
 End Select
 End Sub
 
+#If VBA7 Then
+Public Sub ComCtlsSetRightToLeft(ByVal hWnd As LongPtr, ByVal dwMask As Long)
+#Else
 Public Sub ComCtlsSetRightToLeft(ByVal hWnd As Long, ByVal dwMask As Long)
+#End If
 Const WS_EX_LAYOUTRTL As Long = &H400000, WS_EX_RTLREADING As Long = &H2000, WS_EX_RIGHT As Long = &H1000, WS_EX_LEFTSCROLLBAR As Long = &H4000
 ' WS_EX_LAYOUTRTL will take care of both layout and reading order with the single flag and mirrors the window.
 Dim dwExStyle As Long
@@ -458,7 +591,7 @@ If (dwMask And WS_EX_LEFTSCROLLBAR) = WS_EX_LEFTSCROLLBAR Then dwExStyle = dwExS
 Const WS_POPUP As Long = &H80000000
 If (GetWindowLong(hWnd, GWL_STYLE) And WS_POPUP) = 0 Then
     SetWindowLong hWnd, GWL_EXSTYLE, dwExStyle
-    InvalidateRect hWnd, ByVal 0&, 1
+    InvalidateRect hWnd, ByVal NULL_PTR, 1
     Call ComCtlsFrameChanged(hWnd)
 Else
     ' ToolTip control supports only the WS_EX_LAYOUTRTL flag.
@@ -481,7 +614,7 @@ Else
     .cbSize = LenB(TI)
     Buffer = String(80, vbNullChar)
     .lpszText = StrPtr(Buffer)
-    For i = 1 To SendMessage(hWnd, TTM_GETTOOLCOUNT, 0, ByVal 0&)
+    For i = 1 To CLng(SendMessage(hWnd, TTM_GETTOOLCOUNT, 0, ByVal 0&))
         If SendMessage(hWnd, TTM_ENUMTOOLS, i - 1, ByVal VarPtr(TI)) <> 0 Then
             If (dwMask And WS_EX_LAYOUTRTL) = WS_EX_LAYOUTRTL Or (dwMask And WS_EX_RTLREADING) = 0 Then
                 If (.uFlags And TTF_RTLREADING) = TTF_RTLREADING Then .uFlags = .uFlags And Not TTF_RTLREADING
@@ -496,64 +629,18 @@ Else
 End If
 End Sub
 
-Public Sub ComCtlsIPPBSetDisplayStringMousePointer(ByVal MousePointer As Integer, ByRef DisplayName As String)
-Select Case MousePointer
-    Case 0: DisplayName = "0 - Default"
-    Case 1: DisplayName = "1 - Arrow"
-    Case 2: DisplayName = "2 - Cross"
-    Case 3: DisplayName = "3 - I-Beam"
-    Case 4: DisplayName = "4 - Hand"
-    Case 5: DisplayName = "5 - Size"
-    Case 6: DisplayName = "6 - Size NE SW"
-    Case 7: DisplayName = "7 - Size N S"
-    Case 8: DisplayName = "8 - Size NW SE"
-    Case 9: DisplayName = "9 - Size W E"
-    Case 10: DisplayName = "10 - Up Arrow"
-    Case 11: DisplayName = "11 - Hourglass"
-    Case 12: DisplayName = "12 - No Drop"
-    Case 13: DisplayName = "13 - Arrow and Hourglass"
-    Case 14: DisplayName = "14 - Arrow and Question"
-    Case 15: DisplayName = "15 - Size All"
-    Case 16: DisplayName = "16 - Arrow and CD"
-    Case 99: DisplayName = "99 - Custom"
-End Select
-End Sub
-
-Public Sub ComCtlsIPPBSetPredefinedStringsMousePointer(ByRef StringsOut() As String, ByRef CookiesOut() As Long)
-ReDim StringsOut(0 To (17 + 1)) As String
-ReDim CookiesOut(0 To (17 + 1)) As Long
-StringsOut(0) = "0 - Default": CookiesOut(0) = 0
-StringsOut(1) = "1 - Arrow": CookiesOut(1) = 1
-StringsOut(2) = "2 - Cross": CookiesOut(2) = 2
-StringsOut(3) = "3 - I-Beam": CookiesOut(3) = 3
-StringsOut(4) = "4 - Hand": CookiesOut(4) = 4
-StringsOut(5) = "5 - Size": CookiesOut(5) = 5
-StringsOut(6) = "6 - Size NE SW": CookiesOut(6) = 6
-StringsOut(7) = "7 - Size N S": CookiesOut(7) = 7
-StringsOut(8) = "8 - Size NW SE": CookiesOut(8) = 8
-StringsOut(9) = "9 - Size W E": CookiesOut(9) = 9
-StringsOut(10) = "10 - Up Arrow": CookiesOut(10) = 10
-StringsOut(11) = "11 - Hourglass": CookiesOut(11) = 11
-StringsOut(12) = "12 - No Drop": CookiesOut(12) = 12
-StringsOut(13) = "13 - Arrow and Hourglass": CookiesOut(13) = 13
-StringsOut(14) = "14 - Arrow and Question": CookiesOut(14) = 14
-StringsOut(15) = "15 - Size All": CookiesOut(15) = 15
-StringsOut(16) = "16 - Arrow and CD": CookiesOut(16) = 16
-StringsOut(17) = "99 - Custom": CookiesOut(17) = 99
-End Sub
-
 Public Sub ComCtlsIPPBSetPredefinedStringsImageList(ByRef StringsOut() As String, ByRef CookiesOut() As Long, ByRef ControlsEnum As VBRUN.ParentControls, ByRef ImageListArray() As String)
 Dim ControlEnum As Object, PropUBound As Long
 PropUBound = UBound(StringsOut())
-ReDim Preserve StringsOut(PropUBound + 1) As String
-ReDim Preserve CookiesOut(PropUBound + 1) As Long
+ReDim Preserve StringsOut(0 To PropUBound) As String
+ReDim Preserve CookiesOut(0 To PropUBound) As Long
 StringsOut(PropUBound) = "(None)"
 CookiesOut(PropUBound) = PropUBound
 For Each ControlEnum In ControlsEnum
     If TypeName(ControlEnum) = "ImageList" Then
-        PropUBound = UBound(StringsOut())
-        ReDim Preserve StringsOut(PropUBound + 1) As String
-        ReDim Preserve CookiesOut(PropUBound + 1) As Long
+        PropUBound = UBound(StringsOut()) + 1
+        ReDim Preserve StringsOut(0 To PropUBound) As String
+        ReDim Preserve CookiesOut(0 To PropUBound) As Long
         StringsOut(PropUBound) = ProperControlName(ControlEnum)
         CookiesOut(PropUBound) = PropUBound
     End If
@@ -568,42 +655,70 @@ End Sub
 
 Public Sub ComCtlsPPInitComboMousePointer(ByVal ComboBox As Object)
 With ComboBox
-.AddItem "0 - Default"
-.ItemData(.NewIndex) = 0
-.AddItem "1 - Arrow"
-.ItemData(.NewIndex) = 1
-.AddItem "2 - Cross"
-.ItemData(.NewIndex) = 2
-.AddItem "3 - I-Beam"
-.ItemData(.NewIndex) = 3
-.AddItem "4 - Hand"
-.ItemData(.NewIndex) = 4
-.AddItem "5 - Size"
-.ItemData(.NewIndex) = 5
-.AddItem "6 - Size NE SW"
-.ItemData(.NewIndex) = 6
-.AddItem "7 - Size N S"
-.ItemData(.NewIndex) = 7
-.AddItem "8 - Size NW SE"
-.ItemData(.NewIndex) = 8
-.AddItem "9 - Size W E"
-.ItemData(.NewIndex) = 9
-.AddItem "10 - Up Arrow"
-.ItemData(.NewIndex) = 10
-.AddItem "11 - Hourglass"
-.ItemData(.NewIndex) = 11
-.AddItem "12 - No Drop"
-.ItemData(.NewIndex) = 12
-.AddItem "13 - Arrow and Hourglass"
-.ItemData(.NewIndex) = 13
-.AddItem "14 - Arrow and Question"
-.ItemData(.NewIndex) = 14
-.AddItem "15 - Size All"
-.ItemData(.NewIndex) = 15
-.AddItem "16 - Arrow and CD"
-.ItemData(.NewIndex) = 16
-.AddItem "99 - Custom"
-.ItemData(.NewIndex) = 99
+.AddItem CCMousePointerDefault & " - Default"
+.ItemData(.NewIndex) = CCMousePointerDefault
+.AddItem CCMousePointerArrow & " - Arrow"
+.ItemData(.NewIndex) = CCMousePointerArrow
+.AddItem CCMousePointerCrosshair & " - Cross"
+.ItemData(.NewIndex) = CCMousePointerCrosshair
+.AddItem CCMousePointerIbeam & " - I-Beam"
+.ItemData(.NewIndex) = CCMousePointerIbeam
+.AddItem CCMousePointerHand & " - Hand"
+.ItemData(.NewIndex) = CCMousePointerHand
+.AddItem CCMousePointerSizePointer & " - Size"
+.ItemData(.NewIndex) = CCMousePointerSizePointer
+.AddItem CCMousePointerSizeNESW & " - Size NE SW"
+.ItemData(.NewIndex) = CCMousePointerSizeNESW
+.AddItem CCMousePointerSizeNS & " - Size N S"
+.ItemData(.NewIndex) = CCMousePointerSizeNS
+.AddItem CCMousePointerSizeNWSE & " - Size NW SE"
+.ItemData(.NewIndex) = CCMousePointerSizeNWSE
+.AddItem CCMousePointerSizeWE & " - Size W E"
+.ItemData(.NewIndex) = CCMousePointerSizeWE
+.AddItem CCMousePointerUpArrow & " - Up Arrow"
+.ItemData(.NewIndex) = CCMousePointerUpArrow
+.AddItem CCMousePointerHourglass & " - Hourglass"
+.ItemData(.NewIndex) = CCMousePointerHourglass
+.AddItem CCMousePointerNoDrop & " - No Drop"
+.ItemData(.NewIndex) = CCMousePointerNoDrop
+.AddItem CCMousePointerArrowHourglass & " - Arrow and Hourglass"
+.ItemData(.NewIndex) = CCMousePointerArrowHourglass
+.AddItem CCMousePointerArrowQuestion & " - Arrow and Question"
+.ItemData(.NewIndex) = CCMousePointerArrowQuestion
+.AddItem CCMousePointerSizeAll & " - Size All"
+.ItemData(.NewIndex) = CCMousePointerSizeAll
+.AddItem CCMousePointerArrowCD & " - Arrow and CD"
+.ItemData(.NewIndex) = CCMousePointerArrowCD
+.AddItem CCMousePointerPin & " - Pin"
+.ItemData(.NewIndex) = CCMousePointerPin
+.AddItem CCMousePointerPerson & " - Person"
+.ItemData(.NewIndex) = CCMousePointerPerson
+.AddItem CCMousePointerPen & " - Pen"
+.ItemData(.NewIndex) = CCMousePointerPen
+.AddItem CCMousePointerScrollN & " - Scroll N"
+.ItemData(.NewIndex) = CCMousePointerScrollN
+.AddItem CCMousePointerScrollS & " - Scroll S"
+.ItemData(.NewIndex) = CCMousePointerScrollS
+.AddItem CCMousePointerScrollE & " - Scroll E"
+.ItemData(.NewIndex) = CCMousePointerScrollE
+.AddItem CCMousePointerScrollW & " - Scroll W"
+.ItemData(.NewIndex) = CCMousePointerScrollW
+.AddItem CCMousePointerScrollNS & " - Scroll N S"
+.ItemData(.NewIndex) = CCMousePointerScrollNS
+.AddItem CCMousePointerScrollWE & " - Scroll W E"
+.ItemData(.NewIndex) = CCMousePointerScrollWE
+.AddItem CCMousePointerScrollNW & " - Scroll NW"
+.ItemData(.NewIndex) = CCMousePointerScrollNW
+.AddItem CCMousePointerScrollNE & " - Scroll NE"
+.ItemData(.NewIndex) = CCMousePointerScrollNE
+.AddItem CCMousePointerScrollSW & " - Scroll SW"
+.ItemData(.NewIndex) = CCMousePointerScrollSW
+.AddItem CCMousePointerScrollSE & " - Scroll SE"
+.ItemData(.NewIndex) = CCMousePointerScrollSE
+.AddItem CCMousePointerScrollAll & " - Scroll All"
+.ItemData(.NewIndex) = CCMousePointerScrollAll
+.AddItem CCMousePointerCustom & " - Custom"
+.ItemData(.NewIndex) = CCMousePointerCustom
 End With
 End Sub
 
@@ -638,19 +753,22 @@ Public Sub ComCtlsPPKeyPressOnlyNumeric(ByRef KeyAscii As Integer)
 If KeyAscii < 48 Or KeyAscii > 57 Then If KeyAscii <> 8 Then KeyAscii = 0
 End Sub
 
+#If VBA7 Then
+Public Function ComCtlsPeekCharCode(ByVal hWnd As LongPtr) As Long
+#Else
 Public Function ComCtlsPeekCharCode(ByVal hWnd As Long) As Long
+#End If
 Dim Msg As TMSG
 Const PM_NOREMOVE As Long = &H0, WM_CHAR As Long = &H102
-If PeekMessage(Msg, hWnd, WM_CHAR, WM_CHAR, PM_NOREMOVE) <> 0 Then ComCtlsPeekCharCode = Msg.wParam
+If PeekMessage(Msg, hWnd, WM_CHAR, WM_CHAR, PM_NOREMOVE) <> 0 Then ComCtlsPeekCharCode = CLng(Msg.wParam)
 End Function
 
-Public Function ComCtlsSupportLevel() As Byte
-Static Done As Boolean, Value As Byte
+Public Function ComCtlsSupportLevel() As Integer
+Static Done As Boolean, Value As Integer
 If Done = False Then
     Dim Version As DLLVERSIONINFO
     On Error Resume Next
     Version.cbSize = LenB(Version)
-    Const S_OK As Long = &H0
     If DllGetVersion(Version) = S_OK Then
         If Version.dwMajor = 6 And Version.dwMinor = 0 Then
             Value = 1
@@ -663,108 +781,99 @@ End If
 ComCtlsSupportLevel = Value
 End Function
 
-Public Function ComCtlsW2KCompatibility() As Boolean
-Static Done As Boolean, Value As Boolean
-If Done = False Then
-    Dim Version As OSVERSIONINFO
-    On Error Resume Next
-    Version.dwOSVersionInfoSize = LenB(Version)
-    If GetVersionEx(Version) <> 0 Then
-        With Version
-        Const VER_PLATFORM_WIN32_NT As Long = 2
-        If .dwPlatformID = VER_PLATFORM_WIN32_NT Then
-            If .dwMajorVersion = 5 And .dwMinorVersion = 0 Then Value = True
-        End If
-        End With
-    End If
-    Done = True
-End If
-ComCtlsW2KCompatibility = Value
-End Function
-
-Public Function ComCtlsRootIsEditor(ByVal hWnd As Long) As Boolean
-Static Done As Boolean, Value As Boolean
-If Done = False Then
-    Const GA_ROOT As Long = 2
-    hWnd = GetAncestor(hWnd, GA_ROOT)
-    If hWnd <> 0 Then
-        Dim Buffer As String, RetVal As Long
-        Buffer = String(256, vbNullChar)
-        RetVal = GetClassName(hWnd, StrPtr(Buffer), Len(Buffer))
-        If RetVal <> 0 Then Value = CBool(Left$(Buffer, RetVal) = "wndclass_desked_gsk")
-    End If
-    Done = True
-End If
-ComCtlsRootIsEditor = Value
-End Function
-
-Public Sub ComCtlsTopParentValidateControls(ByVal UserControl As Object)
-With GetTopUserControl(UserControl)
-If TypeOf .Parent Is VB.Form Then
-    Dim Form As VB.Form
-    Set Form = .Parent
-    Form.ValidateControls
-Else
-    Const IID_IPropertyPage As String = "{B196B28D-BAB4-101A-B69C-00AA00341D07}"
-    If VTableInterfaceSupported(.Parent, IID_IPropertyPage) = True Then
-        Dim PropertyPage As VB.PropertyPage, TempPropertyPage As VB.PropertyPage
-        CopyMemory TempPropertyPage, ObjPtr(.Parent), 4
-        Set PropertyPage = TempPropertyPage
-        CopyMemory TempPropertyPage, 0&, 4
-        PropertyPage.ValidateControls
-    End If
-End If
-End With
-End Sub
-
+#If VBA7 Then
+Public Sub ComCtlsSetSubclass(ByVal hWnd As LongPtr, ByVal This As ISubclass, ByVal dwRefData As LongPtr, Optional ByVal Name As String)
+#Else
 Public Sub ComCtlsSetSubclass(ByVal hWnd As Long, ByVal This As ISubclass, ByVal dwRefData As Long, Optional ByVal Name As String)
-If hWnd = 0 Then Exit Sub
-If Name = vbNullString Then Name = "ComCtl"
+#End If
+If hWnd = NULL_PTR Then Exit Sub
+If Name = vbNullString Then Name = "ComCtls"
 If GetProp(hWnd, StrPtr(Name & "SubclassInit")) = 0 Then
-    If ComCtlsW2KCompatibility() = False Then
-        SetWindowSubclass hWnd, AddressOf ComCtlsSubclassProc, ObjPtr(This), dwRefData
-    Else
-        SetWindowSubclass_W2K hWnd, AddressOf ComCtlsSubclassProc, ObjPtr(This), dwRefData
+    If ComCtlsSubclassProcPtr = NULL_PTR Then ComCtlsSubclassProcPtr = ProcPtr(AddressOf ComCtlsSubclassProc)
+    #If VBA7 Then
+    SetWindowSubclass hWnd, ComCtlsSubclassProcPtr, ObjPtr(This), dwRefData
+    #Else
+    If ComCtlsSubclassW2K = 0 Then
+        Dim hLib As Long
+        hLib = LoadLibrary(StrPtr("comctl32.dll"))
+        If hLib <> NULL_PTR Then
+            If GetProcAddress(hLib, "SetWindowSubclass") <> NULL_PTR Then
+                ComCtlsSubclassW2K = 1
+            ElseIf GetProcAddress(hLib, 410&) <> NULL_PTR Then
+                ComCtlsSubclassW2K = -1
+            End If
+            FreeLibrary hLib
+        End If
     End If
+    If ComCtlsSubclassW2K > -1 Then
+        SetWindowSubclass hWnd, ComCtlsSubclassProcPtr, ObjPtr(This), dwRefData
+    Else
+        SetWindowSubclassW2K hWnd, ComCtlsSubclassProcPtr, ObjPtr(This), dwRefData
+    End If
+    #End If
     SetProp hWnd, StrPtr(Name & "SubclassID"), ObjPtr(This)
     SetProp hWnd, StrPtr(Name & "SubclassInit"), 1
 End If
 End Sub
 
+#If VBA7 Then
+Public Function ComCtlsDefaultProc(ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+#Else
 Public Function ComCtlsDefaultProc(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
-If ComCtlsW2KCompatibility() = False Then
+#End If
+#If VBA7 Then
+ComCtlsDefaultProc = DefSubclassProc(hWnd, wMsg, wParam, lParam)
+#Else
+If ComCtlsSubclassW2K > -1 Then
     ComCtlsDefaultProc = DefSubclassProc(hWnd, wMsg, wParam, lParam)
 Else
-    ComCtlsDefaultProc = DefSubclassProc_W2K(hWnd, wMsg, wParam, lParam)
+    ComCtlsDefaultProc = DefSubclassProcW2K(hWnd, wMsg, wParam, lParam)
 End If
+#End If
 End Function
 
+#If VBA7 Then
+Public Sub ComCtlsRemoveSubclass(ByVal hWnd As LongPtr, Optional ByVal Name As String)
+#Else
 Public Sub ComCtlsRemoveSubclass(ByVal hWnd As Long, Optional ByVal Name As String)
-If hWnd = 0 Then Exit Sub
-If Name = vbNullString Then Name = "ComCtl"
+#End If
+If hWnd = NULL_PTR Then Exit Sub
+If Name = vbNullString Then Name = "ComCtls"
 If GetProp(hWnd, StrPtr(Name & "SubclassInit")) = 1 Then
-    If ComCtlsW2KCompatibility() = False Then
-        RemoveWindowSubclass hWnd, AddressOf ComCtlsSubclassProc, GetProp(hWnd, StrPtr(Name & "SubclassID"))
+    #If VBA7 Then
+    RemoveWindowSubclass hWnd, ComCtlsSubclassProcPtr, GetProp(hWnd, StrPtr(Name & "SubclassID"))
+    #Else
+    If ComCtlsSubclassW2K > -1 Then
+        RemoveWindowSubclass hWnd, ComCtlsSubclassProcPtr, GetProp(hWnd, StrPtr(Name & "SubclassID"))
     Else
-        RemoveWindowSubclass_W2K hWnd, AddressOf ComCtlsSubclassProc, GetProp(hWnd, StrPtr(Name & "SubclassID"))
+        RemoveWindowSubclassW2K hWnd, ComCtlsSubclassProcPtr, GetProp(hWnd, StrPtr(Name & "SubclassID"))
     End If
+    #End If
     RemoveProp hWnd, StrPtr(Name & "SubclassID")
     RemoveProp hWnd, StrPtr(Name & "SubclassInit")
 End If
 End Sub
 
+#If VBA7 Then
+Public Function ComCtlsSubclassProc(ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, ByVal uIdSubclass As LongPtr, ByVal dwRefData As LongPtr) As LongPtr
+#Else
 Public Function ComCtlsSubclassProc(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long, ByVal uIdSubclass As Long, ByVal dwRefData As Long) As Long
+#End If
 Select Case wMsg
     Case WM_DESTROY
         ComCtlsSubclassProc = ComCtlsDefaultProc(hWnd, wMsg, wParam, lParam)
         Exit Function
     Case WM_NCDESTROY, WM_UAHDESTROYWINDOW
         ComCtlsSubclassProc = ComCtlsDefaultProc(hWnd, wMsg, wParam, lParam)
-        If ComCtlsW2KCompatibility() = False Then
-            RemoveWindowSubclass hWnd, AddressOf ComCtlsBase.ComCtlsSubclassProc, uIdSubclass
+        #If VBA7 Then
+        RemoveWindowSubclass hWnd, ComCtlsSubclassProcPtr, uIdSubclass
+        #Else
+        If ComCtlsSubclassW2K > -1 Then
+            RemoveWindowSubclass hWnd, ComCtlsSubclassProcPtr, uIdSubclass
         Else
-            RemoveWindowSubclass_W2K hWnd, AddressOf ComCtlsBase.ComCtlsSubclassProc, uIdSubclass
+            RemoveWindowSubclassW2K hWnd, ComCtlsSubclassProcPtr, uIdSubclass
         End If
+        #End If
         Exit Function
 End Select
 On Error Resume Next
@@ -777,88 +886,284 @@ Else
 End If
 End Function
 
-Public Sub ComCtlsImlListImageIndex(ByVal Control As Object, ByVal ImageList As Variant, ByVal KeyOrIndex As Variant, ByRef ImageIndex As Long)
-Dim LngValue As Long
-Select Case VarType(KeyOrIndex)
-    Case vbLong, vbInteger, vbByte
-        LngValue = KeyOrIndex
-    Case vbString
-        Dim ImageListControl As Object
-        If IsObject(ImageList) Then
-            Set ImageListControl = ImageList
-        ElseIf VarType(ImageList) = vbString Then
-            Dim ControlEnum As Object, CompareName As String
-            For Each ControlEnum In Control.ControlsEnum
-                If TypeName(ControlEnum) = "ImageList" Then
-                    CompareName = ProperControlName(ControlEnum)
-                    If CompareName = ImageList And Not CompareName = vbNullString Then
-                        Set ImageListControl = ControlEnum
-                        Exit For
-                    End If
-                End If
-            Next ControlEnum
-        End If
-        If Not ImageListControl Is Nothing Then
-            On Error Resume Next
-            LngValue = ImageListControl.ListImages(KeyOrIndex).Index
-            On Error GoTo 0
-        End If
-        If LngValue = 0 Then Err.Raise Number:=35601, Description:="Element not found"
-    Case vbDouble, vbSingle
-        LngValue = CLng(KeyOrIndex)
-    Case vbEmpty
-    Case Else
-        Err.Raise 13
-End Select
-If LngValue < 0 Then Err.Raise Number:=35600, Description:="Index out of bounds"
-ImageIndex = LngValue
+Public Sub ComCtlsTaskModal()
+' Disable all enabled top-level thread windows, just like MB_TASKMODAL.
+If ComCtlsDisabledThreadWindowsCount = 0 Then
+    EnumThreadWindows App.ThreadID, AddressOf ComCtlsTaskModalEnumThreadWndProc, 0
+Else
+    Dim i As Long
+    For i = 0 To ComCtlsDisabledThreadWindowsCount - 1
+        EnableWindow ComCtlsDisabledThreadWindows(i), 1
+    Next i
+    ComCtlsDisabledThreadWindowsCount = 0
+    Erase ComCtlsDisabledThreadWindows()
+End If
 End Sub
 
+Private Function ComCtlsTaskModalEnumThreadWndProc(ByVal hWnd As LongPtr, ByVal lParam As LongPtr) As Long
+If IsWindowEnabled(hWnd) <> 0 Then
+    EnableWindow hWnd, 0
+    ReDim Preserve ComCtlsDisabledThreadWindows(0 To ComCtlsDisabledThreadWindowsCount) ' As LongPtr
+    ComCtlsDisabledThreadWindows(ComCtlsDisabledThreadWindowsCount) = hWnd
+    ComCtlsDisabledThreadWindowsCount = ComCtlsDisabledThreadWindowsCount + 1
+End If
+ComCtlsTaskModalEnumThreadWndProc = 1
+End Function
+
+Public Sub ComCtlsImlListImageIndex(ByVal Control As Object, ByVal ImageList As Variant, ByVal KeyOrIndex As Variant, ByRef ImageIndex As Long)
+Dim IndexLong As Long
+If VarType(KeyOrIndex) = vbString Then
+    Dim ImageListControl As Object
+    If IsObject(ImageList) Then
+        Set ImageListControl = ImageList
+    ElseIf VarType(ImageList) = vbString Then
+        Dim ControlEnum As Object, CompareName As String
+        For Each ControlEnum In Control.ControlsEnum
+            If TypeName(ControlEnum) = "ImageList" Then
+                CompareName = ProperControlName(ControlEnum)
+                If CompareName = ImageList And Not CompareName = vbNullString Then
+                    Set ImageListControl = ControlEnum
+                    Exit For
+                End If
+            End If
+        Next ControlEnum
+    End If
+    If Not ImageListControl Is Nothing Then
+        On Error Resume Next
+        IndexLong = ImageListControl.ListImages(KeyOrIndex).Index
+        On Error GoTo 0
+    End If
+    If IndexLong = 0 Then Err.Raise Number:=35601, Description:="Element not found"
+Else
+    IndexLong = KeyOrIndex
+End If
+If IndexLong < 0 Then Err.Raise Number:=35600, Description:="Index out of bounds"
+ImageIndex = IndexLong
+End Sub
+
+Public Sub ComCtlsMCIWndRegisterClass()
+If MCIWndRefCount = 0 Then MCIWndRegisterClass
+MCIWndRefCount = MCIWndRefCount + 1
+End Sub
+
+Public Sub ComCtlsMCIWndReleaseClass()
+MCIWndRefCount = MCIWndRefCount - 1
+If MCIWndRefCount = 0 Then UnregisterClass StrPtr("MCIWndClass"), App.hInstance
+End Sub
+
+Public Sub ComCtlsImcGetSysColorSetHook(ByVal RGBBackColor As Long, ByVal RGBForeColor As Long)
+Dim OldProtect As Long
+If ImcGetSysColorPtr = NULL_PTR Then
+    ImcGetSysColorPtr = GetProcAddress(GetModuleHandle(StrPtr("user32.dll")), "GetSysColor")
+    If ImcGetSysColorPtr <> NULL_PTR Then
+        VirtualProtect ImcGetSysColorPtr, API_HOOK_SIZE, PAGE_EXECUTE_READWRITE, OldProtect
+        CopyMemory ByVal VarPtr(ImcGetSysColorOrig(0)), ByVal ImcGetSysColorPtr, API_HOOK_SIZE
+        #If Win64 Then
+        ImcGetSysColorHook(0) = &H48
+        ImcGetSysColorHook(1) = &HB8
+        CopyMemory ByVal VarPtr(ImcGetSysColorHook(2)), ProcPtr(AddressOf ComCtlsImcGetSysColorProc), PTR_SIZE
+        ImcGetSysColorHook(10) = &HFF
+        ImcGetSysColorHook(11) = &HE0
+        #Else
+        ImcGetSysColorHook(0) = &H68
+        CopyMemory ByVal VarPtr(ImcGetSysColorHook(1)), ProcPtr(AddressOf ComCtlsImcGetSysColorProc), PTR_SIZE
+        ImcGetSysColorHook(5) = &HC3
+        #End If
+        VirtualProtect ImcGetSysColorPtr, API_HOOK_SIZE, OldProtect, OldProtect
+    End If
+End If
+If ImcGetSysColorPtr <> NULL_PTR Then
+    ImcGetSysColorRGBBackColor = RGBBackColor
+    ImcGetSysColorRGBForeColor = RGBForeColor
+    VirtualProtect ImcGetSysColorPtr, API_HOOK_SIZE, PAGE_EXECUTE_READWRITE, OldProtect
+    CopyMemory ByVal ImcGetSysColorPtr, ByVal VarPtr(ImcGetSysColorHook(0)), API_HOOK_SIZE
+    VirtualProtect ImcGetSysColorPtr, API_HOOK_SIZE, OldProtect, OldProtect
+End If
+End Sub
+
+Public Sub ComCtlsImcGetSysColorRemoveHook()
+If ImcGetSysColorPtr <> NULL_PTR Then
+    Dim OldProtect As Long
+    VirtualProtect ImcGetSysColorPtr, API_HOOK_SIZE, PAGE_EXECUTE_READWRITE, OldProtect
+    CopyMemory ByVal ImcGetSysColorPtr, ByVal VarPtr(ImcGetSysColorOrig(0)), API_HOOK_SIZE
+    VirtualProtect ImcGetSysColorPtr, API_HOOK_SIZE, OldProtect, OldProtect
+End If
+End Sub
+
+Private Function ComCtlsImcGetSysColorProc(ByVal nIndex As Long) As Long
+Const COLOR_WINDOW As Long = 5, COLOR_WINDOWTEXT As Long = 8
+If nIndex = COLOR_WINDOW Then
+    ComCtlsImcGetSysColorProc = ImcGetSysColorRGBBackColor
+ElseIf nIndex = COLOR_WINDOWTEXT Then
+    ComCtlsImcGetSysColorProc = ImcGetSysColorRGBForeColor
+Else
+    Call ComCtlsImcGetSysColorRemoveHook
+    ComCtlsImcGetSysColorProc = GetSysColor(nIndex)
+    Call ComCtlsImcGetSysColorSetHook(ImcGetSysColorRGBBackColor, ImcGetSysColorRGBForeColor)
+End If
+End Function
+
+Public Sub ComCtlsImcImageListDrawSetHook()
+Dim OldProtect As Long
+If ImcImageListDrawPtr = NULL_PTR Then
+    ImcImageListDrawPtr = GetProcAddress(GetModuleHandle(StrPtr("comctl32.dll")), "ImageList_Draw")
+    If ImcImageListDrawPtr <> NULL_PTR Then
+        VirtualProtect ImcImageListDrawPtr, API_HOOK_SIZE, PAGE_EXECUTE_READWRITE, OldProtect
+        CopyMemory ByVal VarPtr(ImcImageListDrawOrig(0)), ByVal ImcImageListDrawPtr, API_HOOK_SIZE
+        #If Win64 Then
+        ImcImageListDrawHook(0) = &H48
+        ImcImageListDrawHook(1) = &HB8
+        CopyMemory ByVal VarPtr(ImcImageListDrawHook(2)), ProcPtr(AddressOf ComCtlsImcImageListDrawProc), PTR_SIZE
+        ImcImageListDrawHook(10) = &HFF
+        ImcImageListDrawHook(11) = &HE0
+        #Else
+        ImcImageListDrawHook(0) = &H68
+        CopyMemory ByVal VarPtr(ImcImageListDrawHook(1)), ProcPtr(AddressOf ComCtlsImcImageListDrawProc), PTR_SIZE
+        ImcImageListDrawHook(5) = &HC3
+        #End If
+        VirtualProtect ImcImageListDrawPtr, API_HOOK_SIZE, OldProtect, OldProtect
+    End If
+End If
+If ImcImageListDrawPtr <> NULL_PTR Then
+    VirtualProtect ImcImageListDrawPtr, API_HOOK_SIZE, PAGE_EXECUTE_READWRITE, OldProtect
+    CopyMemory ByVal ImcImageListDrawPtr, ByVal VarPtr(ImcImageListDrawHook(0)), API_HOOK_SIZE
+    VirtualProtect ImcImageListDrawPtr, API_HOOK_SIZE, OldProtect, OldProtect
+End If
+End Sub
+
+Public Sub ComCtlsImcImageListDrawRemoveHook()
+If ImcImageListDrawPtr <> NULL_PTR Then
+    Dim OldProtect As Long
+    VirtualProtect ImcImageListDrawPtr, API_HOOK_SIZE, PAGE_EXECUTE_READWRITE, OldProtect
+    CopyMemory ByVal ImcImageListDrawPtr, ByVal VarPtr(ImcImageListDrawOrig(0)), API_HOOK_SIZE
+    VirtualProtect ImcImageListDrawPtr, API_HOOK_SIZE, OldProtect, OldProtect
+End If
+End Sub
+
+#If VBA7 Then
+Private Function ComCtlsImcImageListDrawProc(ByVal hImageList As LongPtr, ByVal ImgIndex As Long, ByVal hDC As LongPtr, ByVal X As Long, ByVal Y As Long, ByVal fStyle As Long) As Long
+#Else
+Private Function ComCtlsImcImageListDrawProc(ByVal hImageList As Long, ByVal ImgIndex As Long, ByVal hDC As Long, ByVal X As Long, ByVal Y As Long, ByVal fStyle As Long) As Long
+#End If
+Const ILD_FOCUS As Long = &H2, ILD_SELECTED As Long = &H4, CLR_DEFAULT As Long = -16777216
+If (fStyle And ILD_FOCUS) = ILD_FOCUS Then fStyle = fStyle And Not ILD_FOCUS
+If (fStyle And ILD_SELECTED) = ILD_SELECTED Then fStyle = fStyle And Not ILD_SELECTED
+ComCtlsImcImageListDrawProc = ImageList_DrawEx(hImageList, ImgIndex, hDC, X, Y, 0, 0, CLR_DEFAULT, CLR_DEFAULT, fStyle)
+End Function
+
+#If VBA7 Then
+Public Function ComCtlsCbrPlaceholderWindowProc(ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+#Else
+Public Function ComCtlsCbrPlaceholderWindowProc(ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+#End If
+ComCtlsCbrPlaceholderWindowProc = DefWindowProc(hWnd, wMsg, wParam, lParam)
+End Function
+
+#If VBA7 Then
+Public Function ComCtlsTbrEnumThreadWndProc(ByVal hWnd As LongPtr, ByVal lParam As LongPtr) As Long
+#Else
+Public Function ComCtlsTbrEnumThreadWndProc(ByVal hWnd As Long, ByVal lParam As Long) As Long
+#End If
+If GetClassLong(hWnd, GCW_ATOM) = &H8000& Then ComCtlsTbrEnumThreadWndProc = 0 Else ComCtlsTbrEnumThreadWndProc = 1
+End Function
+
+#If VBA7 Then
+Public Function ComCtlsLvwSortingFunctionBinary(ByVal lParam1 As LongPtr, ByVal lParam2 As LongPtr, ByVal This As ISubclass) As Long
+#Else
 Public Function ComCtlsLvwSortingFunctionBinary(ByVal lParam1 As Long, ByVal lParam2 As Long, ByVal This As ISubclass) As Long
-ComCtlsLvwSortingFunctionBinary = This.Message(0, 0, lParam1, lParam2, 10)
+#End If
+ComCtlsLvwSortingFunctionBinary = CLng(This.Message(0, 0, lParam1, lParam2, 10))
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsLvwSortingFunctionText(ByVal lParam1 As LongPtr, ByVal lParam2 As LongPtr, ByVal This As ISubclass) As Long
+#Else
 Public Function ComCtlsLvwSortingFunctionText(ByVal lParam1 As Long, ByVal lParam2 As Long, ByVal This As ISubclass) As Long
-ComCtlsLvwSortingFunctionText = This.Message(0, 0, lParam1, lParam2, 11)
+#End If
+ComCtlsLvwSortingFunctionText = CLng(This.Message(0, 0, lParam1, lParam2, 11))
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsLvwSortingFunctionNumeric(ByVal lParam1 As LongPtr, ByVal lParam2 As LongPtr, ByVal This As ISubclass) As Long
+#Else
 Public Function ComCtlsLvwSortingFunctionNumeric(ByVal lParam1 As Long, ByVal lParam2 As Long, ByVal This As ISubclass) As Long
-ComCtlsLvwSortingFunctionNumeric = This.Message(0, 0, lParam1, lParam2, 12)
+#End If
+ComCtlsLvwSortingFunctionNumeric = CLng(This.Message(0, 0, lParam1, lParam2, 12))
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsLvwSortingFunctionCurrency(ByVal lParam1 As LongPtr, ByVal lParam2 As LongPtr, ByVal This As ISubclass) As Long
+#Else
 Public Function ComCtlsLvwSortingFunctionCurrency(ByVal lParam1 As Long, ByVal lParam2 As Long, ByVal This As ISubclass) As Long
-ComCtlsLvwSortingFunctionCurrency = This.Message(0, 0, lParam1, lParam2, 13)
+#End If
+ComCtlsLvwSortingFunctionCurrency = CLng(This.Message(0, 0, lParam1, lParam2, 13))
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsLvwSortingFunctionDate(ByVal lParam1 As LongPtr, ByVal lParam2 As LongPtr, ByVal This As ISubclass) As Long
+#Else
 Public Function ComCtlsLvwSortingFunctionDate(ByVal lParam1 As Long, ByVal lParam2 As Long, ByVal This As ISubclass) As Long
-ComCtlsLvwSortingFunctionDate = This.Message(0, 0, lParam1, lParam2, 14)
+#End If
+ComCtlsLvwSortingFunctionDate = CLng(This.Message(0, 0, lParam1, lParam2, 14))
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsLvwSortingFunctionLogical(ByVal lParam1 As LongPtr, ByVal lParam2 As LongPtr, ByVal This As ISubclass) As Long
+#Else
+Public Function ComCtlsLvwSortingFunctionLogical(ByVal lParam1 As Long, ByVal lParam2 As Long, ByVal This As ISubclass) As Long
+#End If
+ComCtlsLvwSortingFunctionLogical = CLng(This.Message(0, 0, lParam1, lParam2, 15))
+End Function
+
+#If VBA7 Then
+Public Function ComCtlsLvwSortingFunctionGroups(ByVal lParam1 As LongPtr, ByVal lParam2 As LongPtr, ByVal This As ISubclass) As Long
+#Else
 Public Function ComCtlsLvwSortingFunctionGroups(ByVal lParam1 As Long, ByVal lParam2 As Long, ByVal This As ISubclass) As Long
-ComCtlsLvwSortingFunctionGroups = This.Message(0, 0, lParam1, lParam2, 0)
+#End If
+ComCtlsLvwSortingFunctionGroups = CLng(This.Message(0, 0, lParam1, lParam2, 0))
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsTvwSortingFunctionBinary(ByVal lParam1 As LongPtr, ByVal lParam2 As LongPtr, ByVal This As ISubclass) As Long
+#Else
 Public Function ComCtlsTvwSortingFunctionBinary(ByVal lParam1 As Long, ByVal lParam2 As Long, ByVal This As ISubclass) As Long
-ComCtlsTvwSortingFunctionBinary = This.Message(0, 0, lParam1, lParam2, 10)
+#End If
+ComCtlsTvwSortingFunctionBinary = CLng(This.Message(0, 0, lParam1, lParam2, 10))
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsTvwSortingFunctionText(ByVal lParam1 As LongPtr, ByVal lParam2 As LongPtr, ByVal This As ISubclass) As Long
+#Else
 Public Function ComCtlsTvwSortingFunctionText(ByVal lParam1 As Long, ByVal lParam2 As Long, ByVal This As ISubclass) As Long
-ComCtlsTvwSortingFunctionText = This.Message(0, 0, lParam1, lParam2, 11)
+#End If
+ComCtlsTvwSortingFunctionText = CLng(This.Message(0, 0, lParam1, lParam2, 11))
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsFtcEnumFontFunction(ByVal lpELF As LongPtr, ByVal lpTM As LongPtr, ByVal FontType As Long, ByVal This As ISubclass) As Long
+#Else
 Public Function ComCtlsFtcEnumFontFunction(ByVal lpELF As Long, ByVal lpTM As Long, ByVal FontType As Long, ByVal This As ISubclass) As Long
-ComCtlsFtcEnumFontFunction = This.Message(0, lpELF, lpTM, FontType, 10)
+#End If
+ComCtlsFtcEnumFontFunction = CLng(This.Message(0, FontType, lpELF, lpTM, 10))
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsCdlOFN1CallbackProc(ByVal hDlg As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+#Else
 Public Function ComCtlsCdlOFN1CallbackProc(ByVal hDlg As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
-Dim lCustData As Long
+#End If
+Dim lCustData As LongPtr
 If wMsg <> WM_INITDIALOG Then
     lCustData = GetProp(hDlg, StrPtr("ComCtlsCdlOFN1CallbackProcCustData"))
 Else
-    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 64), 4
+    #If Win64 Then
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 112), PTR_SIZE
+    #Else
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 64), PTR_SIZE
+    #End If
     SetProp hDlg, StrPtr("ComCtlsCdlOFN1CallbackProcCustData"), lCustData
 End If
-If lCustData <> 0 Then
+If lCustData <> NULL_PTR Then
     Dim This As ISubclass
     Set This = PtrToObj(lCustData)
     ComCtlsCdlOFN1CallbackProc = This.Message(hDlg, wMsg, wParam, lParam, -1)
@@ -867,15 +1172,23 @@ Else
 End If
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsCdlOFN1CallbackProcOldStyle(ByVal hDlg As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+#Else
 Public Function ComCtlsCdlOFN1CallbackProcOldStyle(ByVal hDlg As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
-Dim lCustData As Long
+#End If
+Dim lCustData As LongPtr
 If wMsg <> WM_INITDIALOG Then
     lCustData = GetProp(hDlg, StrPtr("ComCtlsCdlOFN1CallbackProcOldStyleCustData"))
 Else
-    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 64), 4
+    #If Win64 Then
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 112), PTR_SIZE
+    #Else
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 64), PTR_SIZE
+    #End If
     SetProp hDlg, StrPtr("ComCtlsCdlOFN1CallbackProcOldStyleCustData"), lCustData
 End If
-If lCustData <> 0 Then
+If lCustData <> NULL_PTR Then
     Dim This As ISubclass
     Set This = PtrToObj(lCustData)
     ComCtlsCdlOFN1CallbackProcOldStyle = This.Message(hDlg, wMsg, wParam, lParam, -1001)
@@ -884,15 +1197,23 @@ Else
 End If
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsCdlOFN2CallbackProc(ByVal hDlg As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+#Else
 Public Function ComCtlsCdlOFN2CallbackProc(ByVal hDlg As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
-Dim lCustData As Long
+#End If
+Dim lCustData As LongPtr
 If wMsg <> WM_INITDIALOG Then
     lCustData = GetProp(hDlg, StrPtr("ComCtlsCdlOFN2CallbackProcCustData"))
 Else
-    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 64), 4
+    #If Win64 Then
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 112), PTR_SIZE
+    #Else
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 64), PTR_SIZE
+    #End If
     SetProp hDlg, StrPtr("ComCtlsCdlOFN2CallbackProcCustData"), lCustData
 End If
-If lCustData <> 0 Then
+If lCustData <> NULL_PTR Then
     Dim This As ISubclass
     Set This = PtrToObj(lCustData)
     ComCtlsCdlOFN2CallbackProc = This.Message(hDlg, wMsg, wParam, lParam, -2)
@@ -901,15 +1222,23 @@ Else
 End If
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsCdlOFN2CallbackProcOldStyle(ByVal hDlg As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+#Else
 Public Function ComCtlsCdlOFN2CallbackProcOldStyle(ByVal hDlg As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
-Dim lCustData As Long
+#End If
+Dim lCustData As LongPtr
 If wMsg <> WM_INITDIALOG Then
     lCustData = GetProp(hDlg, StrPtr("ComCtlsCdlOFN2CallbackProcOldStyleCustData"))
 Else
-    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 64), 4
+    #If Win64 Then
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 112), PTR_SIZE
+    #Else
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 64), PTR_SIZE
+    #End If
     SetProp hDlg, StrPtr("ComCtlsCdlOFN2CallbackProcOldStyleCustData"), lCustData
 End If
-If lCustData <> 0 Then
+If lCustData <> NULL_PTR Then
     Dim This As ISubclass
     Set This = PtrToObj(lCustData)
     ComCtlsCdlOFN2CallbackProcOldStyle = This.Message(hDlg, wMsg, wParam, lParam, -1002)
@@ -918,15 +1247,23 @@ Else
 End If
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsCdlCCCallbackProc(ByVal hDlg As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+#Else
 Public Function ComCtlsCdlCCCallbackProc(ByVal hDlg As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
-Dim lCustData As Long
+#End If
+Dim lCustData As LongPtr
 If wMsg <> WM_INITDIALOG Then
     lCustData = GetProp(hDlg, StrPtr("ComCtlsCdlCCCallbackProcCustData"))
 Else
-    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 24), 4
+    #If Win64 Then
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 48), PTR_SIZE
+    #Else
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 24), PTR_SIZE
+    #End If
     SetProp hDlg, StrPtr("ComCtlsCdlCCCallbackProcCustData"), lCustData
 End If
-If lCustData <> 0 Then
+If lCustData <> NULL_PTR Then
     Dim This As ISubclass
     Set This = PtrToObj(lCustData)
     ComCtlsCdlCCCallbackProc = This.Message(hDlg, wMsg, wParam, lParam, -3)
@@ -935,15 +1272,23 @@ Else
 End If
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsCdlCFCallbackProc(ByVal hDlg As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+#Else
 Public Function ComCtlsCdlCFCallbackProc(ByVal hDlg As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
-Dim lCustData As Long
+#End If
+Dim lCustData As LongPtr
 If wMsg <> WM_INITDIALOG Then
     lCustData = GetProp(hDlg, StrPtr("ComCtlsCdlCFCallbackProcCustData"))
 Else
-    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 28), 4
+    #If Win64 Then
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 40), PTR_SIZE
+    #Else
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 28), PTR_SIZE
+    #End If
     SetProp hDlg, StrPtr("ComCtlsCdlCFCallbackProcCustData"), lCustData
 End If
-If lCustData <> 0 Then
+If lCustData <> NULL_PTR Then
     Dim This As ISubclass
     Set This = PtrToObj(lCustData)
     ComCtlsCdlCFCallbackProc = This.Message(hDlg, wMsg, wParam, lParam, -4)
@@ -952,82 +1297,164 @@ Else
 End If
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsCdlPDCallbackProc(ByVal hDlg As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+#Else
 Public Function ComCtlsCdlPDCallbackProc(ByVal hDlg As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
-Dim lCustData As Long
+#End If
 If wMsg <> WM_INITDIALOG Then
-    lCustData = GetProp(hDlg, StrPtr("ComCtlsCdlPDCallbackProcCustData"))
-Else
-    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 38), 4
-    SetProp hDlg, StrPtr("ComCtlsCdlPDCallbackProcCustData"), lCustData
-End If
-If lCustData <> 0 Then
-    Dim This As ISubclass
-    Set This = PtrToObj(lCustData)
-    ComCtlsCdlPDCallbackProc = This.Message(hDlg, wMsg, wParam, lParam, -5)
-Else
     ComCtlsCdlPDCallbackProc = 0
-End If
-End Function
-
-Public Sub ComCtlsCdlPDEXSetHook(ByVal This As ISubclass)
-If CdlPDEXHookHandle = 0 Then
-    CdlPDEXHookCustData = ObjPtr(This)
-    Const WH_CALLWNDPROCRET As Long = 12
-    CdlPDEXHookHandle = SetWindowsHookEx(WH_CALLWNDPROCRET, AddressOf ComCtlsCdlPDEXHookProc, 0, App.ThreadID)
-End If
-End Sub
-
-Public Sub ComCtlsCdlPDEXRemoveHook()
-If CdlPDEXHookHandle <> 0 Then
-    UnhookWindowsHookEx CdlPDEXHookHandle
-    CdlPDEXHookHandle = 0
-    CdlPDEXHookCustData = 0
-End If
-End Sub
-
-Private Function ComCtlsCdlPDEXHookProc(ByVal nCode As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
-ComCtlsCdlPDEXHookProc = CallNextHookEx(CdlPDEXHookHandle, nCode, wParam, lParam)
-Const HC_ACTION As Long = 0
-If nCode >= HC_ACTION Then
-    Dim CWPRET As CWPRETSTRUCT
-    CopyMemory CWPRET, ByVal lParam, LenB(CWPRET)
-    If CWPRET.Message = WM_INITDIALOG Then
+Else
+    Dim lCustData As LongPtr
+    #If Win64 Then
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 54), PTR_SIZE
+    #Else
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 38), PTR_SIZE
+    #End If
+    If lCustData <> NULL_PTR Then
         Dim This As ISubclass
-        If CdlPDEXHookCustData <> 0 Then Set This = PtrToObj(CdlPDEXHookCustData)
-        Call ComCtlsCdlPDEXRemoveHook
-        If Not This Is Nothing Then This.Message CWPRET.hWnd, CWPRET.Message, CWPRET.wParam, CWPRET.lParam, -5
+        Set This = PtrToObj(lCustData)
+        ComCtlsCdlPDCallbackProc = This.Message(hDlg, wMsg, wParam, lParam, -5)
+    Else
+        ComCtlsCdlPDCallbackProc = 0
     End If
 End If
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsCdlPDEXCallbackPtr(ByVal This As ISubclass) As LongPtr
+#Else
+Public Function ComCtlsCdlPDEXCallbackPtr(ByVal This As ISubclass) As Long
+#End If
+Dim VTableData(0 To 2) As LongPtr
+VTableData(0) = GetVTableIPDCB()
+VTableData(1) = 0 ' RefCount is uninstantiated
+VTableData(2) = ObjPtr(This)
+Dim hMem As LongPtr
+hMem = CoTaskMemAlloc(3 * PTR_SIZE)
+If hMem <> NULL_PTR Then
+    CopyMemory ByVal hMem, VTableData(0), 3 * PTR_SIZE
+    ComCtlsCdlPDEXCallbackPtr = hMem
+End If
+End Function
+
+Private Function GetVTableIPDCB() As LongPtr
+If CdlPDEXVTableIPDCB(0) = NULL_PTR Then
+    CdlPDEXVTableIPDCB(0) = ProcPtr(AddressOf IPDCB_QueryInterface)
+    CdlPDEXVTableIPDCB(1) = ProcPtr(AddressOf IPDCB_AddRef)
+    CdlPDEXVTableIPDCB(2) = ProcPtr(AddressOf IPDCB_Release)
+    CdlPDEXVTableIPDCB(3) = ProcPtr(AddressOf IPDCB_InitDone)
+    CdlPDEXVTableIPDCB(4) = ProcPtr(AddressOf IPDCB_SelectionChange)
+    CdlPDEXVTableIPDCB(5) = ProcPtr(AddressOf IPDCB_HandleMessage)
+End If
+GetVTableIPDCB = VarPtr(CdlPDEXVTableIPDCB(0))
+End Function
+
+Private Function IPDCB_QueryInterface(ByVal Ptr As LongPtr, ByRef IID As CLSID, ByRef pvObj As LongPtr) As Long
+If VarPtr(pvObj) = NULL_PTR Then
+    IPDCB_QueryInterface = E_POINTER
+    Exit Function
+End If
+' IID_IPrintDialogCallback = {5852A2C3-6530-11D1-B6A3-0000F8757BF9}
+If IID.Data1 = &H5852A2C3 And IID.Data2 = &H6530 And IID.Data3 = &H11D1 Then
+    If IID.Data4(0) = &HB6 And IID.Data4(1) = &HA3 And IID.Data4(2) = &H0 And IID.Data4(3) = &H0 _
+    And IID.Data4(4) = &HF8 And IID.Data4(5) = &H75 And IID.Data4(6) = &H7B And IID.Data4(7) = &HF9 Then
+        pvObj = Ptr
+        IPDCB_AddRef Ptr
+        IPDCB_QueryInterface = S_OK
+    Else
+        IPDCB_QueryInterface = E_NOINTERFACE
+    End If
+Else
+    IPDCB_QueryInterface = E_NOINTERFACE
+End If
+End Function
+
+Private Function IPDCB_AddRef(ByVal Ptr As LongPtr) As Long
+CopyMemory IPDCB_AddRef, ByVal UnsignedAdd(Ptr, 1 * PTR_SIZE), 4
+IPDCB_AddRef = IPDCB_AddRef + 1
+CopyMemory ByVal UnsignedAdd(Ptr, 1 * PTR_SIZE), IPDCB_AddRef, 4
+End Function
+
+Private Function IPDCB_Release(ByVal Ptr As LongPtr) As Long
+CopyMemory IPDCB_Release, ByVal UnsignedAdd(Ptr, 1 * PTR_SIZE), 4
+IPDCB_Release = IPDCB_Release - 1
+CopyMemory ByVal UnsignedAdd(Ptr, 1 * PTR_SIZE), IPDCB_Release, 4
+If IPDCB_Release = 0 Then CoTaskMemFree Ptr
+End Function
+
+Private Function IPDCB_InitDone(ByVal Ptr As LongPtr) As Long
+IPDCB_InitDone = S_FALSE
+End Function
+
+Private Function IPDCB_SelectionChange(ByVal Ptr As LongPtr) As Long
+IPDCB_SelectionChange = S_FALSE
+End Function
+
+Private Function IPDCB_HandleMessage(ByVal Ptr As LongPtr, ByVal hDlg As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, ByRef Result As LongPtr) As Long
+If wMsg = WM_INITDIALOG Then
+    Dim lCustData As LongPtr
+    #If Win64 Then
+    CopyMemory lCustData, ByVal UnsignedAdd(Ptr, 16), PTR_SIZE
+    #Else
+    CopyMemory lCustData, ByVal UnsignedAdd(Ptr, 8), PTR_SIZE
+    #End If
+    If lCustData <> NULL_PTR Then
+        Dim This As ISubclass
+        Set This = PtrToObj(lCustData)
+        This.Message hDlg, wMsg, wParam, lParam, -5
+    End If
+End If
+IPDCB_HandleMessage = S_FALSE
+End Function
+
+#If VBA7 Then
+Public Function ComCtlsCdlPSDCallbackProc(ByVal hDlg As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+#Else
 Public Function ComCtlsCdlPSDCallbackProc(ByVal hDlg As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
-Dim lCustData As Long
+#End If
 If wMsg <> WM_INITDIALOG Then
-    lCustData = GetProp(hDlg, StrPtr("ComCtlsCdlPSDCallbackProcCustData"))
-Else
-    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 64), 4
-    SetProp hDlg, StrPtr("ComCtlsCdlPSDCallbackProcCustData"), lCustData
-End If
-If lCustData <> 0 Then
-    Dim This As ISubclass
-    Set This = PtrToObj(lCustData)
-    ComCtlsCdlPSDCallbackProc = This.Message(hDlg, wMsg, wParam, lParam, -7)
-Else
     ComCtlsCdlPSDCallbackProc = 0
+Else
+    Dim lCustData As LongPtr
+    #If Win64 Then
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 88), PTR_SIZE
+    #Else
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 64), PTR_SIZE
+    #End If
+    If lCustData <> NULL_PTR Then
+        Dim This As ISubclass
+        Set This = PtrToObj(lCustData)
+        ComCtlsCdlPSDCallbackProc = This.Message(hDlg, wMsg, wParam, lParam, -7)
+    Else
+        ComCtlsCdlPSDCallbackProc = 0
+    End If
 End If
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsCdlBIFCallbackProc(ByVal hDlg As LongPtr, ByVal wMsg As Long, ByVal lParam As LongPtr, ByVal This As ISubclass) As Long
+#Else
 Public Function ComCtlsCdlBIFCallbackProc(ByVal hDlg As Long, ByVal wMsg As Long, ByVal lParam As Long, ByVal This As ISubclass) As Long
-ComCtlsCdlBIFCallbackProc = This.Message(hDlg, wMsg, 0, lParam, -8)
+#End If
+ComCtlsCdlBIFCallbackProc = CLng(This.Message(hDlg, wMsg, 0, lParam, -8))
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsCdlFR1CallbackProc(ByVal hDlg As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+#Else
 Public Function ComCtlsCdlFR1CallbackProc(ByVal hDlg As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+#End If
 If wMsg <> WM_INITDIALOG Then
     ComCtlsCdlFR1CallbackProc = 0
 Else
-    Dim lCustData As Long
-    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 28), 4
-    If lCustData <> 0 Then
+    Dim lCustData As LongPtr
+    #If Win64 Then
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 56), PTR_SIZE
+    #Else
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 28), PTR_SIZE
+    #End If
+    If lCustData <> NULL_PTR Then
         Dim This As ISubclass
         Set This = PtrToObj(lCustData)
         This.Message hDlg, wMsg, wParam, lParam, -9
@@ -1037,13 +1464,21 @@ Else
 End If
 End Function
 
+#If VBA7 Then
+Public Function ComCtlsCdlFR2CallbackProc(ByVal hDlg As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+#Else
 Public Function ComCtlsCdlFR2CallbackProc(ByVal hDlg As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+#End If
 If wMsg <> WM_INITDIALOG Then
     ComCtlsCdlFR2CallbackProc = 0
 Else
-    Dim lCustData As Long
-    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 28), 4
-    If lCustData <> 0 Then
+    Dim lCustData As LongPtr
+    #If Win64 Then
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 56), PTR_SIZE
+    #Else
+    CopyMemory lCustData, ByVal UnsignedAdd(lParam, 28), PTR_SIZE
+    #End If
+    If lCustData <> NULL_PTR Then
         Dim This As ISubclass
         Set This = PtrToObj(lCustData)
         This.Message hDlg, wMsg, wParam, lParam, -10
@@ -1053,39 +1488,54 @@ Else
 End If
 End Function
 
+#If VBA7 Then
+Public Sub ComCtlsCdlFRAddHook(ByVal hDlg As LongPtr)
+#Else
 Public Sub ComCtlsCdlFRAddHook(ByVal hDlg As Long)
-If (CdlFRHookHandle Or CdlFRDialogCount) = 0 Then
+#End If
+If CdlFRHookHandle = NULL_PTR And CdlFRDialogCount = 0 Then
     Const WH_GETMESSAGE As Long = 3
-    CdlFRHookHandle = SetWindowsHookEx(WH_GETMESSAGE, AddressOf ComCtlsCdlFRHookProc, 0, App.ThreadID)
-    ReDim CdlFRDialogHandle(0) As Long
+    CdlFRHookHandle = SetWindowsHookEx(WH_GETMESSAGE, AddressOf ComCtlsCdlFRHookProc, NULL_PTR, App.ThreadID)
+    ReDim CdlFRDialogHandle(0) ' As LongPtr
     CdlFRDialogHandle(0) = hDlg
 Else
-    ReDim Preserve CdlFRDialogHandle(0 To CdlFRDialogCount) As Long
+    ReDim Preserve CdlFRDialogHandle(0 To CdlFRDialogCount) ' As LongPtr
     CdlFRDialogHandle(CdlFRDialogCount) = hDlg
 End If
 CdlFRDialogCount = CdlFRDialogCount + 1
 End Sub
 
+#If VBA7 Then
+Public Sub ComCtlsCdlFRReleaseHook(ByVal hDlg As LongPtr)
+#Else
 Public Sub ComCtlsCdlFRReleaseHook(ByVal hDlg As Long)
-CdlFRDialogCount = CdlFRDialogCount - 1
-If CdlFRDialogCount = 0 And CdlFRHookHandle <> 0 Then
-    UnhookWindowsHookEx CdlFRHookHandle
-    CdlFRHookHandle = 0
-    Erase CdlFRDialogHandle()
-Else
-    If CdlFRDialogCount > 0 Then
-        Dim i As Long
-        For i = 0 To CdlFRDialogCount
-            If CdlFRDialogHandle(i) = hDlg And i < CdlFRDialogCount Then
+#End If
+Dim Index As Long, i As Long
+Index = -1
+For i = 0 To CdlFRDialogCount - 1
+    If CdlFRDialogHandle(i) = hDlg Then
+        Index = i
+        Exit For
+    End If
+Next i
+If Index > -1 Then
+    CdlFRDialogCount = CdlFRDialogCount - 1
+    If CdlFRHookHandle <> NULL_PTR And CdlFRDialogCount = 0 Then
+        UnhookWindowsHookEx CdlFRHookHandle
+        CdlFRHookHandle = NULL_PTR
+        Erase CdlFRDialogHandle()
+    Else
+        If Index < CdlFRDialogCount Then
+            For i = Index To CdlFRDialogCount - 1
                 CdlFRDialogHandle(i) = CdlFRDialogHandle(i + 1)
-            End If
-        Next i
-        ReDim Preserve CdlFRDialogHandle(0 To CdlFRDialogCount - 1) As Long
+            Next i
+        End If
+        ReDim Preserve CdlFRDialogHandle(0 To CdlFRDialogCount - 1) ' As LongPtr
     End If
 End If
 End Sub
 
-Private Function ComCtlsCdlFRHookProc(ByVal nCode As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Function ComCtlsCdlFRHookProc(ByVal nCode As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
 Const HC_ACTION As Long = 0, PM_REMOVE As Long = &H1
 Const WM_KEYFIRST As Long = &H100, WM_KEYLAST As Long = &H108, WM_NULL As Long = &H0
 If nCode >= HC_ACTION And wParam = PM_REMOVE Then
@@ -1109,122 +1559,57 @@ End If
 ComCtlsCdlFRHookProc = CallNextHookEx(CdlFRHookHandle, nCode, wParam, lParam)
 End Function
 
-Public Sub ComCtlsInitIDEStopProtection()
+#If ImplementPreTranslateMsg = True Then
 
-#If ImplementIDEStopProtection = True Then
-
-If InIDE() = True Then
-    Dim ASMWrapper As Long, RestorePointer As Long, OldAddress As Long
-    ASMWrapper = VirtualAlloc(ByVal 0, 20, MEM_COMMIT, PAGE_EXECUTE_READWRITE)
-    OldAddress = GetProcAddress(GetModuleHandle(StrPtr("vba6.dll")), "EbProjectReset")
-    RestorePointer = HookIATEntry("vb6.exe", "vba6.dll", "EbProjectReset", ASMWrapper)
-    WriteCall ASMWrapper, AddressOf ComCtlsIDEStopProtectionHandler
-    WriteByte ASMWrapper, &HC7 ' MOV
-    WriteByte ASMWrapper, &H5
-    WriteLong ASMWrapper, RestorePointer ' IAT Entry
-    WriteLong ASMWrapper, OldAddress ' Address from EbProjectReset
-    WriteJump ASMWrapper, OldAddress
+Public Sub ComCtlsPreTranslateMsgAddHook()
+If ComCtlsPreTranslateMsgHookHandle = NULL_PTR And ComCtlsPreTranslateMsgCount = 0 Then
+    Const WH_GETMESSAGE As Long = 3
+    ComCtlsPreTranslateMsgHookHandle = SetWindowsHookEx(WH_GETMESSAGE, AddressOf ComCtlsPreTranslateMsgHookProc, NULL_PTR, App.ThreadID)
 End If
+ComCtlsPreTranslateMsgCount = ComCtlsPreTranslateMsgCount + 1
+End Sub
 
+Public Sub ComCtlsPreTranslateMsgReleaseHook()
+ComCtlsPreTranslateMsgCount = ComCtlsPreTranslateMsgCount - 1
+If ComCtlsPreTranslateMsgHookHandle <> NULL_PTR And ComCtlsPreTranslateMsgCount = 0 Then
+    UnhookWindowsHookEx ComCtlsPreTranslateMsgHookHandle
+    ComCtlsPreTranslateMsgHookHandle = NULL_PTR
+    ComCtlsPreTranslateMsgHwnd = NULL_PTR
+End If
+End Sub
+
+#If VBA7 Then
+Public Sub ComCtlsPreTranslateMsgActivate(ByVal hWnd As LongPtr)
+#Else
+Public Sub ComCtlsPreTranslateMsgActivate(ByVal hWnd As Long)
 #End If
-
+ComCtlsPreTranslateMsgHwnd = hWnd
 End Sub
 
-#If ImplementIDEStopProtection = True Then
-
-Private Sub ComCtlsIDEStopProtectionHandler()
-On Error Resume Next
-Call RemoveAllVTableSubclass(VTableInterfaceInPlaceActiveObject)
-Call RemoveAllVTableSubclass(VTableInterfaceControl)
-Call RemoveAllVTableSubclass(VTableInterfacePerPropertyBrowsing)
-Call RemoveAllVTableSubclass(VTableInterfaceEnumeration)
-Dim AppForm As Form, CurrControl As Control
-For Each AppForm In Forms
-    For Each CurrControl In AppForm.Controls
-        Select Case TypeName(CurrControl)
-            Case "Animation", "DTPicker", "MonthView", "Slider", "StatusBar", "TabStrip", "ListBoxW", "ListView", "TreeView", "IPAddress", "ToolBar", "UpDown", "SpinBox", "Pager", "OptionButtonW", "CheckBoxW", "CommandButtonW", "TextBoxW", "HotKey", "CoolBar", "LinkLabel", "CommandLink"
-                Call ComCtlsRemoveSubclass(CurrControl.hWnd)
-                Call ComCtlsRemoveSubclass(CurrControl.hWndUserControl)
-            Case "ProgressBar", "FrameW"
-                Call ComCtlsRemoveSubclass(CurrControl.hWnd)
-            Case "ComboBoxW", "FontCombo"
-                Call ComCtlsRemoveSubclass(CurrControl.hWnd)
-                If CurrControl.hWndEdit <> 0 Then Call ComCtlsRemoveSubclass(CurrControl.hWndEdit)
-                If CurrControl.hWndList <> 0 Then Call ComCtlsRemoveSubclass(CurrControl.hWndList)
-                Call ComCtlsRemoveSubclass(CurrControl.hWndUserControl)
-            Case "ImageCombo"
-                Call ComCtlsRemoveSubclass(CurrControl.hWnd)
-                If CurrControl.hWndCombo <> 0 Then Call ComCtlsRemoveSubclass(CurrControl.hWndCombo)
-                If CurrControl.hWndEdit <> 0 Then Call ComCtlsRemoveSubclass(CurrControl.hWndEdit)
-                If CurrControl.hWndList <> 0 Then Call ComCtlsRemoveSubclass(CurrControl.hWndList)
-                Call ComCtlsRemoveSubclass(CurrControl.hWndUserControl)
-            Case "RichTextBox", "MCIWnd", "SysInfo"
-                CurrControl.IDEStop ' Hidden
-        End Select
-    Next CurrControl
-Next AppForm
-If CdlFRDialogCount > 0 Then
-    Dim DialogHandle() As Long
-    DialogHandle() = CdlFRDialogHandle()
-    Const WM_CLOSE As Long = &H10
-    Dim i As Long
-    For i = 0 To CdlFRDialogCount - 1
-        SendMessage DialogHandle(i), WM_CLOSE, 0, ByVal 0&
-        DoEvents
-    Next i
-End If
+Public Sub ComCtlsPreTranslateMsgDeActivate()
+ComCtlsPreTranslateMsgHwnd = NULL_PTR
 End Sub
 
-Private Function HookIATEntry(ByVal Module As String, ByVal Lib As String, ByVal Fnc As String, ByVal NewAddr As Long) As Long
-Dim hMod As Long, OldLibFncAddr As Long
-Dim lpIAT As Long, IATLen As Long, IATPos As Long
-Dim DOSHdr As IMAGE_DOS_HEADER
-Dim PEHdr As IMAGE_OPTIONAL_HEADER32
-hMod = GetModuleHandle(StrPtr(Module))
-If hMod = 0 Then Exit Function
-OldLibFncAddr = GetProcAddress(GetModuleHandle(StrPtr(Lib)), Fnc)
-If OldLibFncAddr = 0 Then Exit Function
-CopyMemory DOSHdr, ByVal hMod, LenB(DOSHdr)
-CopyMemory PEHdr, ByVal UnsignedAdd(hMod, DOSHdr.e_lfanew), LenB(PEHdr)
-Const IMAGE_NT_SIGNATURE As Long = &H4550
-If PEHdr.Magic = IMAGE_NT_SIGNATURE Then
-    lpIAT = UnsignedAdd(PEHdr.DataDirectory(15).VirtualAddress, hMod)
-    IATLen = PEHdr.DataDirectory(15).Size
-    IATPos = lpIAT
-    Do Until CLngToULng(IATPos) >= CLngToULng(UnsignedAdd(lpIAT, IATLen))
-        If DeRef(IATPos) = OldLibFncAddr Then
-            VirtualProtect IATPos, 4, PAGE_EXECUTE_READWRITE, 0
-            CopyMemory ByVal IATPos, NewAddr, 4
-            HookIATEntry = IATPos
-            Exit Do
+Private Function ComCtlsPreTranslateMsgHookProc(ByVal nCode As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+Const HC_ACTION As Long = 0, PM_REMOVE As Long = &H1
+Const WM_KEYFIRST As Long = &H100, WM_KEYLAST As Long = &H108, WM_NULL As Long = &H0
+If nCode >= HC_ACTION And wParam = PM_REMOVE Then
+    Dim Msg As TMSG
+    CopyMemory Msg, ByVal lParam, LenB(Msg)
+    If Msg.Message >= WM_KEYFIRST And Msg.Message <= WM_KEYLAST Then
+        If ComCtlsPreTranslateMsgHwnd <> NULL_PTR And ComCtlsPreTranslateMsgCount > 0 Then
+            If Msg.hWnd = ComCtlsPreTranslateMsgHwnd Then
+                If SendMessage(Msg.hWnd, UM_PRETRANSLATEMSG, 0, ByVal lParam) <> 0 Then
+                    Msg.Message = WM_NULL
+                    Msg.wParam = 0
+                    Msg.lParam = 0
+                    CopyMemory ByVal lParam, Msg, LenB(Msg)
+                End If
+            End If
         End If
-        IATPos = UnsignedAdd(IATPos, 4)
-    Loop
+    End If
 End If
+ComCtlsPreTranslateMsgHookProc = CallNextHookEx(ComCtlsPreTranslateMsgHookHandle, nCode, wParam, lParam)
 End Function
-
-Private Function DeRef(ByVal Addr As Long) As Long
-CopyMemory DeRef, ByVal Addr, 4
-End Function
-
-Private Sub WriteJump(ByRef ASM As Long, ByRef Addr As Long)
-WriteByte ASM, &HE9
-WriteLong ASM, Addr - ASM - 4
-End Sub
-
-Private Sub WriteCall(ByRef ASM As Long, ByRef Addr As Long)
-WriteByte ASM, &HE8
-WriteLong ASM, Addr - ASM - 4
-End Sub
-
-Private Sub WriteLong(ByRef ASM As Long, ByRef Lng As Long)
-CopyMemory ByVal ASM, Lng, 4
-ASM = ASM + 4
-End Sub
-
-Private Sub WriteByte(ByRef ASM As Long, ByRef B As Byte)
-CopyMemory ByVal ASM, B, 1
-ASM = ASM + 1
-End Sub
 
 #End If
